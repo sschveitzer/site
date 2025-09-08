@@ -1305,22 +1305,6 @@ h3.textContent = 'Lançamentos — ' + label;
     ul.appendChild(li);
   });
 }
-  items.forEach(x=>{
-    const li = document.createElement('li');
-    li.dataset.tipo = x.tipo || "";
-    const sinal = x.tipo === "Despesa" ? "-" : "+";
-    const icon  = x.tipo === "Despesa" ? "ph-trend-down" :
-                  x.tipo === "Receita" ? "ph-trend-up" : "ph-arrows-left-right";
-    li.innerHTML =
-      `<span class="chip"><i class="ph ${icon}"></i>${x.tipo||"-"}</span>
-       <div class="left">
-         <strong>${x.descricao || x.descr || "-"}</strong>
-         <div class="sub">${x.data||""} • ${x.categoria||"-"}</div>
-       </div>
-       <div class="valor">${sinal} ${fmtMoney(money(x.valor))}</div>`;
-    ul.appendChild(li);
-  });
-};
 const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const setAmount = () => { if (valorInput) valorInput.value = rawCents ? br.format(rawCents/100) : ''; };
 
