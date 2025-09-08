@@ -9,18 +9,19 @@
       }
       // Also expose a global identifier (var) to avoid ReferenceError when the code uses bare supabaseClient
       try { window.supabaseClient = window.supabaseClient || null; } catch(_){}
-  } catch(_) {})();
-
+    }
+  } catch(_) {}
+})();
 
 // === Global DOM helpers (fallbacks) ===
 (function(){
   try {
     if (typeof window !== 'undefined') {
-      if (typeof window.qs !== 'function')  window.qs  = function(s){ return document.querySelector(s); };
-      if (typeof window.qsa !== 'function') window.qsa = function(s){ return Array.from(document.querySelectorAll(s); };
-    } catch(_) {})();
-
-window.onload = function () {
+      if (typeof window.qs !== 'function')  window.qs  = s => document.querySelector(s);
+      if (typeof window.qsa !== 'function') window.qsa = s => Array.from(document.querySelectorAll(s));
+    }
+  } catch(_) {}
+})();window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
 
