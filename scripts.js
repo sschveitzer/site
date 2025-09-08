@@ -21,7 +21,9 @@
       if (typeof window.qsa !== 'function') window.qsa = s => Array.from(document.querySelectorAll(s));
     }
   } catch(_) {}
-})();window.onload = function () {
+})();
+
+window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
 
