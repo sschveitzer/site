@@ -20,6 +20,7 @@ window.onload = function () {
 
   // ========= ESTADO GLOBAL =========
   let S = {
+    const valorInput = document.getElementById('mValor');
     tx: [],
     cats: [],
     recs: [], // recorrências
@@ -1315,14 +1316,14 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
     if (valorInput) {
     const valorInput = document.getElementById('mValor');
-      valorInput && valorInput.addEventListener('beforeinput', (e) => {
+      if (valorInput) valorInput && valorInput.addEventListener('beforeinput', (e) => {
         if (e.inputType === 'deleteContentBackward') {
           rawCents = Math.floor(rawCents/10);
           setAmount();
           e.preventDefault();
         }
       });
-      valorInput && valorInput.addEventListener('input', (e) => {
+      if (valorInput) valorInput && valorInput.addEventListener('input', (e) => {
         const d = (e.data ?? '').replace(/\D/g,''); 
         if (d) {
           rawCents = Math.min(9999999999, rawCents*10 + Number(d));
@@ -1335,7 +1336,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
           valorInput.setSelectionRange(len,len);
         });
       });
-      valorInput && valorInput.addEventListener('focus', () => {
+      if (valorInput) valorInput && valorInput.addEventListener('focus', () => {
         if (!valorInput.value) setAmount();
         requestAnimationFrame(() => {
           const len = valorInput.value.length;
