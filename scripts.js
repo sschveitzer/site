@@ -13,17 +13,6 @@
   } catch(_) {}
 })();
 
-
-// === Global DOM helpers (fallbacks) ===
-(function(){
-  try {
-    if (typeof window !== 'undefined') {
-      if (typeof window.qs !== 'function')  window.qs  = function(s){ return document.querySelector(s); };
-      if (typeof window.qsa !== 'function') window.qsa = function(s){ return Array.from(document.querySelectorAll(s)); };
-    }
-  } catch(_) {}
-})();
-
 window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
@@ -1287,6 +1276,7 @@ h3.textContent = 'Lançamentos — ' + label;
     }
     items.forEach(x=>{
       const li = document.createElement('li');
+      li.dataset.tipo = x && x.tipo ? x.tipo : ''; 
       const sinal = x.tipo==="Despesa" ? "-" : "+";
       li.innerHTML = '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong><div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
                      '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
