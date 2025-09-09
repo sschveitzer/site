@@ -1380,7 +1380,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         const last = focusables[focusables.length - 1];
         if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
-      });
     }
   };)();
 
