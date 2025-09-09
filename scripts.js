@@ -34,7 +34,7 @@ window.onload = function () {
   };
 
   // Carteiras
-  S.walletList = ["Casa","Pessoa 1","Pessoa 2"];
+  S.walletList = ["Casa","Marido","Esposa"];
 
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
 try {
@@ -1285,8 +1285,7 @@ h3.textContent = 'Lançamentos — ' + label;
     });
   }
 
-function renderCarteiras(){
-    // Grid de saldos
+function renderCarteiras(){// Grid de saldos
     const el = document.getElementById('walletsGrid');
     if (el){
       const saldos = computeSaldosPorCarteira();
@@ -1716,9 +1715,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
-}
 
-  // === Helpers de ciclo da fatura ===
+}// === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
   function txBucketYM(x) {
