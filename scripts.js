@@ -13,6 +13,7 @@
   } catch(_) {}
 })();
 
+  const qs = (sel) => document.querySelector(sel);
 window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
@@ -1313,6 +1314,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const setAmount = () => { if (valorInput) valorInput.value = rawCents ? br.format(rawCents/100) : ''; };
 
     if (valorInput) {
+    const valorInput = document.getElementById('mValor');
       valorInput.addEventListener('beforeinput', (e) => {
         if (e.inputType === 'deleteContentBackward') {
           rawCents = Math.floor(rawCents/10);
