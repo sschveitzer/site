@@ -1650,60 +1650,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         if (metasCard){ metasCard.scrollIntoView({behavior:'smooth', block:'start'}); }
       };
     }
-  
-  try { renderMetaCats(); } catch(e) { console.warn('renderMetaCats error', e); }
-}
-function renderMetaCats(){
-  const wrap = document.getElementById('metasCats');
-  if (!wrap) return;
-
-  const metas = S.metas || { total: 0, porCat: {} };
-  const porCat = metas.porCat || {};
-
-  const catsComMeta = Object.keys(porCat).filter(k => (Number(porCat[k]) || 0) > 0);
-  wrap.innerHTML = '';
-  if (!catsComMeta.length) return;
-
-  const gastosMesPorCat = {};
-  (Array.isArray(S.tx) ? S.tx : []).forEach(x => {
-    if (!x || x.tipo !== 'Despesa') return;
-    if (typeof inSelectedMonth === 'function' ? !inSelectedMonth(x) : false) return;
-    const c = x.categoria || '';
-    gastosMesPorCat[c] = (gastosMesPorCat[c] || 0) + (Number(x.valor) || 0);
-  });
-
-  catsComMeta.forEach(cat => {
-    const meta = Number(porCat[cat]) || 0;
-    const usado = Number(gastosMesPorCat[cat] || 0);
-    const pct = meta > 0 ? Math.round((usado / meta) * 100) : 0;
-    const dentro = usado <= meta;
-
-    const card = document.createElement('div');
-    card.className = 'card meta-cat-card';
-
-    card.innerHTML = `
-      <div class="head">
-        <div class="title"><i class="ph ph-target"></i> ${cat}</div>
-        <span class="chip ${meta > 0 ? (dentro ? 'ok' : 'warn') : ''}">
-          ${meta > 0 ? (pct > 100 ? pct : Math.min(pct,100)) + '%' : '—'}
-        </span>
-      </div>
-      <div class="line"><span class="muted">Meta:</span> <strong>${typeof fmtBRL === 'function' ? fmtBRL(meta) : meta.toFixed(2)}</strong></div>
-      <div class="line"><span class="muted">Gasto no mês:</span> <strong>${typeof fmtBRL === 'function' ? fmtBRL(usado) : usado.toFixed(2)}</strong></div>
-      <div class="progress"><div class="bar" style="width:${meta > 0 ? Math.min(100, pct) : 0}%;"></div></div>
-      <div class="helper" style="margin-top:6px">
-        ${meta > 0
-          ? (dentro
-              ? `Faltam <strong>${typeof fmtBRL === 'function' ? fmtBRL(Math.max(0, meta - usado)) : (Math.max(0, meta - usado)).toFixed(2)}</strong>.`
-              : `Ultrapassou em <strong>${typeof fmtBRL === 'function' ? fmtBRL(usado - meta) : (usado - meta).toFixed(2)}</strong>.`)
-          : 'Sem meta definida para esta categoria.'}
-      </div>
-    `;
-
-    wrap.appendChild(card);
-  });
-}
-};
+  }
   function renderMetasConfig(){
     const metas = S.metas || { total:0, porCat:{} };
     const inpTotal = document.getElementById('metaTotalInput');
