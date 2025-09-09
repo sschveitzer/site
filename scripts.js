@@ -40,16 +40,14 @@ window.onload = function () {
 try {
   window.S = S;
   if (typeof window.setUseCycleForReports !== 'function') {
-  window.setUseCycleForReports = function(v) {
-    S.useCycleForReports = !!v;
-    try { savePrefs(); } catch (e) {}
-    try {
-      render();
-      ensureMonthSelectLabels();
-      try { renderPessoas(); } catch (_) {}
-    } catch (e) {}
-  };
-}
+    window.setUseCycleForReports = function(v){
+      S.useCycleForReports = !!v;
+      try { savePrefs(); } catch(e) {}
+      try { render();
+    ensureMonthSelectLabels();
+    try { renderPessoas(); } catch(_) {} } catch(e) {}
+    };
+  }
 } catch (e) {}
 
 
@@ -1374,14 +1372,18 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       // Trap de foco + Tab
       dialog.addEventListener('keydown', (e) => {
         if (e.key !== 'Tab') return;
-        const focusables = Array.from(dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+        const focusables = Array.from(
+  dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+
         if (!focusables.length) return;
         const first = focusables[0];
         const last = focusables[focusables.length - 1];
         if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+      });
     }
-  };)();
+  })();
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
