@@ -1308,7 +1308,7 @@ function renderCarteiras(){// Grid de saldos
 
     // Render e "wire" dos filtros de Marido/Esposa
     try { renderPessoas(); } catch(_) {}
-  };
+  }
 const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const setAmount = () => { if (valorInput) valorInput.value = rawCents ? br.format(rawCents/100) : ''; };
 
