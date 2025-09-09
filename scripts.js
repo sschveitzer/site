@@ -13,8 +13,19 @@
   } catch(_) {}
 })();
 
+  window.onload = function () {
   const qs = (sel) => document.querySelector(sel);
-window.onload = function () {
+  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
+  const valorInput = document.getElementById('mValor');
+  if (valorInput) {
+    valorInput.addEventListener('input', (e) => {
+      // TODO: lógica de input
+    });
+    valorInput.addEventListener('focus', () => {
+      // TODO: lógica de focus
+    });
+  }
+
   const qsa = (sel) => Array.from(document.querySelectorAll(sel));
 
   const qs = (sel) => document.querySelector(sel);
