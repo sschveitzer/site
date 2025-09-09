@@ -13,17 +13,12 @@
   } catch(_) {}
 })();
 
-  const qs = (sel) => document.querySelector(sel);
 window.onload = function () {
-  const qs = (sel) => document.querySelector(sel);
-  const valorInput = document.getElementById('mValor');
-
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
 
   // ========= ESTADO GLOBAL =========
   let S = {
-    const valorInput = document.getElementById('mValor');
     tx: [],
     cats: [],
     recs: [], // recorrências
@@ -39,7 +34,7 @@ window.onload = function () {
   };
 
   // Carteiras
-  S.walletList = ["Casa","Marido","Esposa"];
+  S.walletList = ["Casa","Pessoa 1","Pessoa 2"];
 
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
 try {
@@ -1289,44 +1284,238 @@ h3.textContent = 'Lançamentos — ' + label;
       ul.appendChild(li);
     });
   }
-
-function renderCarteiras(){// Grid de saldos
+function renderCarteiras(){
+    // Grid de saldos
     const el = document.getElementById('walletsGrid');
     if (el){
       const saldos = computeSaldosPorCarteira();
       el.innerHTML = '';
       (S.walletList||["Casa"]).forEach(w=>{
-        const displayName = (w === "Pessoa 1") ? "Marido" : (w === "Pessoa 2") ? "Esposa" : w;
         const card = document.createElement('div');
         card.className = 'wallet-card';
-        card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+displayName+'</strong></div>' +
+        card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
                          '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
         el.appendChild(card);
       });
     }
-
+    // Somas P1/P2 e listas
+    const p1 = sumInOutByWallet("Pessoa 1");
+    const p2 = sumInOutByWallet("Pessoa 2");
+    const p1In = document.getElementById('p1In'); if (p1In) p1In.textContent = fmtMoney(p1.entradas);
+    const p1Out= document.getElementById('p1Out'); if (p1Out) p1Out.textContent = fmtMoney(p1.saidas);
+    const p2In = document.getElementById('p2In'); if (p2In) p2In.textContent = fmtMoney(p2.entradas);
+    const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
+    renderMiniList('p1List', p1.items);
+    renderMiniList('p2List', p2.items);
     // Resumo familiar
     const fam = sumFamily();
     const e = document.getElementById('famEntradas'); if (e) e.textContent = fmtMoney(fam.entradas);
     const s = document.getElementById('famSaidas');   if (s) s.textContent = fmtMoney(fam.saidas);
     const d = document.getElementById('famDiff');     if (d) d.textContent = fmtMoney(fam.diff);
-
-    // Render e "wire" dos filtros de Marido/Esposa
-    try { renderPessoas(); } catch(_) {}
   }
+function render() {
+    document.body.classList.toggle("dark", S.dark);
+
+    // sincroniza estado dos toggles (suporta ids antigos e novos)
+    const hideToggle = qs("#toggleHide") || qs("#cfgHide");
+    if (hideToggle) hideToggle.checked = S.hide;
+    const darkToggle = qs("#toggleDark") || qs("#cfgDark");
+    if (darkToggle) darkToggle.checked = S.dark;
+
+    
+    const cycleToggle = qs("#toggleCycle") || qs("#useCycleForReports");
+    if (cycleToggle) cycleToggle.checked = !!S.useCycleForReports;
+    renderRecentes();
+    renderLancamentos();
+    renderCategorias();
+    renderCarteiras();
+    buildLancCatFilter();
+    buildMonthSelect();
+    updateKpis();
+    renderCharts();
+
+    // Novos insights
+    renderTopCategorias12m(5);
+    renderMediaPorCategoria(6);
+    renderTendenciaSaldo();
+    renderForecastChart();
+    renderHeatmap();
+    // Metas
+    renderMetaCard();
+    renderMetasConfig();
+  }
+
+  // ========= EVENTOS =========
+
+  // ======= NAV MOBILE =======
+  (function(){
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (menuBtn && mobileMenu){
+      menuBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        mobileMenu.classList.toggle('open');
+      });
+      // Fechar ao clicar fora
+      document.addEventListener('click', function(e){
+        if (!mobileMenu.contains(e.target) && e.target !== menuBtn){
+          mobileMenu.classList.remove('open');
+        }
+      });
+      // Fechar ao escolher uma aba
+      mobileMenu.querySelectorAll('.tab').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          mobileMenu.classList.remove('open');
+        });
+      });
+    }
+  })();
+
+  qsa(".tab").forEach(btn =>
+    btn.addEventListener("click", () => setTab(btn.dataset.tab))
+  );
+
+  const fab = qs("#fab"); if (fab) fab.onclick = () => toggleModal(true);
+  const btnNovo = qs("#btnNovo"); if (btnNovo) btnNovo.onclick = () => toggleModal(true);
+  const btnClose = qs("#closeModal");
+  if (btnClose) btnClose.onclick = () => {
+    if (window.resetValorInput) window.resetValorInput();
+    toggleModal(false); return;
+  };
+  const btnCancelar = qs("#cancelar");
+  const btnSalvar = qs("#salvar");
+  if (btnSalvar) btnSalvar.onclick = (e) => {
+    try { e && e.preventDefault && e.preventDefault(); } catch(_) {}
+    if (typeof window.addOrUpdate === "function") window.addOrUpdate(false);
+  };
+  if (btnCancelar) btnCancelar.onclick = () => {
+    if (window.resetValorInput) window.resetValorInput();
+    toggleModal(false); return;
+  };
+
+  qsa("#tipoTabs button").forEach(b =>
+    b.addEventListener("click", () => { modalTipo = b.dataset.type; syncTipoTabs(); })
+  );
+
+  const btnAddCat = qs("#addCat");
+  if (btnAddCat) btnAddCat.onclick = async () => {
+    const nome = (qs("#newCatName")?.value || "").trim();
+    if (!nome) return;
+    if ((S.cats||[]).some(c => (c.nome||"").toLowerCase() === nome.toLowerCase())) {
+      alert("Essa categoria já existe.");
+      return;
+    }
+    await saveCat({ nome });
+    const inp = qs("#newCatName"); if (inp) inp.value = "";
+    loadAll();
+  };
+
+  // Suporta #toggleDark (novo) e #cfgDark (antigo)
+  const btnDark = qs("#toggleDark") || qs("#cfgDark");
+  if (btnDark) {
+    btnDark.addEventListener('change', async () => {
+      S.dark = !!btnDark.checked;
+      document.body.classList.toggle("dark", S.dark);
+      await savePrefs();
+    });
+    // clique também alterna (para botões sem checkbox)
+    btnDark.addEventListener('click', async (e) => {
+      if (btnDark.tagName === 'BUTTON') {
+        S.dark = !S.dark;
+        document.body.classList.toggle("dark", S.dark);
+        await savePrefs();
+      }
+    });
+  }
+
+  // Suporta #toggleHide (novo) e #cfgHide (antigo)
+  const toggleHide = qs("#toggleHide") || qs("#cfgHide");
+  if (toggleHide) toggleHide.onchange = async e => {
+    S.hide = !!e.target.checked;
+    render();
+    await savePrefs();
+  };
+
+  // Toggle do ciclo na topbar (ao lado de Esconder valores)
+  const toggleCycle = qs('#toggleCycle') || qs('#useCycleForReports');
+  if (toggleCycle) toggleCycle.onchange = async e => {
+    try {
+      setUseCycleForReports(!!e.target.checked); // já salva e re-renderiza
+    } catch (err) {
+      console.error('Falha ao alternar ciclo:', err);
+    }
+  };
+
+
+  // Ícone de Config na topbar (abre a aba Config)
+  function wireBtnConfig(){
+    const btn = document.getElementById('btnConfig');
+    if (btn && !btn.__wired){
+      btn.__wired = true;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setTab('config');
+      });
+    }
+  }
+  wireBtnConfig();
+  document.addEventListener('click', (e) => {
+    const target = e.target && e.target.closest ? e.target.closest('#btnConfig') : null;
+    if (target){
+      e.preventDefault();
+      setTab('config');
+    }
+  });
+
+  // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
+  const chkRepetir = qs("#mRepetir");
+  const recurrenceBox = qs("#recurrenceFields");
+  const selPer = qs("#mPeriodicidade");
+  const fldDM = qs("#fieldDiaMes");
+  const fldDW = qs("#fieldDiaSemana");
+  const fldM = qs("#fieldMes");
+  function syncRecurrenceFields() {
+    if (!chkRepetir || !recurrenceBox) return;
+    const on = chkRepetir.checked;
+    recurrenceBox.style.display = on ? "block" : "none";
+    if (!on) return;
+    const per = selPer?.value || "Mensal";
+    if (fldDM) fldDM.style.display = (per === "Mensal" || per === "Anual") ? "block" : "none";
+    if (fldDW) fldDW.style.display = (per === "Semanal") ? "block" : "none";
+    if (fldM)  fldM.style.display  = (per === "Anual") ? "block" : "none";
+  }
+  if (chkRepetir) chkRepetir.addEventListener("change", syncRecurrenceFields);
+  if (selPer) selPer.addEventListener("change", syncRecurrenceFields);
+
+  // ====== UX additions: currency mask, keyboard and focus handling ======
+  (function enhanceModalUX(){
+    const modal = document.getElementById('modalLanc');
+    const dialog = modal ? modal.querySelector('.content') : null;
+    const valorInput = document.getElementById('mValorBig');
+    const formError = document.getElementById('formError');
+    const btnSalvar = document.getElementById('salvar');
+    const btnCancelar = document.getElementById('cancelar');
+
+    // currency mask with raw cents
+    let rawCents = 0;
+    
+window.resetValorInput = function(){
+  try { rawCents = 0; } catch(_) {}
+  const el = document.getElementById('mValorBig');
+  if (el) el.value = '';
+};
 const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const setAmount = () => { if (valorInput) valorInput.value = rawCents ? br.format(rawCents/100) : ''; };
 
     if (valorInput) {
-    const valorInput = document.getElementById('mValor');
-      if (valorInput) valorInput && valorInput.addEventListener('beforeinput', (e) => {
+      valorInput.addEventListener('beforeinput', (e) => {
         if (e.inputType === 'deleteContentBackward') {
           rawCents = Math.floor(rawCents/10);
           setAmount();
           e.preventDefault();
         }
       });
-      if (valorInput) valorInput && valorInput.addEventListener('input', (e) => {
+      valorInput.addEventListener('input', (e) => {
         const d = (e.data ?? '').replace(/\D/g,''); 
         if (d) {
           rawCents = Math.min(9999999999, rawCents*10 + Number(d));
@@ -1339,7 +1528,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
           valorInput.setSelectionRange(len,len);
         });
       });
-      if (valorInput) valorInput && valorInput.addEventListener('focus', () => {
+      valorInput.addEventListener('focus', () => {
         if (!valorInput.value) setAmount();
         requestAnimationFrame(() => {
           const len = valorInput.value.length;
@@ -1378,10 +1567,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       // Trap de foco + Tab
       dialog.addEventListener('keydown', (e) => {
         if (e.key !== 'Tab') return;
-        const focusables = Array.from(
-  dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
-
+        const focusables = Array.from(dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
         if (!focusables.length) return;
         const first = focusables[0];
         const last = focusables[focusables.length - 1];
@@ -1389,7 +1575,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
       });
     }
-  };
+  })();
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
@@ -1636,7 +1822,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
       const labels = months.map(m=>m);
       const ds = years.map(y=>({ label:y, data: months.map(m=> byYearMonth[`${y}-${m}`]||0) }));
-      ensureChart('chartYoY', { type:'bar', data:{ labels, datasets: ds } });
+      ensureChart('chartYoY', { type:'bar', data:{ labels, datasets: ds }, options:{ scales:{ x:{ stacked:false, grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
     }
 
     // ==== Receitas x Despesas (stacked)
@@ -1716,7 +1902,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   }
   wireBillingConfig();
 // Start!
-//   loadAll();
+  loadAll();
 
   // Expose some functions for out-of-onload modules
   try {
@@ -1724,8 +1910,9 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
+}
 
-// === Helpers de ciclo da fatura ===
+  // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
   function txBucketYM(x) {
