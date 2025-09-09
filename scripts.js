@@ -13,6 +13,17 @@
   } catch(_) {}
 })();
 
+
+// === Global DOM helpers (fallbacks) ===
+(function(){
+  try {
+    if (typeof window !== 'undefined') {
+      if (typeof window.qs !== 'function')  window.qs  = function(s){ return document.querySelector(s); };
+      if (typeof window.qsa !== 'function') window.qsa = function(s){ return Array.from(document.querySelectorAll(s)); };
+    }
+  } catch(_) {}
+})();
+
 window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
@@ -1274,16 +1285,17 @@ h3.textContent = 'Lançamentos — ' + label;
       ul.appendChild(li);
       return;
     }
-    items.forEach(x=>{
+    items.forEach(x => {
       const li = document.createElement('li');
-      li.dataset.tipo = x && x.tipo ? x.tipo : ''; 
-      const sinal = x.tipo==="Despesa" ? "-" : "+";
-      li.innerHTML = '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong><div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
-                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
-                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
+      // sinal e dataset para CSS
+      const sinal = x.tipo === "Despesa" ? "-" : "+";
+      li.dataset.tipo = x.tipo || "";
+      li.innerHTML =
+        '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong>'+
+        '<div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
+        '<div class="valor right">'+ sinal +' '+ fmtMoney(money(x.valor)) +'</div>';
       ul.appendChild(li);
-    });
-  }
+    });}
 function renderCarteiras(){
     // Grid de saldos
     const el = document.getElementById('walletsGrid');
@@ -1293,8 +1305,11 @@ function renderCarteiras(){
       (S.walletList||["Casa"]).forEach(w=>{
         const card = document.createElement('div');
         card.className = 'wallet-card';
+        const saldo = saldos[w] || 0;
+        const kind = saldo > 0 ? 'pos' : (saldo < 0 ? 'neg' : 'zero');
+        card.setAttribute('data-kind', kind);
         card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
-                         '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
+                         '<div class="w-balance">'+ fmtMoney(saldo) +'</div>';
         el.appendChild(card);
       });
     }
@@ -2118,7 +2133,52 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
       };
     }
   }
-  function wirePessoaToolbar(owner, ids){
+  
+// ==== Delegated handler for mini-toolbar filters (Marido/Esposa) ====
+(function setupPessoaToolbarDelegation(){
+  try{
+    if (window._pessoaDelegated) return;
+    document.addEventListener('click', function(e){
+      const btn = e.target.closest('.mini-toolbar .pill-btn');
+      if (!btn) return;
+      const toolbar = btn.closest('.mini-toolbar');
+      if (!toolbar) return;
+      // toggle active within this toolbar
+      toolbar.querySelectorAll('.pill-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      // re-render both sections to reflect filter
+      if (typeof renderPessoas === 'function') renderPessoas();
+    });
+    window._pessoaDelegated = true;
+  } catch(_) {}
+})();
+
+
+// ==== Delegated handler para mini-toolbar (Marido/Esposa) ====
+(function setupPessoaToolbarDelegation(){
+  try{
+    if (window._pessoaDelegated) return;
+    document.addEventListener('click', function(e){
+      const btn = e.target.closest('.mini-toolbar .pill-btn');
+      if (!btn) return;
+      const toolbar = btn.closest('.mini-toolbar');
+      const owner = toolbar?.dataset?.owner; // "Marido" ou "Esposa"
+      if (!owner) return;
+
+      // Alterna o active apenas dentro desta toolbar
+      toolbar.querySelectorAll('.pill-btn').forEach(b=>b.classList.toggle('active', b===btn));
+
+      // Mapeia ids conforme o owner e re-renderiza só esse painel
+      const ids = (owner === 'Marido')
+        ? { in:'p1In', out:'p1Out', list:'p1List', seeAll:'p1SeeAll' }
+        : { in:'p2In', out:'p2Out', list:'p2List', seeAll:'p2SeeAll' };
+
+      if (typeof renderPessoa === 'function') renderPessoa(owner, ids);
+    });
+    window._pessoaDelegated = true;
+  } catch(_) {}
+})();
+
+function wirePessoaToolbar(owner, ids){
     const toolbar = document.querySelector(`.mini-toolbar[data-owner="${owner}"]`);
     if (!toolbar || toolbar._wired) return;
     toolbar.addEventListener('click', (e)=>{
