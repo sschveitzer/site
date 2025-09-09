@@ -570,7 +570,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
-      .filter(x => x.tipo === "Despesa")
       .sort((a, b) => String(b.data||"").localeCompare(String(a.data||"")))
       .slice(0, 8);
     ul.innerHTML = "";
