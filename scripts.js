@@ -40,14 +40,16 @@ window.onload = function () {
 try {
   window.S = S;
   if (typeof window.setUseCycleForReports !== 'function') {
-    window.setUseCycleForReports = function(v){
-      S.useCycleForReports = !!v;
-      try { savePrefs(); } catch(e) {}
-      try { render();
-    ensureMonthSelectLabels();
-    try { renderPessoas(); } catch(_) {} } catch(e) {}
-    };
-  }
+  window.setUseCycleForReports = function(v) {
+    S.useCycleForReports = !!v;
+    try { savePrefs(); } catch (e) {}
+    try {
+      render();
+      ensureMonthSelectLabels();
+      try { renderPessoas(); } catch (_) {}
+    } catch (e) {}
+  };
+}
 } catch (e) {}
 
 
@@ -1380,7 +1382,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
       });
     }
-  })();
+  };)();
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
