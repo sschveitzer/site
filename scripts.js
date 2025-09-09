@@ -1315,14 +1315,14 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
     if (valorInput) {
     const valorInput = document.getElementById('mValor');
-      valorInput.addEventListener('beforeinput', (e) => {
+      valorInput && valorInput.addEventListener('beforeinput', (e) => {
         if (e.inputType === 'deleteContentBackward') {
           rawCents = Math.floor(rawCents/10);
           setAmount();
           e.preventDefault();
         }
       });
-      valorInput.addEventListener('input', (e) => {
+      valorInput && valorInput.addEventListener('input', (e) => {
         const d = (e.data ?? '').replace(/\D/g,''); 
         if (d) {
           rawCents = Math.min(9999999999, rawCents*10 + Number(d));
@@ -1335,7 +1335,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
           valorInput.setSelectionRange(len,len);
         });
       });
-      valorInput.addEventListener('focus', () => {
+      valorInput && valorInput.addEventListener('focus', () => {
         if (!valorInput.value) setAmount();
         requestAnimationFrame(() => {
           const len = valorInput.value.length;
@@ -1712,7 +1712,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   }
   wireBillingConfig();
 // Start!
-  loadAll();
+//   loadAll();
 
   // Expose some functions for out-of-onload modules
   try {
