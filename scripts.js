@@ -567,16 +567,35 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
   }
 
   function renderRecentes() {
-    const ul = qs("#listaRecentes");
-    if (!ul) return;
-    const list = (S.tx || [])
-      .filter(x => x.tipo === "Despesa")
-      .sort((a, b) => String(b.data||"").localeCompare(String(a.data||"")))
-      .slice(0, 8);
-    ul.innerHTML = "";
-    if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
-    list.forEach(x => ul.append(itemTx(x, true)));
+  const ul = qs("#listaRecentes");
+  if (!ul) return;
+
+  const sel = document.querySelector("#filterTipo");
+  const filtro = sel ? sel.value : "todos";
+
+  let list = (S.tx || []);
+
+  if (filtro && filtro !== "todos") {
+    list = list.filter(x => x && x.tipo === filtro);
   }
+
+  list = list
+    .sort((a, b) => String(b?.data||"").localeCompare(String(a?.data||"")))
+    .slice(0, 8);
+
+  ul.innerHTML = "";
+  if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
+
+  if (!list.length) {
+    const li = document.createElement('li');
+    li.className = 'item';
+    li.innerHTML = '<div class="empty"><div class="title">Nenhum lançamento encontrado</div><div class="hint">Ajuste os filtros ou crie um novo lançamento.</div></div>';
+    ul.append(li);
+    return;
+  }
+
+  list.forEach(x => ul.append(itemTx(x, true)));
+}
 
   function renderLancamentos() {
 
@@ -2136,4 +2155,18 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     renderPessoa('Esposa', {in:'p2In', out:'p2Out', list:'p2List', seeAll:'p2SeeAll'});
   }
   try { window.renderPessoas = renderPessoas; } catch(_){}
+})();
+
+
+// === Wire filter in Dashboard ("Últimos lançamentos") ===
+(function(){
+  try {
+    var sel = document.getElementById('filterTipo');
+    if (sel && !sel._wired) {
+      sel.addEventListener('change', function(){
+        try { renderRecentes(); } catch(_) {}
+      });
+      sel._wired = true;
+    }
+  } catch(_) {}
 })();
