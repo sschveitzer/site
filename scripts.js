@@ -1383,7 +1383,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
       });
     }
-  })();
+  };
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
