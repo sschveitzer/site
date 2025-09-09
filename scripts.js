@@ -13,6 +13,17 @@
   } catch(_) {}
 })();
 
+
+// === Global DOM helpers (fallbacks) ===
+(function(){
+  try {
+    if (typeof window !== 'undefined') {
+      if (typeof window.qs !== 'function')  window.qs  = function(s){ return document.querySelector(s); };
+      if (typeof window.qsa !== 'function') window.qsa = function(s){ return Array.from(document.querySelectorAll(s)); };
+    }
+  } catch(_) {}
+})();
+
 window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
@@ -2073,19 +2084,10 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     if (elOut) elOut.textContent = fmtBR(totalOut);
 
     const toolbar = document.querySelector(`.mini-toolbar[data-owner="${owner}"]`);
-    const activeBtn = toolbar?.querySelector('.pill-btn.active') || toolbar?.querySelector('[data-tipo="todos"]');
-    const tipoSel = activeBtn?.dataset?.tipo || 'todos';
-    let list = listAll;
-    const sel = String(tipoSel).trim().toLowerCase();
-    if (sel !== 'todos') {
-      list = list.filter(x => {
-        const t = String(x && x.tipo || '').trim().toLowerCase();
-        if (sel.startsWith('receita')) return t.startsWith('receita');
-        if (sel.startsWith('despesa')) return t.startsWith('despesa');
-        return t === sel;
-      });
-    }
+    const tipoSel = toolbar?.querySelector('.pill-btn.active')?.dataset?.tipo || 'todos';
 
+    let list = listAll;
+    if (tipoSel !== 'todos') list = list.filter(x => x.tipo === tipoSel);
     list = list.slice(0, 6);
 
     const ul = document.getElementById(ids.list);
