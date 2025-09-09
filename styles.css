@@ -1530,3 +1530,38 @@ body.dark textarea:focus {
 /* ===== Cores nas mini-listas (compatibilidade .right/.valor) ===== */
 .lanc-mini li[data-tipo="Receita"] .right, .lanc-mini li[data-tipo="Receita"] .valor { color: var(--ok); }
 .lanc-mini li[data-tipo="Despesa"] .right, .lanc-mini li[data-tipo="Despesa"] .valor { color: var(--warn); }
+
+/* ===== Metas por categoria (cards) ===== */
+.metas-cats {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.meta-cat-card .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.meta-cat-card .title {
+  font-weight: 700;
+}
+
+.meta-cat-card .chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--chip);
+}
+
+.meta-cat-card .chip.ok { background: rgba(22,163,74,.12); color: var(--ok); }
+.meta-cat-card .chip.warn { background: rgba(220,38,38,.12); color: var(--warn); }
+
+.meta-cat-card .line {
+  display: flex; justify-content: space-between;
+  margin: 6px 0; font-size: 13px;
+}
+
+.meta-cat-card .progress { height: 8px; }
+.meta-cat-card .progress .bar { transition: width .3s ease; }
