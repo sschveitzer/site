@@ -1527,11 +1527,6 @@ body.dark textarea:focus {
 }
 
 
-/* ===== Cores em Carteiras: saldo por wallet ===== */
-.wallet-card[data-kind="pos"] { border-left: 6px solid var(--ok); }
-.wallet-card[data-kind="neg"] { border-left: 6px solid var(--warn); }
-.wallet-card[data-kind="zero"] { border-left: 6px solid var(--brand); }
-.wallet-card[data-kind="pos"] .w-balance { color: var(--ok); }
-.wallet-card[data-kind="neg"] .w-balance { color: var(--warn); }
-.wallet-card[data-kind="zero"] .w-balance { color: var(--brand); }
-
+/* ===== Cores nas mini-listas (compatibilidade .right/.valor) ===== */
+.lanc-mini li[data-tipo="Receita"] .right, .lanc-mini li[data-tipo="Receita"] .valor { color: var(--ok); }
+.lanc-mini li[data-tipo="Despesa"] .right, .lanc-mini li[data-tipo="Despesa"] .valor { color: var(--warn); }
