@@ -2133,7 +2133,26 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
       };
     }
   }
-  function wirePessoaToolbar(owner, ids){
+  
+// ==== Delegated handler for mini-toolbar filters (Marido/Esposa) ====
+(function setupPessoaToolbarDelegation(){
+  try{
+    if (window._pessoaDelegated) return;
+    document.addEventListener('click', function(e){
+      const btn = e.target.closest('.mini-toolbar .pill-btn');
+      if (!btn) return;
+      const toolbar = btn.closest('.mini-toolbar');
+      if (!toolbar) return;
+      // toggle active within this toolbar
+      toolbar.querySelectorAll('.pill-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      // re-render both sections to reflect filter
+      if (typeof renderPessoas === 'function') renderPessoas();
+    });
+    window._pessoaDelegated = true;
+  } catch(_) {}
+})();
+
+function wirePessoaToolbar(owner, ids){
     const toolbar = document.querySelector(`.mini-toolbar[data-owner="${owner}"]`);
     if (!toolbar || toolbar._wired) return;
     toolbar.addEventListener('click', (e)=>{
