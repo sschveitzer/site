@@ -278,69 +278,18 @@ function ensureMonthSelectLabels(){
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    // Carteira/Transferência
-    if (modalTipo === "Transferência") {
+    // Carteira/Transferência — usar dados da recorrência, não o estado do modal
+    if (rec.tipo === "Transferência") {
       t.carteira = null;
-      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
-      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+      t.carteira_origem  = rec.wallet_origem || "Casa";
+      t.carteira_destino = rec.wallet_destino || "Marido";
     } else {
-      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira = rec.wallet || "Casa";
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
     await saveTx(t);
   }
-
-  async function applyRecurrences() {
-    if (!Array.isArray(S.recs) || !S.recs.length) return;
-    const today = nowYMD();
-
-    for (const r of S.recs) {
-      if (!r.ativo) continue;
-      if (r.fim_em && r.fim_em < today) continue;
-
-      let next = r.proxima_data || today;
-      let changed = false;
-
-      while (next <= today) {
-        if (r.fim_em && next > r.fim_em) break;
-        await materializeOne(r, next);
-        changed = true;
-
-        if (r.periodicidade === "Mensal") {
-          next = incMonthly(next, r.dia_mes || 1, r.ajuste_fim_mes ?? true);
-        } else if (r.periodicidade === "Semanal") {
-          next = incWeekly(next);
-        } else if (r.periodicidade === "Anual") {
-          next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
-        } else {
-          break;
-        }
-      }
-
-      if (changed) {
-        await supabaseClient.from("recurrences").update({ proxima_data: next }).eq("id", r.id);
-      }
-    }
-
-    // Recarrega transações após gerar
-    const { data: tx } = await supabaseClient.from("transactions").select("*");
-    S.tx = tx || [];
-  }
-
-  // ========= UI BÁSICA =========
-  function setTab(name) {
-    qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
-    qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
-  }
-
-  function clearModalFields(){
-  try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
-  const v=document.getElementById('mValorBig'); if(v) v.value='';
-  const d=document.getElementById('mDesc'); if(d) d.value='';
-  const o=document.getElementById('mObs'); if(o) o.value='';
-  const c=document.getElementById('mCategoria'); if(c) c.selectedIndex=0;
-}
 function toggleModal(show, titleOverride) {
     const m = qs("#modalLanc");
     if (!m) return;
@@ -501,17 +450,16 @@ const chkRepetir = qs("#mRepetir");
     if (error) {
       console.error(error);
       return alert("Erro ao salvar recorrência.");
+    }// ✅ Materializa SEMPRE a primeira ocorrência imediatamente e avança a próxima data
+    await materializeOne(saved, saved.proxima_data);
+    if (saved.periodicidade === "Mensal") {
+      saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+    } else if (saved.periodicidade === "Semanal") {
+      saved.proxima_data = incWeekly(saved.proxima_data);
+    } else if (saved.periodicidade === "Anual") {
+      saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
     }
-
-    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
-    if (t.data === saved.proxima_data) {
-      await materializeOne(saved, saved.proxima_data);
-      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
-      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
-      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
-      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
-    }
-
+    await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
     await loadAll();
     toggleModal(false); return;
   }
