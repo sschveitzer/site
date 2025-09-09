@@ -15,6 +15,9 @@
 
   const qs = (sel) => document.querySelector(sel);
 window.onload = function () {
+  const qs = (sel) => document.querySelector(sel);
+  const valorInput = document.getElementById('mValor');
+
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
 
