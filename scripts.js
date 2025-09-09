@@ -1285,17 +1285,15 @@ h3.textContent = 'Lançamentos — ' + label;
       ul.appendChild(li);
       return;
     }
-    items.forEach(x => {
+    items.forEach(x=>{
       const li = document.createElement('li');
-      // sinal e dataset para CSS
-      const sinal = x.tipo === "Despesa" ? "-" : "+";
-      li.dataset.tipo = x.tipo || "";
-      li.innerHTML =
-        '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong>'+
-        '<div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
-        '<div class="valor right">'+ sinal +' '+ fmtMoney(money(x.valor)) +'</div>';
+      const sinal = x.tipo==="Despesa" ? "-" : "+";
+      li.innerHTML = '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong><div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
+                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
+                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
       ul.appendChild(li);
-    });}
+    });
+  }
 function renderCarteiras(){
     // Grid de saldos
     const el = document.getElementById('walletsGrid');
@@ -1305,11 +1303,8 @@ function renderCarteiras(){
       (S.walletList||["Casa"]).forEach(w=>{
         const card = document.createElement('div');
         card.className = 'wallet-card';
-        const saldo = saldos[w] || 0;
-        const kind = saldo > 0 ? 'pos' : (saldo < 0 ? 'neg' : 'zero');
-        card.setAttribute('data-kind', kind);
         card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
-                         '<div class="w-balance">'+ fmtMoney(saldo) +'</div>';
+                         '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
         el.appendChild(card);
       });
     }
@@ -2090,9 +2085,16 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
 
     const toolbar = document.querySelector(`.mini-toolbar[data-owner="${owner}"]`);
     const tipoSel = toolbar?.querySelector('.pill-btn.active')?.dataset?.tipo || 'todos';
-
     let list = listAll;
-    if (tipoSel !== 'todos') list = list.filter(x => x.tipo === tipoSel);
+    if (tipoSel !== 'todos') {
+      const sel = String(tipoSel).trim().toLowerCase();
+      list = list.filter(x => {
+        const t = String(x && x.tipo || '').trim().toLowerCase();
+        if (sel.startsWith('receita')) return t.startsWith('receita');
+        if (sel.startsWith('despesa')) return t.startsWith('despesa');
+        return t === sel;
+      });
+    }
     list = list.slice(0, 6);
 
     const ul = document.getElementById(ids.list);
@@ -2133,26 +2135,7 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
       };
     }
   }
-  
-// ==== Delegated handler for mini-toolbar filters (Marido/Esposa) ====
-(function setupPessoaToolbarDelegation(){
-  try{
-    if (window._pessoaDelegated) return;
-    document.addEventListener('click', function(e){
-      const btn = e.target.closest('.mini-toolbar .pill-btn');
-      if (!btn) return;
-      const toolbar = btn.closest('.mini-toolbar');
-      if (!toolbar) return;
-      // toggle active within this toolbar
-      toolbar.querySelectorAll('.pill-btn').forEach(b=>b.classList.toggle('active', b===btn));
-      // re-render both sections to reflect filter
-      if (typeof renderPessoas === 'function') renderPessoas();
-    });
-    window._pessoaDelegated = true;
-  } catch(_) {}
-})();
-
-function wirePessoaToolbar(owner, ids){
+  function wirePessoaToolbar(owner, ids){
     const toolbar = document.querySelector(`.mini-toolbar[data-owner="${owner}"]`);
     if (!toolbar || toolbar._wired) return;
     toolbar.addEventListener('click', (e)=>{
