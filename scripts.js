@@ -875,7 +875,7 @@ h3.textContent = 'Lançamentos — ' + label;
     if (kpiDespesas) kpiDespesas.textContent = fmtMoney(despesas);
     if (kpiSaldo) kpiSaldo.textContent = fmtMoney(saldo);
     if (kpiSplit) kpiSplit.textContent = fmtMoney(despesas / 2);
-    if (kpiSplitHint) kpiSplitHint.textContent = "½ de despesas";
+    if (kpiSplitHint) kpiSplitHint.textContent = "50%";
 
     // --- Variação vs mês anterior (em %) ---
     const ymPrev = prevYM(S.month);
