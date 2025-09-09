@@ -14,9 +14,7 @@
 })();
 
   window.onload = function () {
-  const qs = (sel) => document.querySelector(sel);
-  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
-  const valorInput = document.getElementById('mValor');
+  const qs = (sel) => document.querySelector(sel);const valorInput = document.getElementById('mValor');
   if (valorInput) {
     valorInput.addEventListener('input', (e) => {
       // TODO: lógica de input
@@ -24,11 +22,7 @@
     valorInput.addEventListener('focus', () => {
       // TODO: lógica de focus
     });
-  }
-
-  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
-
-  const qs = (sel) => document.querySelector(sel);
+  }const qs = (sel) => document.querySelector(sel);
   const valorInput = document.getElementById('mValor');
 
   // Usa o supabase já criado no dashboard.html
