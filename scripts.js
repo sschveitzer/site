@@ -2090,10 +2090,17 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
 
     const toolbar = document.querySelector(`.mini-toolbar[data-owner="${owner}"]`);
     const tipoSel = toolbar?.querySelector('.pill-btn.active')?.dataset?.tipo || 'todos';
-
     let list = listAll;
-    if (tipoSel !== 'todos') list = list.filter(x => x.tipo === tipoSel);
-    list = list.slice(0, 6);
+    const sel = String(tipoSel).trim().toLowerCase();
+    if (sel !== 'todos') {
+      list = list.filter(x => {
+        const t = String(x && x.tipo || '').trim().toLowerCase();
+        if (sel.startsWith('receita')) return t.startsWith('receita');
+        if (sel.startsWith('despesa')) return t.startsWith('despesa');
+        return t === sel;
+      });
+    }
+list = list.slice(0, 6);
 
     const ul = document.getElementById(ids.list);
     if (!ul) return;
