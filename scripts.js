@@ -887,7 +887,6 @@ h3.textContent = 'Lançamentos — ' + label;
         .filter(x => x.tipo === "Receita" && (x.carteira === "Marido" || x.carteira === "Esposa"))
         .reduce((a,b)=>a+Number(b.valor||0),0);
       const despesasPrev = prevTx
-      const despesasPrev = prevTx
         .filter(x => x.tipo === "Despesa" && (x.carteira === "Casa" || x.carteira === "Marido" || x.carteira === "Esposa"))
         .reduce((a,b)=>a+Number(b.valor||0),0);
 
