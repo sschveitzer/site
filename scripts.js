@@ -883,12 +883,17 @@ h3.textContent = 'Lançamentos — ' + label;
     // --- Variação vs mês anterior (em %) ---
     const ymPrev = prevYM(S.month);
     const txPrev = (S.tx || []).filter(x => x.data && String(x.data).startsWith(ymPrev));
-    const receitasPrev = prevTx
-        .filter(x => x.tipo === "Receita" && (x.carteira === "Marido" || x.carteira === "Esposa"))
-        .reduce((a,b)=>a+Number(b.valor||0),0);
-      const despesasPrev = prevTx
-        .filter(x => x.tipo === "Despesa" && (x.carteira === "Casa" || x.carteira === "Marido" || x.carteira === "Esposa"))
-        .reduce((a,b)=>a+Number(b.valor||0),0);
+
+    const receitasPrev = txPrev
+      .filter(x => x.tipo === "Receita" && (x.carteira === "Marido" || x.carteira === "Esposa"))
+      .reduce((a, b) => a + Number(b.valor || 0), 0);
+
+    const despesasPrev = txPrev
+      .filter(x => x.tipo === "Despesa" && (x.carteira === "Casa" || x.carteira === "Marido" || x.carteira === "Esposa"))
+      .reduce((a, b) => a + Number(b.valor || 0), 0);
+
+    const saldoPrev = receitasPrev - despesasPrev;
+
 
     function formatDeltaPct(cur, prev) {
       if (prev > 0) {
