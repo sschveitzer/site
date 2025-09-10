@@ -875,19 +875,25 @@ h3.textContent = 'Lançamentos — ' + label;
     if (kpiReceitas) kpiReceitas.textContent = fmtMoney(receitas);
     if (kpiDespesas) kpiDespesas.textContent = fmtMoney(despesas);
     if (kpiSaldo) kpiSaldo.textContent = fmtMoney(saldo);
-    if (kpiSplit) kpiSplit.textContent = fmtMoney(despesas / 2);
-    if (kpiSplitHint) kpiSplitHint.textContent = "50%";
+    const casaAgg = sumInOutByWallet("Casa");
+    const saidasCasa = (casaAgg && typeof casaAgg.saidas === "number") ? casaAgg.saidas : 0;
+    if (kpiSplit) kpiSplit.textContent = fmtMoney(saidasCasa / 2);
+    if (kpiSplitHint) kpiSplitHint.textContent = "50% Casa";
 
     // --- Variação vs mês anterior (em %) ---
     const ymPrev = prevYM(S.month);
     const txPrev = (S.tx || []).filter(x => x.data && String(x.data).startsWith(ymPrev));
-    const receitasPrev = prevTx
-        .filter(x => x.tipo === "Receita" && (x.carteira === "Marido" || x.carteira === "Esposa"))
-        .reduce((a,b)=>a+Number(b.valor||0),0);
-      const despesasPrev = prevTx
-        .filter(x => x.tipo === "Despesa" && (x.carteira === "Casa" || x.carteira === "Marido" || x.carteira === "Esposa"))
-        .reduce((a,b)=>a+Number(b.valor||0),0);
+
+    const receitasPrev = txPrev
+      .filter(x => x.tipo === "Receita" && (x.carteira === "Marido" || x.carteira === "Esposa"))
+      .reduce((a, b) => a + Number(b.valor || 0), 0);
+
+    const despesasPrev = txPrev
+      .filter(x => x.tipo === "Despesa" && (x.carteira === "Casa" || x.carteira === "Marido" || x.carteira === "Esposa"))
+      .reduce((a, b) => a + Number(b.valor || 0), 0);
+
     const saldoPrev = receitasPrev - despesasPrev;
+
 
     function formatDeltaPct(cur, prev) {
       if (prev > 0) {
@@ -973,7 +979,6 @@ h3.textContent = 'Lançamentos — ' + label;
     const ctxFluxo = qs("#chartFluxo");
     if (ctxFluxo && window.Chart) {
       const porMes = {};
-    const gastosPorDia = new Array(daysInMonth).fill(0);
       (S.tx || []).forEach(x => {
         if (!x.data) return;
         const ym = String(x.data).slice(0, 7);
