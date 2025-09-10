@@ -1530,3 +1530,33 @@ body.dark textarea:focus {
 /* ===== Cores nas mini-listas (compatibilidade .right/.valor) ===== */
 .lanc-mini li[data-tipo="Receita"] .right, .lanc-mini li[data-tipo="Receita"] .valor { color: var(--ok); }
 .lanc-mini li[data-tipo="Despesa"] .right, .lanc-mini li[data-tipo="Despesa"] .valor { color: var(--warn); }
+
+
+/* ==== Heatmap (mês atual) ==== */
+.heatmap-grid{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 8px 4px 12px;
+}
+.heatmap-grid .dow{
+  font-size: 12px;
+  opacity: .7;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.heatmap-grid .cell{
+  aspect-ratio: 1;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  background: var(--heatmap-bg, #eee);
+  color: var(--heatmap-fg, #111);
+}
+.heatmap-grid .cell.empty{
+  background: transparent;
+}
+.heatmap-grid .cell.hasval{
+  /* colors will be set inline via style attr using CSS vars */
+}
