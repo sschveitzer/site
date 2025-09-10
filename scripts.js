@@ -876,7 +876,7 @@ h3.textContent = 'Lançamentos — ' + label;
     if (kpiDespesas) kpiDespesas.textContent = fmtMoney(despesas);
     if (kpiSaldo) kpiSaldo.textContent = fmtMoney(saldo);
     const casaAgg = sumInOutByWallet("Casa");
-    const saidasCasa = (casaAgg && typeof casaAgg.saidas === \'number\') ? casaAgg.saidas : 0;
+    const saidasCasa = (casaAgg && typeof casaAgg.saidas === "number") ? casaAgg.saidas : 0;
     if (kpiSplit) kpiSplit.textContent = fmtMoney(saidasCasa / 2);
     if (kpiSplitHint) kpiSplitHint.textContent = "50% Casa";
 
@@ -887,9 +887,9 @@ h3.textContent = 'Lançamentos — ' + label;
         .filter(x => x.tipo === "Receita" && (x.carteira === "Marido" || x.carteira === "Esposa"))
         .reduce((a,b)=>a+Number(b.valor||0),0);
       const despesasPrev = prevTx
+      const despesasPrev = prevTx
         .filter(x => x.tipo === "Despesa" && (x.carteira === "Casa" || x.carteira === "Marido" || x.carteira === "Esposa"))
         .reduce((a,b)=>a+Number(b.valor||0),0);
-    const saldoPrev = receitasPrev - despesasPrev;
 
     function formatDeltaPct(cur, prev) {
       if (prev > 0) {
