@@ -306,7 +306,7 @@ function computeSplit(month) {
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    const formaPag = (qs(\"#mPagamento\")?.value || \"\").toLowerCase();
+    const formaPag = (qs("#mPagamento")?.value || "").toLowerCase();
     t.forma_pagamento = formaPag;
     // Carteira/Transferência
     if (modalTipo === "Transferência") {
