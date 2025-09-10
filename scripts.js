@@ -1218,6 +1218,9 @@ function renderCharts() {
       }
     });
   }
+
+  , ()=>0);
+
     (S.tx || []).forEach(x=>{
       if (!x.data || x.tipo!=="Despesa") return;
       if (!String(x.data).startsWith(ym)) return;
@@ -1969,7 +1972,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
-}
 
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
