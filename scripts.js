@@ -44,6 +44,9 @@ try {
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
       try { render();
+
+    try { renderSplitKPI(); } catch(_) {}
+
     ensureMonthSelectLabels();
     try { renderPessoas(); } catch(_) {} } catch(e) {}
     };
@@ -143,6 +146,31 @@ function abbrevLabelFromYM(ym){
 }
 
 function ensureMonthSelectLabels(){
+
+function computeSplit(month) {
+  const starts = (d) => String(d || '').startsWith(month);
+  const asNumber = (v) => Number(v) || 0;
+  const despesasMes = (S.tx || []).filter(x => x && x.tipo === 'Despesa' && starts(x.data));
+  const totalCasa = despesasMes.filter(x => x.carteira === 'Casa').reduce((a, b) => a + asNumber(b.valor), 0);
+  const metadeCasa = totalCasa / 2;
+  let extraEsposa = 0, extraMarido = 0;
+  despesasMes.forEach(x => {
+    const forma = String(x.forma_pagamento || '').toLowerCase();
+    const isDinPix = (forma === 'dinheiro' || forma === 'pix');
+    if (!isDinPix) return;
+    if (x.carteira === 'Marido') extraEsposa += asNumber(x.valor) * 0.5;
+    if (x.carteira === 'Esposa') extraMarido += asNumber(x.valor) * 0.5;
+  });
+  return {
+    totalCasa,
+    metadeCasa,
+    pagarMarido: metadeCasa + extraMarido,
+    pagarEsposa: metadeCasa + extraEsposa,
+    extras: { marido: extraMarido, esposa: extraEsposa }
+  };
+}
+
+
   try {
     var sel = document.getElementById('monthSelect');
     if (!sel) return;
@@ -278,6 +306,8 @@ function ensureMonthSelectLabels(){
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
+    const formaPag = (qs(\"#mPagamento\")?.value || \"\").toLowerCase();
+    t.forma_pagamento = formaPag;
     // Carteira/Transferência
     if (modalTipo === "Transferência") {
       t.carteira = null;
@@ -568,7 +598,20 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     return li;
   }
 
-  function renderRecentes() {
+  
+function renderSplitKPI() {
+  try {
+    const res = computeSplit(S.month);
+    const el = document.getElementById('kpiSplit');
+    const hint = document.getElementById('kpiSplitHint');
+    if (el) {
+      el.textContent = 'Marido ' + fmtMoney(res.pagarMarido) + ' • Esposa ' + fmtMoney(res.pagarEsposa);
+    }
+    if (hint) hint.textContent = '50% da Casa + rateio Dinheiro/Pix';
+  } catch(_) {}
+}
+
+function renderRecentes() {
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
