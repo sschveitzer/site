@@ -451,7 +451,7 @@ const chkRepetir = qs("#mRepetir");
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
-    toggleModal(false); return;
+    if (!keepOpen) { toggleModal(false); } else { clearModalFields(); /* mantém modal aberto para novo */ }
     return;
     }
 
