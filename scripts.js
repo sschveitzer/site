@@ -2005,7 +2005,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   const btnSalvarENovo = document.getElementById('salvarENovo');
   if (btnSalvarENovo && !btnSalvarENovo._bound) {
     btnSalvarENovo.addEventListener('click', async () => {
-      await addOrUpdate(false);
+      await addOrUpdate(true);
       if (typeof clearModalFields === 'function') clearModalFields();
       const v = document.getElementById('mValorBig'); if (v) v.focus();
     });
