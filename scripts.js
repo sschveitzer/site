@@ -875,8 +875,10 @@ h3.textContent = 'Lançamentos — ' + label;
     if (kpiReceitas) kpiReceitas.textContent = fmtMoney(receitas);
     if (kpiDespesas) kpiDespesas.textContent = fmtMoney(despesas);
     if (kpiSaldo) kpiSaldo.textContent = fmtMoney(saldo);
-    if (kpiSplit) kpiSplit.textContent = fmtMoney(despesas / 2);
-    if (kpiSplitHint) kpiSplitHint.textContent = "50%";
+    const casaAgg = sumInOutByWallet("Casa");
+    const saidasCasa = (casaAgg && typeof casaAgg.saidas === \'number\') ? casaAgg.saidas : 0;
+    if (kpiSplit) kpiSplit.textContent = fmtMoney(saidasCasa / 2);
+    if (kpiSplitHint) kpiSplitHint.textContent = "50% Casa";
 
     // --- Variação vs mês anterior (em %) ---
     const ymPrev = prevYM(S.month);
