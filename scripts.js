@@ -1158,8 +1158,8 @@ h3.textContent = 'Lançamentos — ' + label;
   }
 
   // Heatmap de gastos por dia do mês
-  function renderHeatmap(targetId = 'heatmap2'){
-    const wrap = document.getElementById(targetId);
+  function renderHeatmap(){
+    const wrap = document.getElementById('heatmap');
     if (!wrap) return;
     const ym = S.month;
     const days = monthDays(ym);
@@ -1841,9 +1841,10 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       ensureChart('chartRxV', { type:'bar', data:{ labels, datasets:[ {label:'Receitas', data:rec}, {label:'Despesas', data:des} ] }, options:{ scales:{ x:{ stacked:true, grid:{ color: theme.grid } }, y:{ stacked:true, grid:{ color: theme.grid } } } } });
     }
 
-        // ==== Heatmap nos Relatórios
-    renderHeatmap('heatmap2');
-  }
+    // ==== Heatmap reaproveitado
+    const hm = document.getElementById('heatmap2');
+    const hmOld = document.getElementById('heatmap');
+    if (hm){ hm.innerHTML = hmOld ? hmOld.innerHTML : '<div class="muted">Sem dados</div>'; }
   }
 
   // ===== Exportar gráfico para PNG =====
