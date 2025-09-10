@@ -244,6 +244,7 @@ function computeSplit(month) {
       S.month = e.target.value;
       try { savePrefs(); } catch (e) {}
       try { render(); } catch (e) {}
+      try { renderSplitKPI(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
     });
