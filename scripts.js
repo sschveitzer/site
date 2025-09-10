@@ -127,6 +127,7 @@ function money(v){
   }
 
   const qs  = (s) => document.querySelector(s);
+  const qsa = (s) => document.querySelectorAll(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
 
 // === Helpers de abreviação de mês/ano ===
@@ -926,75 +927,7 @@ h3.textContent = 'Lançamentos — ' + label;
   }
 
   let chartSaldo, chartPie, chartFluxo;
-  
-  // Heatmap de gastos por dia do mês (despesas do mês atual)
-  function renderHeatmap(){
-    const wrap = document.getElementById('heatmap');
-    if (!wrap) return;
-
-    // Limpa conteúdo anterior
-    wrap.innerHTML = "";
-
-    // Cabeçalho com dias da semana
-    const dows = ["D", "S", "T", "Q", "Q", "S", "S"];
-    for (let i=0;i<7;i++){
-      const h = document.createElement("div");
-      h.className = "dow";
-      h.textContent = dows[i];
-      wrap.appendChild(h);
-    }
-
-    // Coleta despesas do mês selecionado
-    const ym = (S && S.month) || (new Date()).toISOString().slice(0,7);
-    const daysInMonth = monthDays(ym);
-    const [yy, mm] = ym.split("-").map(Number);
-    const firstDow = new Date(yy, mm-1, 1).getDay(); // 0=Dom, 6=Sáb
-
-    // Mapa de valor total por dia
-    const vals = new Array(daysInMonth+1).fill(0);
-    (S.tx || []).forEach(x => {
-      if (!x || !x.data) return;
-      const ymCal = String(x.data).slice(0,7);
-      if (ymCal !== ym) return;
-      if (x.tipo !== "Despesa") return;
-      const dd = Number(String(x.data).slice(8,10));
-      if (!isNaN(dd)) vals[dd] += Number(x.valor||0);
-    });
-    const maxVal = Math.max(0, ...vals);
-
-    // Preenche células vazias antes do dia 1 para alinhar a semana
-    for (let i=0;i<firstDow;i++){
-      const c = document.createElement("div");
-      c.className = "cell empty";
-      wrap.appendChild(c);
-    }
-
-    // Cria as células dos dias
-    for (let day=1; day<=daysInMonth; day++){
-      const v = vals[day] || 0;
-      const c = document.createElement("div");
-      c.className = "cell" + (v>0 ? " hasval" : "");
-      c.title = `${String(day).padStart(2,"0")}/${String(mm).padStart(2,"0")}/${yy} • ${fmtMoney(v)}`;
-      c.textContent = day;
-
-      if (v>0 && maxVal>0){
-        // Escala 0..1 e aplica em CSS vars para permitir theming
-        const t = Math.min(1, v/maxVal);
-        // cor de fundo: do claro ao mais intenso (verde-azulado)
-        const light = 92 - Math.round(t*52); // 92% -> 40%
-        const fg = light < 55 ? "#fff" : "#111";
-        c.style.setProperty("--heatmap-bg", `hsl(190 70% ${light}%)`);
-        c.style.setProperty("--heatmap-fg", fg);
-      }
-      wrap.appendChild(c);
-    }
-
-    // Ajusta grid-template-rows: 1 linha para cabeçalho + 5-6 semanas
-    const weeks = Math.ceil((firstDow + daysInMonth)/7);
-    wrap.style.gridTemplateRows = `repeat(${1 + weeks}, auto)`;
-  }
-
-function renderCharts() {
+  function renderCharts() {
     // Saldo acumulado (12 meses)
     if (chartSaldo) chartSaldo.destroy();
     const ctxSaldo = qs("#chartSaldo");
@@ -1041,6 +974,7 @@ function renderCharts() {
     const ctxFluxo = qs("#chartFluxo");
     if (ctxFluxo && window.Chart) {
       const porMes = {};
+    const gastosPorDia = new Array(daysInMonth).fill(0);
       (S.tx || []).forEach(x => {
         if (!x.data) return;
         const ym = String(x.data).slice(0, 7);
@@ -1218,6 +1152,15 @@ function renderCharts() {
       }
     });
   }
+
+  // Heatmap de gastos por dia do mês
+  function renderHeatmap(){
+    const wrap = document.getElementById('heatmap');
+    if (!wrap) return;
+    const ym = S.month;
+    const days = monthDays(ym);
+    const gastosPorDia = Array.from({length: days}, ()=>0);
+
     (S.tx || []).forEach(x=>{
       if (!x.data || x.tipo!=="Despesa") return;
       if (!String(x.data).startsWith(ym)) return;
@@ -1969,6 +1912,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
+}
 
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
