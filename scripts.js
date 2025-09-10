@@ -127,7 +127,6 @@ function money(v){
   }
 
   const qs  = (s) => document.querySelector(s);
-  const qsa = (s) => document.querySelectorAll(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
 
 // === Helpers de abreviação de mês/ano ===
