@@ -1218,9 +1218,6 @@ function renderCharts() {
       }
     });
   }
-
-  , ()=>0);
-
     (S.tx || []).forEach(x=>{
       if (!x.data || x.tipo!=="Despesa") return;
       if (!String(x.data).startsWith(ym)) return;
