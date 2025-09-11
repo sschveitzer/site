@@ -1560,3 +1560,6 @@ body.dark textarea:focus {
 .heatmap-grid .cell.hasval{
   /* colors will be set inline via style attr using CSS vars */
 }
+
+/* Ensure FAB is always on top and visible */
+.fab{ position:fixed; right:26px; bottom:26px; z-index:2000; display:grid; }
