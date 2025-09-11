@@ -255,7 +255,11 @@ function computeSplit(month) {
   }
 
   // ========= SAVE =========
-  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
+  async function saveTx(t) {
+  const res = await supabaseClient.from("transactions").upsert([t]).select();
+  try { console.debug('saveTx payload', t); console.debug('saveTx result', res); } catch(_) {}
+  return res;
+}
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
@@ -388,6 +392,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vDesc = qs("#mDesc"); if (vDesc) vDesc.value = "";
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
+      const vPag = qs("#mPagamento"); if (vPag) vPag.value = "";
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -784,6 +789,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
+    const pag = qs("#mPagamento"); if (pag) pag.value = (x.forma_pagamento || "");
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
