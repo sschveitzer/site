@@ -364,6 +364,12 @@ function computeSplit(month) {
   function setTab(name) {
     try { var _fab = document.getElementById('fab'); if (_fab) _fab.style.display = (name==='dashboard') ? '' : 'none'; } catch(_) {}
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  const fab = qs("#fab"); if (fab) fab.onclick = () => toggleModal(true);
+  const btnNovo = qs("#btnNovo"); if (btnNovo) btnNovo.onclick = () => toggleModal(true);
+  const btnSalvar = qs("#salvar"); if (btnSalvar) btnSalvar.onclick = () => addOrUpdate(false);
+  const btnSalvarENovo = qs("#salvarENovo"); if (btnSalvarENovo) btnSalvarENovo.onclick = () => addOrUpdate(true);
+  const btnCancelar = qs("#cancelar"); if (btnCancelar) btnCancelar.onclick = () => toggleModal(false);
+
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
   }
 
@@ -479,6 +485,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       t.carteira_destino = null;
     }
 const chkRepetir = qs("#mRepetir");
+    t.forma_pagamento = (qs("#mPagamento")?.value || "").toLowerCase();
     if (S.editingId || !chkRepetir?.checked) {
       await saveTx(t);
       await loadAll();
@@ -2261,4 +2268,3 @@ function renderSplitKPI() {
     if (hint) hint.textContent = '50% da Casa + rateio Dinheiro/Pix';
   } catch(_) {}
 }
-
