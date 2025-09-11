@@ -44,8 +44,11 @@ try {
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
       try { render();
+    try{ var _fab=document.getElementById('fab'); if(_fab) _fab.style.display = (document.querySelector('section.active')?.id==='dashboard')?'':'none'; }catch(_){}
+;
 
     try { renderSplitKPI(); } catch(_) {}
+    try { renderPessoas(); } catch(_) {}
 
     ensureMonthSelectLabels();
     try { renderPessoas(); } catch(_) {} } catch(e) {}
@@ -244,7 +247,6 @@ function computeSplit(month) {
       S.month = e.target.value;
       try { savePrefs(); } catch (e) {}
       try { render(); } catch (e) {}
-      try { renderSplitKPI(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
     });
@@ -307,8 +309,6 @@ function computeSplit(month) {
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    const formaPag = (qs("#mPagamento")?.value || "").toLowerCase();
-    t.forma_pagamento = formaPag;
     // Carteira/Transferência
     if (modalTipo === "Transferência") {
       t.carteira = null;
@@ -362,6 +362,7 @@ function computeSplit(month) {
 
   // ========= UI BÁSICA =========
   function setTab(name) {
+    try { var _fab = document.getElementById('fab'); if (_fab) _fab.style.display = (name==='dashboard') ? '' : 'none'; } catch(_) {}
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
   }
@@ -599,20 +600,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     return li;
   }
 
-  
-function renderSplitKPI() {
-  try {
-    const res = computeSplit(S.month);
-    const el = document.getElementById('kpiSplit');
-    const hint = document.getElementById('kpiSplitHint');
-    if (el) {
-      el.textContent = 'Marido ' + fmtMoney(res.pagarMarido) + ' • Esposa ' + fmtMoney(res.pagarEsposa);
-    }
-    if (hint) hint.textContent = '50% da Casa + rateio Dinheiro/Pix';
-  } catch(_) {}
-}
-
-function renderRecentes() {
+  function renderRecentes() {
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
@@ -2260,3 +2248,17 @@ document.addEventListener("click", function(e) {
     }
   }
 });
+
+
+function renderSplitKPI() {
+  try {
+    const res = computeSplit(S.month);
+    const el = document.getElementById('kpiSplit');
+    const hint = document.getElementById('kpiSplitHint');
+    if (el) {
+      el.textContent = 'Marido ' + fmtMoney(res.pagarMarido) + ' • Esposa ' + fmtMoney(res.pagarEsposa);
+    }
+    if (hint) hint.textContent = '50% da Casa + rateio Dinheiro/Pix';
+  } catch(_) {}
+}
+
