@@ -290,11 +290,6 @@
     <!-- Carteiras -->
     <section id="carteiras">
       <div class="grid-carteiras">
-        <div class="card span-2">
-          <h3><i class="ph ph-users-three"></i> Rateio por pessoa (mês)</h3>
-          <div id="splitPessoas" class="meta-summary" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
-        </div>
-
         <!-- Resumo familiar -->
         <div class="card span-2">
           <h3><i class="ph ph-wallet"></i> Resumo familiar</h3>
@@ -479,6 +474,24 @@
             <option>Esposa</option>
           </select>
         </div>
+        <div class="form-grid">
+
+        <div class="field">
+          <label for="mPagamento">Forma de pagamento</label>
+          <select id="mPagamento">
+            <option value="">Selecione...</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="pix">Pix</option>
+            <option value="cartao">Cartão</option>
+            <option value="outros">Outros</option>
+          </select>
+        </div>
+<div class="field">
+          <label for="mData">Data</label>
+          <input type="date" id="mData">
+          <div class="helper">Padrão: hoje</div>
+        </div>
+
 
         <div class="field" id="wrapTransf" style="display:none">
           <label>Transferência</label>
@@ -496,10 +509,7 @@
     
         </div>
 
-        <div class="field">
-          <label for="mData">Data</label>
-          <input type="date" id="mData">
-          <div class="helper">Padrão: hoje</div>
+        
         </div>
 
         <div class="field span-2">
