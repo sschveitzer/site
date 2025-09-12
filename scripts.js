@@ -556,6 +556,7 @@ const chkRepetir = qs("#mRepetir");
     if (!keepOpen) { toggleModal(false); } else { clearModalFields(); }
     return;
   }
+try { window.toggleModal = toggleModal; } catch(e) {}
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
