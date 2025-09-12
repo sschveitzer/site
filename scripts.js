@@ -425,6 +425,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       S.editingId = null;
     }
   }
+try { window.toggleModal = toggleModal; } catch(e) {}
+
 
   let modalTipo = "Despesa";
   function syncTipoTabs() {
@@ -2407,6 +2409,7 @@ window.addEventListener('load', function(){
 });
 
 
-// Eventos do modal (corrigido)
+// Eventos do modal (corrigido v2)
 document.getElementById("btnNovo")?.addEventListener("click", () => toggleModal(true));
 document.getElementById("btnFecharModal")?.addEventListener("click", () => toggleModal(false));
+document.getElementById("btnCancelar")?.addEventListener("click", () => toggleModal(false));
