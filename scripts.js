@@ -185,6 +185,7 @@ function ensureMonthSelectLabels(){
       if (prefs.use_cycle_for_reports !== undefined && prefs.use_cycle_for_reports !== null) {
         S.useCycleForReports = !!prefs.use_cycle_for_reports;
       } else {
+      if (selPag) selPag.disabled = false;
         S.useCycleForReports = true;
       }
     }
@@ -280,10 +281,12 @@ function ensureMonthSelectLabels(){
     };
     // Carteira/Transferência
     if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
       t.carteira_destino = (qs("#mDestino")?.value || "Marido");
     } else {
+      if (selPag) selPag.disabled = false;
       t.carteira = (qs("#mCarteira")?.value || "Casa");
       t.carteira_origem = null;
       t.carteira_destino = null;
@@ -315,6 +318,7 @@ function ensureMonthSelectLabels(){
         } else if (r.periodicidade === "Anual") {
           next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
         } else {
+      if (selPag) selPag.disabled = false;
           break;
         }
       }
@@ -357,6 +361,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vDesc = qs("#mDesc"); if (vDesc) vDesc.value = "";
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
+      const vPag = qs("#mPagamento"); if (vPag) vPag.value = "";
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -385,6 +390,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
 
       setTimeout(() => qs("#mValorBig")?.focus(), 0);
     } else {
+      if (selPag) selPag.disabled = false;
       S.editingId = null;
     }
   }
@@ -422,12 +428,15 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
 
   let modalTipo = "Despesa";
   function syncTipoTabs() {
+    const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
     if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
     } else {
+      if (selPag) selPag.disabled = false;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
     }
@@ -469,10 +478,12 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     
     // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
     if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
       t.carteira_destino = (qs("#mDestino")?.value || "Marido");
     } else {
+      if (selPag) selPag.disabled = false;
       t.carteira = (qs("#mCarteira")?.value || "Casa");
       t.carteira_origem = null;
       t.carteira_destino = null;
@@ -765,9 +776,11 @@ h3.textContent = 'Lançamentos — ' + label;
       const o = qs("#mOrigem"); if (o) o.value = x.carteira_origem || "Casa";
       const d = qs("#mDestino"); if (d) d.value = x.carteira_destino || "Marido";
     } else {
+      if (selPag) selPag.disabled = false;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
+    const pag = qs("#mPagamento"); if (pag) pag.value = (x.forma_pagamento || "");
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
@@ -1673,6 +1686,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         obs.textContent = gastosMes <= totalMeta ? `Faltam ${fmtBRL(restante)} para atingir a meta.` : `Ultrapassou a meta em ${fmtBRL(gastosMes - totalMeta)}.`;
       }
     } else {
+      if (selPag) selPag.disabled = false;
       bar.style.width = '0%';
       chip.textContent = '—';
       chip.classList.remove('ok','warn');
@@ -1966,6 +1980,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       if (d <= closing) {
         return String(y) + '-' + String(m).padStart(2, '0');
       } else {
+      if (selPag) selPag.disabled = false;
         let yy = y, mm = m + 1;
         if (mm > 12) { mm = 1; yy += 1; }
         return String(yy) + '-' + String(mm).padStart(2, '0');
