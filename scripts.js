@@ -2200,53 +2200,7 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
 
 
 // === RENDERIZAÇÃO DAS LISTAS DE PESSOAS (Carteiras) ===
-function renderPessoas() {
-  function renderPessoa(owner, ulId, toolbarSel, inSel, outSel) {
-    var ul = document.getElementById(ulId);
-    var toolbar = document.querySelector(toolbarSel);
-    if (!ul || !toolbar) return;
 
-    // tipo selecionado (todos/Receita/Despesa)
-    var activeBtn = toolbar.querySelector(".pill-btn.active");
-    var tipo = activeBtn ? activeBtn.getAttribute("data-tipo") : "todos";
-
-    // lista base: apenas lançamentos desta carteira e do mês selecionado
-    var listAll = Array.isArray(S.tx) ? S.tx.filter(function(x){
-      if (!x) return false;
-      if (x.carteira !== owner) return false;
-      if (!x.data || typeof x.data !== "string") return false;
-      if (S.month && S.month !== "all") {
-        return x.data.slice(0,7) === S.month;
-      }
-      return true;
-    }) : [];
-
-    // totais independentes do filtro visível
-    var totInAll  = listAll.filter(function(x){ return x.tipo === "Receita"; })
-                           .reduce(function(a,b){ return a + (Number(b.valor)||0); }, 0);
-    var totOutAll = listAll.filter(function(x){ return x.tipo === "Despesa"; })
-                           .reduce(function(a,b){ return a + (Number(b.valor)||0); }, 0);
-
-    // aplica filtro de tipo para a lista mostrada
-    var list = listAll.slice();
-    if (tipo !== "todos") {
-      list = list.filter(function(x){ return x.tipo === tipo; });
-    }
-
-    // ordena por data desc
-    list.sort(function(a,b){ return String(b.data||"").localeCompare(String(a.data||"")); });
-
-    // renderiza
-    ul.innerHTML = "";
-    list.forEach(function(x){ ul.append(itemTx(x, true)); });
-
-    // atualiza mini-somas
-    var fmt = function(v){ return (Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); };
-    var inEl  = document.getElementById(inSel);
-    var outEl = document.getElementById(outSel);
-    if (inEl)  inEl.textContent  = fmt(totInAll);
-    if (outEl) outEl.textContent = fmt(totOutAll);
-  }
 
   renderPessoa("Marido", "p1List", ".mini-toolbar[data-owner='Marido']", "p1In", "p1Out");
   renderPessoa("Esposa", "p2List", ".mini-toolbar[data-owner='Esposa']", "p2In", "p2Out");
