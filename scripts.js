@@ -347,6 +347,8 @@ function ensureMonthSelectLabels(){
   const c=document.getElementById('mCategoria'); if(c) c.selectedIndex=0;
 }
 function toggleModal(show, titleOverride) {
+  const selPag = qs('#mPagamento');
+
     const m = qs("#modalLanc");
     if (!m) return;
     m.style.display = show ? "flex" : "none";
@@ -361,7 +363,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vDesc = qs("#mDesc"); if (vDesc) vDesc.value = "";
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
-      const vPag = qs("#mPagamento"); if (vPag) vPag.value = "";
+      if (selPag) selPag.value = "";
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -461,6 +463,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
 
   // ========= TRANSAÇÕES =========
   async function addOrUpdate(keepOpen=false) {
+  const selPag = qs('#mPagamento');
+
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
     const t = {
       id: S.editingId || gid(),
