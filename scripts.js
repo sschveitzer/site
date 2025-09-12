@@ -425,8 +425,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       S.editingId = null;
     }
   }
-try { window.toggleModal = toggleModal; } catch(e) {}
-
 
   let modalTipo = "Despesa";
   function syncTipoTabs() {
@@ -2409,7 +2407,12 @@ window.addEventListener('load', function(){
 });
 
 
-// Eventos do modal (corrigido v2)
-document.getElementById("btnNovo")?.addEventListener("click", () => toggleModal(true));
-document.getElementById("btnFecharModal")?.addEventListener("click", () => toggleModal(false));
-document.getElementById("btnCancelar")?.addEventListener("click", () => toggleModal(false));
+// ---- Modal buttons wiring (id-based, no inline onclick) ----
+document.addEventListener('DOMContentLoaded', function(){
+  var openBtn = document.getElementById('btnNovo');
+  var closeBtn = document.getElementById('btnFecharModal');
+  var cancelBtn = document.getElementById('btnCancelar');
+  if (openBtn) openBtn.addEventListener('click', function(){ if (window.toggleModal) window.toggleModal(true); });
+  if (closeBtn) closeBtn.addEventListener('click', function(){ if (window.toggleModal) window.toggleModal(false); });
+  if (cancelBtn) cancelBtn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); });
+});
