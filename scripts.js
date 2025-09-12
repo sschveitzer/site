@@ -2407,12 +2407,39 @@ window.addEventListener('load', function(){
 });
 
 
-// ---- Modal buttons wiring (id-based, no inline onclick) ----
-document.addEventListener('DOMContentLoaded', function(){
-  var openBtn = document.getElementById('btnNovo');
-  var closeBtn = document.getElementById('btnFecharModal');
-  var cancelBtn = document.getElementById('btnCancelar');
-  if (openBtn) openBtn.addEventListener('click', function(){ if (window.toggleModal) window.toggleModal(true); });
-  if (closeBtn) closeBtn.addEventListener('click', function(){ if (window.toggleModal) window.toggleModal(false); });
-  if (cancelBtn) cancelBtn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); });
+// ==== Modal buttons wiring (robust) ====
+(function bindModalButtons(){
+  function _bind() {
+    var openBtn = document.getElementById('btnNovo');
+    var closeBtn = document.getElementById('btnFecharModal');
+    var cancelBtn = document.getElementById('btnCancelar');
+    if (openBtn && !openBtn._bound) { openBtn.addEventListener('click', function(){ if (window.toggleModal) window.toggleModal(true); }); openBtn._bound = true; }
+    if (closeBtn && !closeBtn._bound) { closeBtn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); }); closeBtn._bound = true; }
+    if (cancelBtn && !cancelBtn._bound) { cancelBtn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); }); cancelBtn._bound = true; }
+    // Fallback: qualquer botão dentro do modal com texto 'Cancelar'
+    var modal = document.getElementById('modalLanc');
+    if (modal) {
+      Array.prototype.forEach.call(modal.querySelectorAll('button'), function(btn){
+        if (!btn._bound && /cancelar/i.test(btn.textContent || '')) {
+          btn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); });
+          btn._bound = true;
+        }
+      });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _bind);
+  } else {
+    _bind();
+  }
+  window.addEventListener('load', _bind);
+  setTimeout(_bind, 0);
+})();
+// ==== Ensure toggleModal is globally available after load ====
+window.addEventListener('load', function(){
+  try {
+    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
+      window.toggleModal = toggleModal;
+    }
+  } catch(e){}
 });
