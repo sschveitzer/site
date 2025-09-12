@@ -159,6 +159,7 @@ function ensureMonthSelectLabels(){
 
   // ========= LOAD DATA =========
   async function loadAll() {
+  const selPag = qs('#mPagamento');
     // Transações
     const { data: tx, error: txError } = await supabaseClient.from("transactions").select("*");
     
@@ -268,6 +269,7 @@ function ensureMonthSelectLabels(){
   }
 
   async function materializeOne(rec, occDate) {
+  const selPag = qs('#mPagamento');
     const t = {
       id: gid(),
       tipo: rec.tipo,
@@ -295,6 +297,7 @@ function ensureMonthSelectLabels(){
   }
 
   async function applyRecurrences() {
+  const selPag = qs('#mPagamento');
     try { window.applyRecurrences = applyRecurrences; } catch(_) {}
     if (!Array.isArray(S.recs) || !S.recs.length) return;
     const today = nowYMD();
@@ -762,6 +765,7 @@ h3.textContent = 'Lançamentos — ' + label;
   }
 
   function openEdit(id) {
+  const selPag = qs('#mPagamento');
     const x = (S.tx || []).find(t => t.id === id);
     if (!x) return;
     S.editingId = id;
@@ -1664,6 +1668,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   }
   function fmtBRL(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
   function renderMetaCard(){
+  const selPag = qs('#mPagamento');
     const metas = S.metas || { total: 0, porCat: {} };
     const totalMeta = Number(metas.total)||0;
     const kTotal = document.getElementById('metaTotalLabel');
@@ -1971,6 +1976,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
   function txBucketYM(x) {
+  const selPag = qs('#mPagamento');
     try {
       const SS = (typeof S !== 'undefined' ? S : (typeof window !== 'undefined' ? window.S : null)) || {};
       const ymd = String((x && x.data) || '');
