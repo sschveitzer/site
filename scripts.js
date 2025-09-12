@@ -39,18 +39,19 @@ window.onload = function () {
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
 try {
   window.S = S;
-  if (typeof window.setUseCycleForReports !== 'function') {
-    window.setUseCycleForReports = function(v){
-      S.useCycleForReports = !!v;
-      try { savePrefs(); } catch(e) {}
-      try { render();
-
-    try { renderSplitKPI(); } catch(_) {}
-
-    ensureMonthSelectLabels();
-    try { renderPessoas(); } catch(_) {} } catch(e) {}
-    };
-  }
+  
+if (typeof window.setUseCycleForReports !== 'function') {
+  window.setUseCycleForReports = function(v){
+    S.useCycleForReports = !!v;
+    try { savePrefs(); } catch(e) {}
+    try {
+      render();
+      try { renderSplitKPI(); } catch(_) {}
+      ensureMonthSelectLabels();
+      try { renderPessoas(); } catch(_) {}
+    } catch(e) {}
+  };
+}
 } catch (e) {}
 
 
@@ -2266,5 +2267,141 @@ document.addEventListener("click", function(e) {
       btn.classList.add("active");
       try { renderPessoas(); } catch(_) {}
     }
+  }
+});
+
+
+// === UX wiring for modal tipo tabs & grid layout enforcement ===
+(function(){
+  try {
+    const tabs = document.querySelectorAll('#tipoTabs button');
+    if (tabs && tabs.length && !window._tipoTabsWired) {
+      tabs.forEach(btn => {
+        btn.addEventListener('click', function(){
+          try {
+            tabs.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            if (typeof modalTipo !== 'undefined') modalTipo = this.dataset.type || 'Despesa';
+            if (typeof syncTipoTabs === 'function') syncTipoTabs();
+          } catch(e){ console.warn(e); }
+        });
+      });
+      window._tipoTabsWired = true;
+    }
+  } catch(e){}
+})();
+
+(function(){
+  try {
+    const el1 = document.getElementById('listaLanc');
+    const el2 = document.getElementById('listaRecentes');
+    if (el1 && !el1.classList.contains('lanc-grid')) el1.classList.add('lanc-grid');
+    if (el2 && !el2.classList.contains('lanc-grid')) el2.classList.add('lanc-grid');
+  } catch(e){}
+})();
+
+
+// === Patch: export toggleModal; populate Carteiras e Pagamento; keep existing behavior ===
+(function(){
+  try {
+    // Se existir a função toggleModal definida no escopo interno, exponha no window
+    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
+      window.toggleModal = toggleModal;
+    }
+  } catch(e){}
+
+  // Helper para popular selects se estiverem vazios
+  function ensureOptions(sel, list, selected){
+    if (!sel) return;
+    if (!Array.isArray(list) || !list.length) return;
+    // Só (re)constrói se estiver vazio
+    if (!sel.options || sel.options.length === 0) {
+      sel.innerHTML = '';
+      list.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        if (selected && String(selected) === String(v)) o.selected = true;
+        sel.appendChild(o);
+      });
+    } else if (selected) {
+      Array.from(sel.options).forEach(o => o.selected = (o.value === selected));
+    }
+  }
+
+  // Lista padrão de carteiras e meios de pagamento (fallback)
+  var _wallets = (window.S && window.S.walletList) ? window.S.walletList.slice() : ["Casa","Marido","Esposa"];
+  var _payments = (window.S && window.S.paymentList) ? window.S.paymentList.slice() :
+    ["Dinheiro","Pix","Débito","Crédito","Boleto","Transferência","TED","DOC","Outros"];
+
+  // Hook na abertura do modal para garantir selects preenchidos
+  function hydrateModalSelects(){
+    try {
+      var selCar = document.getElementById('mCarteira');
+      var selPag = document.getElementById('mPagamento');
+      ensureOptions(selCar, _wallets, (window.S && S.defaultWallet) || "Casa");
+      ensureOptions(selPag, _payments, (window.S && S.defaultPayment) || "");
+    } catch(e){}
+  }
+
+  // Se já existir toggleModal no window, envolve para hidratar selects
+  if (typeof window.toggleModal === 'function' && !window._wrappedToggleModal) {
+    var _oldToggle = window.toggleModal;
+    window.toggleModal = function(show, titleOverride){
+      var r = _oldToggle.apply(this, arguments);
+      if (show) hydrateModalSelects();
+      return r;
+    };
+    window._wrappedToggleModal = true;
+  } else {
+    // Fallback: hidrata assim que o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', hydrateModalSelects);
+  }
+
+  // Quando renderizar categorias, garanta também a hidratação (caso o usuário abra o modal em seguida)
+  if (typeof window.rebuildCatSelect === 'function' && !window._hookedRebuildCat){
+    var _oldRebuild = window.rebuildCatSelect;
+    window.rebuildCatSelect = function(selected){
+      var r = _oldRebuild.apply(this, arguments);
+      hydrateModalSelects();
+      return r;
+    };
+    window._hookedRebuildCat = true;
+  }
+})();
+
+
+// === Patch: ensure toggleModal is usable from HTML and hydrate selects ===
+window.addEventListener('load', function(){
+  try {
+    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
+      window.toggleModal = toggleModal;
+    }
+  } catch(_){}
+  function ensureOptions(sel, list, placeholder){
+    if (!sel) return;
+    if (placeholder && (!sel.options || !sel.options.length || sel.options[0].value !== '')) {
+      const opt = document.createElement('option'); opt.value=''; opt.textContent=placeholder; sel.insertBefore(opt, sel.firstChild);
+    }
+    if (sel.options && sel.options.length > 1) return; // já populado
+    var arr = Array.isArray(list) ? list : [];
+    arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+  }
+  function hydrate(){
+    var wallets = (window.S && S.walletList) ? S.walletList : ['Casa','Marido','Esposa'];
+    var pays = (window.S && S.paymentList) ? S.paymentList : ['Dinheiro','Pix','Débito','Crédito','Boleto','Transferência','TED','DOC','Outros'];
+    ensureOptions(document.getElementById('mCarteira'), wallets, 'Selecione carteira');
+    ensureOptions(document.getElementById('mPagamento'), pays, 'Selecione forma de pagamento');
+  }
+  if (typeof window.toggleModal === 'function' && !window._tmWrapped){
+    const old = window.toggleModal;
+    window.toggleModal = function(show, title){
+      const r = old.apply(this, arguments);
+      if (show) hydrate();
+      return r;
+    };
+    window._tmWrapped = true;
+  } else {
+    hydrate();
   }
 });
