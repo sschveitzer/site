@@ -257,7 +257,8 @@ function computeSplit(month) {
   // ========= SAVE =========
   async function saveTx(t) {
   const res = await supabaseClient.from("transactions").upsert([t]).select();
-  try { console.debug('saveTx payload', t); console.debug('saveTx result', res); } catch(_) {}
+  try { console.debug('saveTx payload', t); console.debug('saveTx result', res); 
+} catch(_) {}
   return res;
 }
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
