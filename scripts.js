@@ -2268,3 +2268,36 @@ document.addEventListener("click", function(e) {
     }
   }
 });
+
+
+// === UX wiring for new modal grid & tabs ===
+(function(){
+  try {
+    const tabs = document.querySelectorAll('#tipoTabs button');
+    if (tabs && tabs.length && !window._tipoTabsWired) {
+      tabs.forEach(btn => {
+        btn.addEventListener('click', function(){
+          try {
+            // remove active
+            tabs.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // update modalTipo used by addOrUpdate/syncTipoTabs
+            if (typeof modalTipo !== 'undefined') modalTipo = this.dataset.type || 'Despesa';
+            if (typeof syncTipoTabs === 'function') syncTipoTabs();
+          } catch(e){ console.warn(e); }
+        });
+      });
+      window._tipoTabsWired = true;
+    }
+  } catch(e){}
+})();
+
+// Guarantee lanc-grid class for launch lists (matches new card layout)
+(function(){
+  try {
+    const el1 = document.getElementById('listaLanc');
+    const el2 = document.getElementById('listaRecentes');
+    if (el1 && !el1.classList.contains('lanc-grid')) el1.classList.add('lanc-grid');
+    if (el2 && !el2.classList.contains('lanc-grid')) el2.classList.add('lanc-grid');
+  } catch(e){}
+})();
