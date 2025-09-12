@@ -409,7 +409,7 @@
 <div class="content">
 <div class="title">
 <h3 id="modalTitle">Nova Despesa</h3>
-<button class="icon" onclick="toggleModal(false)"><i class="ph ph-x"></i></button>
+<button class="icon" id="btnFecharModal"><i class="ph ph-x"></i></button>
 </div>
 <div class="segmented" id="tipoTabs">
 <button class="active" data-type="Despesa">Despesa</button>
@@ -450,7 +450,7 @@
 <label><input id="mRepetir" type="checkbox"/> Tornar recorrente</label>
 </div>
 <div class="actions">
-<button class="btn secondary" onclick="toggleModal(false)">Cancelar</button>
+<button class="btn secondary" id="btnFecharModal">Cancelar</button>
 <button class="btn btn-save" onclick="addOrUpdate(false)">Salvar</button>
 <button class="btn btn-save" onclick="addOrUpdate(true)">Salvar e novo</button>
 </div>
