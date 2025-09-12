@@ -255,10 +255,66 @@ function computeSplit(month) {
   }
 
   // ========= SAVE =========
-  async function saveTx(t) {
-  const res = await supabaseClient.from("transactions").upsert([t]).select();
-  try { console.debug('saveTx payload', t); console.debug('saveTx result', res); 
-} catch(_) {}
+  
+async function saveTx(t) {
+  // sanitize & whitelist for DB schema
+  const allow = ['id','tipo','categoria','data','descricao','valor','obs','forma_pagamento','carteira','carteira_origem','carteira_destino'];
+  const payload = {};
+  try { if (!t || typeof t !== 'object') t = {}; } catch(_) {}
+  allow.forEach(k => {
+    if (t[k] !== undefined && t[k] !== null && String(t[k]) !== '') {
+      payload[k] = (k === 'valor') ? Number(t[k]) || 0 : t[k];
+    }
+  });
+
+  // defaults & consistency
+  try {
+    if (!payload.data || !/^\d{4}-\d{2}-\d{2}$/.test(String(payload.data))) payload.data = nowYMD();
+    if (payload.tipo === 'Transferência') {
+      payload.carteira = null;
+      if (!payload.carteira_origem)  payload.carteira_origem  = (document.querySelector('#mOrigem')?.value || 'Casa');
+      if (!payload.carteira_destino) payload.carteira_destino = (document.querySelector('#mDestino')?.value || 'Marido');
+    } else {
+      payload.carteira_origem = null;
+      payload.carteira_destino = null;
+      if (!payload.carteira) payload.carteira = (document.querySelector('#mCarteira')?.value || 'Casa');
+    }
+  } catch(_){}
+
+  const looksUUID = (s) => typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+
+  const isEdit = !!(window.S && (window.S.editingId || (payload.id && (Array.isArray(S.tx) && S.tx.some(x => x && x.id === payload.id)))));
+
+  let res;
+  try {
+    if (isEdit) {
+      if (!payload.id) throw new Error('Missing id for update');
+      res = await supabaseClient.from('transactions').update(payload).eq('id', payload.id).select();
+    } else {
+      // Try UPSERT first
+      let upPayload = { ...payload };
+      if (!upPayload.id) delete upPayload.id;
+      res = await supabaseClient.from('transactions').upsert([upPayload], { onConflict: 'id' }).select();
+
+      if (res.error) {
+        const msg = (res.error.message || '') + ' ' + (res.error.details || '');
+        if (/UPSERT requires/i.test(msg) || /There is no unique or primary key constraint/i.test(msg)) {
+          res = await supabaseClient.from('transactions').insert([payload]).select();
+        } else if (/uuid/i.test(msg) && /invalid input syntax/i.test(msg)) {
+          const p2 = { ...payload }; delete p2.id;
+          res = await supabaseClient.from('transactions').insert([p2]).select();
+        }
+      }
+    }
+  } catch (e) {
+    res = { data: null, error: e };
+  }
+
+  try { console.log('saveTx payload(final)', payload, 'result', res); } catch(_) {}
+  if (res && res.error) throw res.error;
+  return res;
+}
+catch(_) {}
   return res;
 }
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
@@ -556,7 +612,6 @@ const chkRepetir = qs("#mRepetir");
     if (!keepOpen) { toggleModal(false); } else { clearModalFields(); }
     return;
   }
-try { window.toggleModal = toggleModal; } catch(e) {}
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
