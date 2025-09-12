@@ -2405,3 +2405,8 @@ window.addEventListener('load', function(){
     hydrate();
   }
 });
+
+
+// Eventos do modal (corrigido)
+document.getElementById("btnNovo")?.addEventListener("click", () => toggleModal(true));
+document.getElementById("btnFecharModal")?.addEventListener("click", () => toggleModal(false));
