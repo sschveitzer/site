@@ -2298,3 +2298,73 @@ document.addEventListener("click", function(e) {
     if (el2 && !el2.classList.contains('lanc-grid')) el2.classList.add('lanc-grid');
   } catch(e){}
 })();
+
+
+// === Patch: export toggleModal; populate Carteiras e Pagamento; keep existing behavior ===
+(function(){
+  try {
+    // Se existir a função toggleModal definida no escopo interno, exponha no window
+    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
+      window.toggleModal = toggleModal;
+    }
+  } catch(e){}
+
+  // Helper para popular selects se estiverem vazios
+  function ensureOptions(sel, list, selected){
+    if (!sel) return;
+    if (!Array.isArray(list) || !list.length) return;
+    // Só (re)constrói se estiver vazio
+    if (!sel.options || sel.options.length === 0) {
+      sel.innerHTML = '';
+      list.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        if (selected && String(selected) === String(v)) o.selected = true;
+        sel.appendChild(o);
+      });
+    } else if (selected) {
+      Array.from(sel.options).forEach(o => o.selected = (o.value === selected));
+    }
+  }
+
+  // Lista padrão de carteiras e meios de pagamento (fallback)
+  var _wallets = (window.S && window.S.walletList) ? window.S.walletList.slice() : ["Casa","Marido","Esposa"];
+  var _payments = (window.S && window.S.paymentList) ? window.S.paymentList.slice() :
+    ["Dinheiro","Pix","Débito","Crédito","Boleto","Transferência","TED","DOC","Outros"];
+
+  // Hook na abertura do modal para garantir selects preenchidos
+  function hydrateModalSelects(){
+    try {
+      var selCar = document.getElementById('mCarteira');
+      var selPag = document.getElementById('mPagamento');
+      ensureOptions(selCar, _wallets, (window.S && S.defaultWallet) || "Casa");
+      ensureOptions(selPag, _payments, (window.S && S.defaultPayment) || "");
+    } catch(e){}
+  }
+
+  // Se já existir toggleModal no window, envolve para hidratar selects
+  if (typeof window.toggleModal === 'function' && !window._wrappedToggleModal) {
+    var _oldToggle = window.toggleModal;
+    window.toggleModal = function(show, titleOverride){
+      var r = _oldToggle.apply(this, arguments);
+      if (show) hydrateModalSelects();
+      return r;
+    };
+    window._wrappedToggleModal = true;
+  } else {
+    // Fallback: hidrata assim que o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', hydrateModalSelects);
+  }
+
+  // Quando renderizar categorias, garanta também a hidratação (caso o usuário abra o modal em seguida)
+  if (typeof window.rebuildCatSelect === 'function' && !window._hookedRebuildCat){
+    var _oldRebuild = window.rebuildCatSelect;
+    window.rebuildCatSelect = function(selected){
+      var r = _oldRebuild.apply(this, arguments);
+      hydrateModalSelects();
+      return r;
+    };
+    window._hookedRebuildCat = true;
+  }
+})();
