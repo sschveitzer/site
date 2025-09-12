@@ -39,19 +39,15 @@ window.onload = function () {
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
 try {
   window.S = S;
-  
-if (typeof window.setUseCycleForReports !== 'function') {
-  window.setUseCycleForReports = function(v){
-    S.useCycleForReports = !!v;
-    try { savePrefs(); } catch(e) {}
-    try {
-      render();
-      try { renderSplitKPI(); } catch(_) {}
-      ensureMonthSelectLabels();
-      try { renderPessoas(); } catch(_) {}
-    } catch(e) {}
-  };
-}
+  if (typeof window.setUseCycleForReports !== 'function') {
+    window.setUseCycleForReports = function(v){
+      S.useCycleForReports = !!v;
+      try { savePrefs(); } catch(e) {}
+      try { render();
+    ensureMonthSelectLabels();
+    try { renderPessoas(); } catch(_) {} } catch(e) {}
+    };
+  }
 } catch (e) {}
 
 
@@ -147,31 +143,6 @@ function abbrevLabelFromYM(ym){
 }
 
 function ensureMonthSelectLabels(){
-
-function computeSplit(month) {
-  const starts = (d) => String(d || '').startsWith(month);
-  const asNumber = (v) => Number(v) || 0;
-  const despesasMes = (S.tx || []).filter(x => x && x.tipo === 'Despesa' && starts(x.data));
-  const totalCasa = despesasMes.filter(x => x.carteira === 'Casa').reduce((a, b) => a + asNumber(b.valor), 0);
-  const metadeCasa = totalCasa / 2;
-  let extraEsposa = 0, extraMarido = 0;
-  despesasMes.forEach(x => {
-    const forma = String(x.forma_pagamento || '').toLowerCase();
-    const isDinPix = (forma === 'dinheiro' || forma === 'pix');
-    if (!isDinPix) return;
-    if (x.carteira === 'Marido') extraEsposa += asNumber(x.valor) * 0.5;
-    if (x.carteira === 'Esposa') extraMarido += asNumber(x.valor) * 0.5;
-  });
-  return {
-    totalCasa,
-    metadeCasa,
-    pagarMarido: metadeCasa + extraMarido,
-    pagarEsposa: metadeCasa + extraEsposa,
-    extras: { marido: extraMarido, esposa: extraEsposa }
-  };
-}
-
-
   try {
     var sel = document.getElementById('monthSelect');
     if (!sel) return;
@@ -245,7 +216,6 @@ function computeSplit(month) {
       S.month = e.target.value;
       try { savePrefs(); } catch (e) {}
       try { render(); } catch (e) {}
-      try { renderSplitKPI(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
     });
@@ -256,11 +226,7 @@ function computeSplit(month) {
   }
 
   // ========= SAVE =========
-  async function saveTx(t) {
-  const res = await supabaseClient.from("transactions").upsert([t]).select();
-  try { console.debug('saveTx payload', t); console.debug('saveTx result', res); } catch(_) {}
-  return res;
-}
+  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
@@ -312,8 +278,6 @@ function computeSplit(month) {
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    const formaPag = (qs("#mPagamento")?.value || "").toLowerCase();
-    t.forma_pagamento = formaPag;
     // Carteira/Transferência
     if (modalTipo === "Transferência") {
       t.carteira = null;
@@ -393,7 +357,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vDesc = qs("#mDesc"); if (vDesc) vDesc.value = "";
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
-      const vPag = qs("#mPagamento"); if (vPag) vPag.value = "";
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -425,6 +388,37 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       S.editingId = null;
     }
   }
+// === Modal bindings (stable) ===
+(function setupModalBindings(){
+  // Open
+  var openBtn = document.getElementById('btnNovo');
+  if (openBtn && !openBtn._wired) {
+    openBtn.addEventListener('click', function(){ try { toggleModal(true); } catch(e) { console.error(e); } });
+    openBtn._wired = true;
+  }
+  // Close / Cancel (delegated inside modal)
+  var modal = document.getElementById('modalLanc');
+  if (modal && !modal._wiredClose) {
+    modal.addEventListener('click', function(ev){
+      var t = ev.target;
+      // Any element marked to close or common close buttons
+      if (t.closest('[data-close-modal], #btnFecharModal, #btnCancelar, .icon.close')) {
+        ev.preventDefault();
+        try { toggleModal(false); } catch(e) { console.error(e); }
+      }
+    });
+    modal._wiredClose = true;
+  }
+  // Esc key closes modal
+  if (!document._wiredEscClose) {
+    document.addEventListener('keydown', function(ev){
+      if (ev.key === 'Escape') {
+        try { toggleModal(false); } catch(_) {}
+      }
+    });
+    document._wiredEscClose = true;
+  }
+})();
 
   let modalTipo = "Despesa";
   function syncTipoTabs() {
@@ -468,8 +462,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
     };
-    // salvar forma de pagamento
-    t.forma_pagamento = (qs("#mPagamento")?.value || "").toLowerCase();
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -490,7 +482,7 @@ const chkRepetir = qs("#mRepetir");
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
-    if (!keepOpen) { toggleModal(false); } else { clearModalFields(); /* mantém modal aberto para novo */ }
+    toggleModal(false); return;
     return;
     }
 
@@ -553,8 +545,7 @@ const chkRepetir = qs("#mRepetir");
     }
 
     await loadAll();
-    if (!keepOpen) { toggleModal(false); } else { clearModalFields(); }
-    return;
+    toggleModal(false); return;
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
@@ -607,20 +598,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     return li;
   }
 
-  
-function renderSplitKPI() {
-  try {
-    const res = computeSplit(S.month);
-    const el = document.getElementById('kpiSplit');
-    const hint = document.getElementById('kpiSplitHint');
-    if (el) {
-      el.textContent = 'Marido ' + fmtMoney(res.pagarMarido) + ' • Esposa ' + fmtMoney(res.pagarEsposa);
-    }
-    if (hint) hint.textContent = '50% da Casa + rateio Dinheiro/Pix';
-  } catch(_) {}
-}
-
-function renderRecentes() {
+  function renderRecentes() {
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
@@ -790,7 +768,6 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) pag.value = (x.forma_pagamento || "");
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
@@ -2058,7 +2035,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   const btnSalvarENovo = document.getElementById('salvarENovo');
   if (btnSalvarENovo && !btnSalvarENovo._bound) {
     btnSalvarENovo.addEventListener('click', async () => {
-      await addOrUpdate(true);
+      await addOrUpdate(false);
       if (typeof clearModalFields === 'function') clearModalFields();
       const v = document.getElementById('mValorBig'); if (v) v.focus();
     });
@@ -2270,176 +2247,4 @@ document.addEventListener("click", function(e) {
   }
 });
 
-
-// === UX wiring for modal tipo tabs & grid layout enforcement ===
-(function(){
-  try {
-    const tabs = document.querySelectorAll('#tipoTabs button');
-    if (tabs && tabs.length && !window._tipoTabsWired) {
-      tabs.forEach(btn => {
-        btn.addEventListener('click', function(){
-          try {
-            tabs.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            if (typeof modalTipo !== 'undefined') modalTipo = this.dataset.type || 'Despesa';
-            if (typeof syncTipoTabs === 'function') syncTipoTabs();
-          } catch(e){ console.warn(e); }
-        });
-      });
-      window._tipoTabsWired = true;
-    }
-  } catch(e){}
-})();
-
-(function(){
-  try {
-    const el1 = document.getElementById('listaLanc');
-    const el2 = document.getElementById('listaRecentes');
-    if (el1 && !el1.classList.contains('lanc-grid')) el1.classList.add('lanc-grid');
-    if (el2 && !el2.classList.contains('lanc-grid')) el2.classList.add('lanc-grid');
-  } catch(e){}
-})();
-
-
-// === Patch: export toggleModal; populate Carteiras e Pagamento; keep existing behavior ===
-(function(){
-  try {
-    // Se existir a função toggleModal definida no escopo interno, exponha no window
-    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
-      window.toggleModal = toggleModal;
-    }
-  } catch(e){}
-
-  // Helper para popular selects se estiverem vazios
-  function ensureOptions(sel, list, selected){
-    if (!sel) return;
-    if (!Array.isArray(list) || !list.length) return;
-    // Só (re)constrói se estiver vazio
-    if (!sel.options || sel.options.length === 0) {
-      sel.innerHTML = '';
-      list.forEach(v => {
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = v;
-        if (selected && String(selected) === String(v)) o.selected = true;
-        sel.appendChild(o);
-      });
-    } else if (selected) {
-      Array.from(sel.options).forEach(o => o.selected = (o.value === selected));
-    }
-  }
-
-  // Lista padrão de carteiras e meios de pagamento (fallback)
-  var _wallets = (window.S && window.S.walletList) ? window.S.walletList.slice() : ["Casa","Marido","Esposa"];
-  var _payments = (window.S && window.S.paymentList) ? window.S.paymentList.slice() :
-    ["Dinheiro","Pix","Débito","Crédito","Boleto","Transferência","TED","DOC","Outros"];
-
-  // Hook na abertura do modal para garantir selects preenchidos
-  function hydrateModalSelects(){
-    try {
-      var selCar = document.getElementById('mCarteira');
-      var selPag = document.getElementById('mPagamento');
-      ensureOptions(selCar, _wallets, (window.S && S.defaultWallet) || "Casa");
-      ensureOptions(selPag, _payments, (window.S && S.defaultPayment) || "");
-    } catch(e){}
-  }
-
-  // Se já existir toggleModal no window, envolve para hidratar selects
-  if (typeof window.toggleModal === 'function' && !window._wrappedToggleModal) {
-    var _oldToggle = window.toggleModal;
-    window.toggleModal = function(show, titleOverride){
-      var r = _oldToggle.apply(this, arguments);
-      if (show) hydrateModalSelects();
-      return r;
-    };
-    window._wrappedToggleModal = true;
-  } else {
-    // Fallback: hidrata assim que o DOM estiver pronto
-    document.addEventListener('DOMContentLoaded', hydrateModalSelects);
-  }
-
-  // Quando renderizar categorias, garanta também a hidratação (caso o usuário abra o modal em seguida)
-  if (typeof window.rebuildCatSelect === 'function' && !window._hookedRebuildCat){
-    var _oldRebuild = window.rebuildCatSelect;
-    window.rebuildCatSelect = function(selected){
-      var r = _oldRebuild.apply(this, arguments);
-      hydrateModalSelects();
-      return r;
-    };
-    window._hookedRebuildCat = true;
-  }
-})();
-
-
-// === Patch: ensure toggleModal is usable from HTML and hydrate selects ===
-window.addEventListener('load', function(){
-  try {
-    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
-      window.toggleModal = toggleModal;
-    }
-  } catch(_){}
-  function ensureOptions(sel, list, placeholder){
-    if (!sel) return;
-    if (placeholder && (!sel.options || !sel.options.length || sel.options[0].value !== '')) {
-      const opt = document.createElement('option'); opt.value=''; opt.textContent=placeholder; sel.insertBefore(opt, sel.firstChild);
-    }
-    if (sel.options && sel.options.length > 1) return; // já populado
-    var arr = Array.isArray(list) ? list : [];
-    arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
-  }
-  function hydrate(){
-    var wallets = (window.S && S.walletList) ? S.walletList : ['Casa','Marido','Esposa'];
-    var pays = (window.S && S.paymentList) ? S.paymentList : ['Dinheiro','Pix','Débito','Crédito','Boleto','Transferência','TED','DOC','Outros'];
-    ensureOptions(document.getElementById('mCarteira'), wallets, 'Selecione carteira');
-    ensureOptions(document.getElementById('mPagamento'), pays, 'Selecione forma de pagamento');
-  }
-  if (typeof window.toggleModal === 'function' && !window._tmWrapped){
-    const old = window.toggleModal;
-    window.toggleModal = function(show, title){
-      const r = old.apply(this, arguments);
-      if (show) hydrate();
-      return r;
-    };
-    window._tmWrapped = true;
-  } else {
-    hydrate();
-  }
-});
-
-
-// ==== Modal buttons wiring (robust) ====
-(function bindModalButtons(){
-  function _bind() {
-    var openBtn = document.getElementById('btnNovo');
-    var closeBtn = document.getElementById('btnFecharModal');
-    var cancelBtn = document.getElementById('btnCancelar');
-    if (openBtn && !openBtn._bound) { openBtn.addEventListener('click', function(){ if (window.toggleModal) window.toggleModal(true); }); openBtn._bound = true; }
-    if (closeBtn && !closeBtn._bound) { closeBtn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); }); closeBtn._bound = true; }
-    if (cancelBtn && !cancelBtn._bound) { cancelBtn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); }); cancelBtn._bound = true; }
-    // Fallback: qualquer botão dentro do modal com texto 'Cancelar'
-    var modal = document.getElementById('modalLanc');
-    if (modal) {
-      Array.prototype.forEach.call(modal.querySelectorAll('button'), function(btn){
-        if (!btn._bound && /cancelar/i.test(btn.textContent || '')) {
-          btn.addEventListener('click', function(e){ e.preventDefault(); if (window.toggleModal) window.toggleModal(false); });
-          btn._bound = true;
-        }
-      });
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _bind);
-  } else {
-    _bind();
-  }
-  window.addEventListener('load', _bind);
-  setTimeout(_bind, 0);
-})();
-// ==== Ensure toggleModal is globally available after load ====
-window.addEventListener('load', function(){
-  try {
-    if (typeof window.toggleModal !== 'function' && typeof toggleModal === 'function') {
-      window.toggleModal = toggleModal;
-    }
-  } catch(e){}
-});
+try { window.toggleModal = toggleModal; } catch(e) {}
