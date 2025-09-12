@@ -1560,3 +1560,57 @@ body.dark textarea:focus {
 .heatmap-grid .cell.hasval{
   /* colors will be set inline via style attr using CSS vars */
 }
+
+
+/* === Ajustes finos para modal de lançamentos em grid === */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 colunas iguais */
+  gap: 16px; /* mais espaço entre campos */
+  margin-top: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 14px;
+}
+
+.field span.optional {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field.span-2 {
+  grid-column: 1 / -1; /* ocupa largura total */
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.actions .btn {
+  min-width: 120px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+}
