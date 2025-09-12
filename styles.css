@@ -1562,55 +1562,24 @@ body.dark textarea:focus {
 }
 
 
-/* === Ajustes finos para modal de lançamentos em grid === */
-.form-grid {
+/* === Ajustes finos para modal de lançamentos (grid 2 colunas) === */
+#modalLanc .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 2 colunas iguais */
-  gap: 16px; /* mais espaço entre campos */
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
   margin-top: 12px;
 }
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+#modalLanc .field { display:flex; flex-direction:column; gap:6px; }
+#modalLanc .field label { font-weight:600; font-size:13px; }
+#modalLanc .field input,
+#modalLanc .field select,
+#modalLanc .field textarea {
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:var(--card);
+  font-size:14px;
 }
-
-.field label {
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.field input,
-.field select,
-.field textarea {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  font-size: 14px;
-}
-
-.field span.optional {
-  font-weight: 500;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.field.span-2 {
-  grid-column: 1 / -1; /* ocupa largura total */
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.actions .btn {
-  min-width: 120px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-weight: 600;
-}
+#modalLanc .field.span-2 { grid-column: 1 / -1; }
+#modalLanc .actions { display:flex; justify-content:flex-end; gap:12px; margin-top:18px; }
