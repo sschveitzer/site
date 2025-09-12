@@ -482,7 +482,14 @@
     });
   </script>
 <!-- JS -->
-<script src="scripts.js"></script>
+<script>
+  try {
+    if (window.supabase && typeof window.supabase.from === "function") {
+      window.supabaseClient = window.supabase;
+    }
+  } catch(e) {}
+</script>
+<script src="scripts_fixed.js"></script>
 <script>
   (function(){
     function parseBRL(s){
