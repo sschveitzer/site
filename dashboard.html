@@ -669,3 +669,71 @@
   </script>
 </body>
 </html>
+
+
+<div id="modalLanc" class="modal">
+  <div class="content">
+    <div class="title">
+      <h3 id="modalTitle">Nova Despesa</h3>
+      <button onclick="toggleModal(false)" class="icon"><i class="ph ph-x"></i></button>
+    </div>
+
+    <!-- Tabs de tipo (Despesa, Receita, Transferência) -->
+    <div id="tipoTabs" class="segmented">
+      <button data-type="Despesa" class="active">Despesa</button>
+      <button data-type="Receita">Receita</button>
+      <button data-type="Transferência">Transferência</button>
+    </div>
+
+    <!-- Valor em destaque -->
+    <div class="amount-wrap">
+      <input type="text" id="mValorBig" class="amount" placeholder="0,00" />
+      <div class="helper">Use vírgula para centavos. Ex: 125,90</div>
+    </div>
+
+    <!-- Campos principais no grid -->
+    <div class="form-grid">
+      <div class="field">
+        <label for="mCategoria">Categoria</label>
+        <select id="mCategoria"></select>
+      </div>
+
+      <div class="field" id="wrapCarteira">
+        <label for="mCarteira">Carteira</label>
+        <select id="mCarteira"></select>
+      </div>
+
+      <div class="field">
+        <label for="mPagamento">Forma de pagamento</label>
+        <select id="mPagamento"></select>
+      </div>
+
+      <div class="field">
+        <label for="mData">Data</label>
+        <input type="date" id="mData" />
+      </div>
+
+      <div class="field span-2">
+        <label for="mDesc">Descrição</label>
+        <input type="text" id="mDesc" placeholder="Ex.: Supermercado, salário, TED." />
+      </div>
+
+      <div class="field span-2">
+        <label for="mObs">Observações <span class="optional">opcional</span></label>
+        <textarea id="mObs" placeholder="Anotações opcionais"></textarea>
+      </div>
+    </div>
+
+    <!-- Recorrência -->
+    <div class="field">
+      <label><input type="checkbox" id="mRepetir" /> Tornar recorrente</label>
+    </div>
+
+    <!-- Botões de ação -->
+    <div class="actions">
+      <button class="btn secondary" onclick="toggleModal(false)">Cancelar</button>
+      <button class="btn btn-save" onclick="addOrUpdate(false)">Salvar</button>
+      <button class="btn btn-save" onclick="addOrUpdate(true)">Salvar e novo</button>
+    </div>
+  </div>
+</div>
