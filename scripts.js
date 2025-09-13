@@ -480,9 +480,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       data: isIsoDate(qs("#mData")?.value) ? qs("#mData").value : nowYMD(),
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
-      obs: (qs("#mObs")?.value || "").trim()
-    ,
-      pagamento: (qs(\"#mPagamento\")?.value || \"\").trim()
+      obs: (qs("#mObs")?.value || "").trim(),
+      pagamento: (qs("#mPagamento")?.value || "").trim()
 };
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
