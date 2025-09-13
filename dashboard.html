@@ -289,6 +289,26 @@
     <!-- Carteiras -->
     <!-- Carteiras -->
     <section id="carteiras">
+      <!-- Card: Gastos por carteira (mês/ciclo) -->
+      <div class="card">
+        <h3><i class="ph ph-wallet"></i> Gastos por carteira (mês/ciclo)</h3>
+        <div class="resumo-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div class="sum-box">
+            <div class="muted">Gasto Casa</div>
+            <div id="gastoCasa" class="sum-value">R$ 0,00</div>
+          </div>
+          <div class="sum-box">
+            <div class="muted">Gasto Marido</div>
+            <div id="gastoMarido" class="sum-value">R$ 0,00</div>
+          </div>
+          <div class="sum-box">
+            <div class="muted">Gasto Esposa</div>
+            <div id="gastoEsposa" class="sum-value">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="helper">Considera apenas <b>Despesas</b> no período ativo (mês ou ciclo da fatura). Transferências não entram.</div>
+      </div>
+
       <div class="grid-carteiras">
         <!-- Resumo familiar -->
         <div class="card span-2">
