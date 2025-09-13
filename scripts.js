@@ -291,13 +291,25 @@ function ensureMonthSelectLabels(){
     // tenta novamente removendo o campo problemático.
     const res = await supabaseClient.from("transactions").upsert([t]);
     if (res && res.error) {
+      console.error('saveTx error (passo 1):', res.error, 'payload:', t);
       const msg = String(res.error.message || '').toLowerCase();
       if (msg.includes('pagamento') || msg.includes('column') || msg.includes('unknown') || msg.includes('invalid input')) {
         try {
           const t2 = Object.assign({}, t);
           delete t2.pagamento;
-          return await supabaseClient.from("transactions").upsert([t2]);
-        } catch(_) {}
+          const res2 = await supabaseClient.from("transactions").upsert([t2]);
+          if (res2 && res2.error) {
+            console.error('saveTx error (passo 2):', res2.error, 'payload2:', t2);
+            alert('Não foi possível salvar o lançamento. Detalhes: ' + (res2.error.message || 'Erro desconhecido'));
+          }
+          return res2;
+        } catch(e) {
+          console.error('saveTx fallback exception:', e);
+          alert('Falha ao salvar o lançamento.');
+          return { error: e };
+        }
+      } else {
+        alert('Não foi possível salvar o lançamento. Detalhes: ' + (res.error.message || 'Erro desconhecido'));
       }
     }
     return res;
@@ -574,11 +586,12 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
-      await saveTx(t);
+      const r = await saveTx(t);
+      if (r && r.error) { return; } // erro já mostrado
       await loadAll();
-    if (window.resetValorInput) window.resetValorInput();
-    toggleModal(false); return;
-    return;
+      if (window.resetValorInput) window.resetValorInput();
+      toggleModal(false); return;
+      return;
     }
 
     // Criar recorrência
