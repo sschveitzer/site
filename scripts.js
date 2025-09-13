@@ -851,7 +851,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs(\"#mPagamento\"); if (pag) pag.value = (x.forma_pagamento || \"\");
+    const pag = qs("#mPagamento"); if (pag) pag.value = (x.forma_pagamento || "");
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
