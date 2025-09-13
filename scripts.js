@@ -9,17 +9,6 @@ function normalizeFormaPagamento(v){
   if (v === 'dinheiro' || v === 'pix' || v === 'cartao' || v === 'outros') return v;
   return 'outros';
 }
-// Exibe rótulo amigável para forma_pagamento
-function humanFormaPagamento(v){
-  switch(String(v||'').toLowerCase()){
-    case 'dinheiro': return 'Dinheiro';
-    case 'pix': return 'Pix';
-    case 'cartao': return 'Cartão';
-    case 'outros': return 'Outros';
-    default: return v || '-';
-  }
-}
-
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
   try {
@@ -389,8 +378,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
       if (selPag) selPag.value = "";
-      
-      var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = '';
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -522,8 +509,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
     };
-    // forma_pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');;
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -647,7 +632,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
         <div class="tag">${x.tipo}</div>
         <div>
           <div><strong>${x.descricao || "-"}</strong></div>
-          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div><div class=\"muted\" style=\"font-size:12px\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -690,16 +675,52 @@ function computeGastosPorCarteira(ym){
 }
 
 function renderGastosCarteiras(){
+  
   if (!S || !S.month) return;
   try {
-    const g = computeGastosPorCarteira(S.month);
+    const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
+    // Deltas do split (Dinheiro/Pix) para Marido/Esposa
+    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+    // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
+    const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const sign = (n) => (n>=0?'+':'');
+
+    const brutoCasa = Number(g.Casa||0);
+    const brutoMar  = Number(g.Marido||0);
+    const brutoEsp  = Number(g.Esposa||0);
+
+    const adjMar = Number(deltas.Marido||0);
+    const adjEsp = Number(deltas.Esposa||0);
+    const adjCasa = 0;
+
+    const liqCasa = brutoCasa - adjCasa;
+    const liqMar  = brutoMar  - adjMar;
+    const liqEsp  = brutoEsp  - adjEsp;
+
     const elC = document.getElementById('gastoCasa');
     const elM = document.getElementById('gastoMarido');
     const elE = document.getElementById('gastoEsposa');
-    if (elC) elC.textContent = fmtMoney(g.Casa || 0);
-    if (elM) elM.textContent = fmtMoney(g.Marido || 0);
-    if (elE) elE.textContent = fmtMoney(g.Esposa || 0);
+
+    if (elC) {
+      elC.innerHTML = ''
+        + '<div><strong>'+fmt(brutoCasa)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjCasa)+fmt(adjCasa)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqCasa)+'</strong></div>';
+    }
+    if (elM) {
+      elM.innerHTML = ''
+        + '<div><strong>'+fmt(brutoMar)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjMar)+fmt(adjMar)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqMar)+'</strong></div>';
+    }
+    if (elE) {
+      elE.innerHTML = ''
+        + '<div><strong>'+fmt(brutoEsp)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
+    }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
+} catch(e){ console.error('renderGastosCarteiras:', e); }
 }
 
 
@@ -815,7 +836,7 @@ h3.textContent = 'Lançamentos — ' + label;
           </div>
         </div>
         <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
-        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div><div class=\"muted\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
         <div class="valor">${valor}</div>
       `;
       const btnEdit = li.querySelector('.edit');
@@ -866,8 +887,8 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = (x.forma_pagamento || '');
-  }
+    const pag = qs(\"#mPagamento\"); if (pag) pag.value = (x.forma_pagamento || \"\");
+    }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
     const chk = qs("#mRepetir");
@@ -1420,30 +1441,6 @@ h3.textContent = 'Lançamentos — ' + label;
       ul.appendChild(li);
     });
   }
-
-
-// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
-// Retorna quanto cada pessoa ganha/perde no split (ex.: { Marido: +100, Esposa: -100 })
-function computeSplitDeltas(items){
-  var delta = { Marido: 0, Esposa: 0 };
-  try{
-    if (!Array.isArray(items)) return delta;
-    items.forEach(function(x){
-      if (!x || x.tipo !== "Despesa") return;
-      var car = x.carteira || "";
-      if (car !== "Marido" && car !== "Esposa") return;
-      var fp = String(x.forma_pagamento || "").toLowerCase();
-      if (fp !== "dinheiro" && fp !== "pix") return;
-      var v = Number(x.valor) || 0;
-      if (!(v > 0)) return;
-      var m = v * 0.5;
-      var other = (car === "Marido") ? "Esposa" : "Marido";
-      delta[car] += m;     // reembolso ao pagador
-      delta[other] -= m;   // cobrança do outro
-    });
-  }catch(e){ console.error("computeSplitDeltas:", e); }
-  return delta;
-}
 function renderCarteiras(){
     // Grid de saldos
     const el = document.getElementById('walletsGrid');
@@ -1456,37 +1453,7 @@ function renderCarteiras(){
         card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
                          '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
         el.appendChild(card);
-      
-    // --- Card de ajustes do split (Dinheiro/Pix) ---
-    try {
-      var cont = document.getElementById('carteiras');
-      // Procura um lugar razoável: após 'Saldos por carteira'
-      var afterEl = document.getElementById('walletsGrid');
-      var host = document.getElementById('splitInfoCard');
-      if (!host) {
-        host = document.createElement('div');
-        host.id = 'splitInfoCard';
-        host.className = 'card';
-        // Inserir após o grid de saldos, senão no final da seção carteiras
-        if (afterEl && afterEl.parentNode) {
-          afterEl.parentNode.parentNode.insertBefore(host, afterEl.parentNode.nextSibling);
-        } else if (cont) {
-          cont.appendChild(host);
-        }
-      }
-      var deltas = computeSplitDeltas(txSelected());
-      var mDelta = (Number(deltas.Marido)||0);
-      var eDelta = (Number(deltas.Esposa)||0);
-      var sinal = function(x){ return (x>=0?'+':''); };
-      host.innerHTML = ''
-        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Dinheiro/Pix)</h3>'
-        + '<div class="resumo-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
-        +   '<div class="sum-box"><div class="muted">Marido</div><div class="sum-value">'+ (sinal(mDelta)) + (mDelta).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}) +'</div></div>'
-        +   '<div class="sum-box"><div class="muted">Esposa</div><div class="sum-value">'+ (sinal(eDelta)) + (eDelta).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}) +'</div></div>'
-        + '</div>'
-        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Dinheiro/Pix (sem alterar lançamentos).</div>';
-    } catch(err) { console.error('render split card', err); }
-});
+      });
     }
     // Somas P1/P2 e listas
     const p1 = sumInOutByWallet("Marido");
@@ -2405,13 +2372,3 @@ document.addEventListener("click", function(e) {
 });
 
 try { window.toggleModal = toggleModal; } catch(e) {}
-
-function humanPagamento(code) {
-  switch(String(code)) {
-    case 'dinheiro': return 'Dinheiro';
-    case 'pix': return 'Pix';
-    case 'cartao': return 'Cartão';
-    case 'outros': return 'Outros';
-    default: return code || '-';
-  }
-}
