@@ -647,6 +647,36 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     list.forEach(x => ul.append(itemTx(x, true)));
   }
 
+
+// === Carteiras: gastos por carteira (mês/ciclo) ===
+function computeGastosPorCarteira(ym){
+  const range = getActiveRangeForYM(ym);
+  const list = (S.tx || []).filter(x =>
+    x && x.tipo === "Despesa" && x.data && ymdInRange(String(x.data), range.start, range.end)
+  );
+  // Ignora transferências por segurança (se vierem marcadas como Despesa indevidamente)
+  const sum = { Casa: 0, Marido: 0, Esposa: 0 };
+  list.forEach(x => {
+    const car = x.carteira || '';
+    if (car in sum) sum[car] += Number(x.valor) || 0;
+  });
+  return sum;
+}
+
+function renderGastosCarteiras(){
+  if (!S || !S.month) return;
+  try {
+    const g = computeGastosPorCarteira(S.month);
+    const elC = document.getElementById('gastoCasa');
+    const elM = document.getElementById('gastoMarido');
+    const elE = document.getElementById('gastoEsposa');
+    if (elC) elC.textContent = fmtMoney(g.Casa || 0);
+    if (elM) elM.textContent = fmtMoney(g.Marido || 0);
+    if (elE) elE.textContent = fmtMoney(g.Esposa || 0);
+  } catch(e){ console.error('renderGastosCarteiras:', e); }
+}
+
+
   function renderLancamentos() {
 
     // Atualiza o título com o mês selecionado (ex.: "Lançamentos — Setembro/2025")
