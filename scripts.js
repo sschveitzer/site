@@ -212,31 +212,7 @@ function ensureMonthSelectLabels(){
 
   // ========= LOAD DATA =========
   
-// === Capabilities: detect if 'pagamento' column exists to avoid 400 on upsert ===
-async function ensurePagamentoColumnFlag(){
-  try{
-    // Try to read information_schema to see if the column exists
-    const { data, error } = await supabaseClient
-      .from('information_schema.columns')
-      .select('column_name')
-      .eq('table_name','transactions')
-      .eq('column_name','pagamento')
-      .limit(1);
-    if (error) {
-      console.warn('Não foi possível verificar coluna pagamento:', error);
-      S.hasPagamentoCol = true; // be optimistic to not break flows
-      return;
-    }
-    S.hasPagamentoCol = Array.isArray(data) && data.length > 0;
-  } catch(e){
-    console.warn('Falha ao checar coluna pagamento:', e);
-    S.hasPagamentoCol = true;
-  }
-}
-
-
   async function loadAll() {
-  await ensurePagamentoColumnFlag();
   const selPag = qs('#mPagamento');
     // Transações
     const { data: tx, error: txError } = await supabaseClient.from("transactions").select("*");
@@ -310,7 +286,22 @@ async function ensurePagamentoColumnFlag(){
   }
 
   // ========= SAVE =========
-  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
+  async function saveTx(t) {
+    // Upsert com fallback: se der erro por coluna desconhecida (ex.: 'pagamento'),
+    // tenta novamente removendo o campo problemático.
+    const res = await supabaseClient.from("transactions").upsert([t]);
+    if (res && res.error) {
+      const msg = String(res.error.message || '').toLowerCase();
+      if (msg.includes('pagamento') || msg.includes('column') || msg.includes('unknown') || msg.includes('invalid input')) {
+        try {
+          const t2 = Object.assign({}, t);
+          delete t2.pagamento;
+          return await supabaseClient.from("transactions").upsert([t2]);
+        } catch(_) {}
+      }
+    }
+    return res;
+  }
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
@@ -583,7 +574,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
-      if (S.hasPagamentoCol === false) { try{ delete t.pagamento; }catch(_){} }
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
