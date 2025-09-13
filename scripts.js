@@ -1452,6 +1452,29 @@ h3.textContent = 'Lançamentos — ' + label;
       ul.appendChild(li);
     });
   }
+
+
+// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
+function computeSplitDeltas(items){
+  var delta = { Marido: 0, Esposa: 0 };
+  if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
+  try{
+    items.forEach(function(x){
+      if (!x || x.tipo !== "Despesa") return;
+      var car = x.carteira || "";
+      if (car !== "Marido" && car !== "Esposa") return;
+      var fp = String(x.forma_pagamento || "").toLowerCase();
+      if (fp !== "dinheiro" && fp !== "pix") return;
+      var v = Number(x.valor) || 0;
+      if (!(v > 0)) return;
+      var metade = v * 0.5;
+      var other = (car === "Marido") ? "Esposa" : "Marido";
+      delta[car]  += metade;   // reembolsa 50% ao pagador
+      delta[other]-= metade;   // cobra 50% do outro
+    });
+  }catch(e){ console.error("computeSplitDeltas:", e); }
+  return delta;
+}
 function renderCarteiras(){
     // Grid de saldos
     const el = document.getElementById('walletsGrid');
@@ -1464,7 +1487,36 @@ function renderCarteiras(){
         card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
                          '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
         el.appendChild(card);
-      });
+      
+  // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
+  try {
+    var section = document.getElementById('carteiras');
+    if (section) {
+      var host = document.getElementById('splitInfoCard');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'splitInfoCard';
+        host.className = 'card';
+        section.appendChild(host);
+      }
+      var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+      var mDelta = Number(deltas.Marido)||0;
+      var eDelta = Number(deltas.Esposa)||0;
+      var sign = function(x){ return x>=0?'+':''; };
+      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+      var ym = (window.S && S.month) ? S.month : new Date().toISOString().slice(0,7);
+      var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } catch(_){ return ym; } })();
+
+      host.innerHTML = ''
+        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Dinheiro/Pix) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
+        + '<div class="resumo-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
+        +   '<div class="sum-box"><div class="muted">Marido</div><div class="sum-value">'+ sign(mDelta) + fmt(mDelta) +'</div></div>'
+        +   '<div class="sum-box"><div class="muted">Esposa</div><div class="sum-value">'+ sign(eDelta) + fmt(eDelta) +'</div></div>'
+        + '</div>'
+        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Dinheiro/Pix (sem alterar lançamentos).</div>';
+    }
+  } catch(err) { console.error('split card render', err); }
+});
     }
     // Somas P1/P2 e listas
     const p1 = sumInOutByWallet("Marido");
