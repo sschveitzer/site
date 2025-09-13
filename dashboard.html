@@ -117,7 +117,7 @@
       <div class="card">
         <div class="lanc-header">
           <h3>Lançamentos</h3>
-          <div class="lanc-actions"><button class="btn" ><i class="ph ph-plus"></i> Novo</button></div>
+          <div class="lanc-actions"><button class="btn" id="btnNovo" ><i class="ph ph-plus"></i> Novo</button></div>
         </div>
         <div class="lanc-toolbar" role="region" aria-label="Filtros de lançamentos">
           <select id="lancTipo" title="Tipo">
@@ -308,27 +308,6 @@
             </div>
           </div>
           <div class="helper">Obs.: Transferências entre carteiras não entram no cálculo de Entradas/Saídas totais.</div>
-
-        <!-- Card: Divisão Casa -->
-        <div class="card">
-          <h3><i class="ph ph-users-three"></i> Divisão Casa (50/50 + ajuste Dinheiro/Pix)</h3>
-          <div class="resumo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="sum-box">
-              <div class="muted">Total Marido (casa)</div>
-              <div id="totMaridoCasa" class="sum-value">R$ 0,00</div>
-            </div>
-            <div class="sum-box">
-              <div class="muted">Total Esposa (casa)</div>
-              <div id="totEsposaCasa" class="sum-value">R$ 0,00</div>
-            </div>
-          </div>
-          <div class="helper">
-            Regra: 50% do gasto da carteira <b>Casa</b> para cada um +
-            metade de despesas pagas em <b>Dinheiro/Pix</b> nas carteiras pessoais
-            migra para o outro.
-          </div>
-        </div>
-
         </div>
 
         <!-- Saldos por carteira (full width) -->
@@ -487,6 +466,7 @@
         <div class="field">
           <label for="mCategoria">Categoria</label>
           <select id="mCategoria"></select>
+
 
 <div class="field" id="wrapPagamento">
   <label for="mPagamento">Forma de pagamento</label>
