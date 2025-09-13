@@ -864,7 +864,6 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs(\"#mPagamento\"); if (pag) pag.value = (x.forma_pagamento || \"\");
     var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = (x.forma_pagamento || '');
   }
 
