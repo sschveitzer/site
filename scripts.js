@@ -315,6 +315,8 @@ function ensureMonthSelectLabels(){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
+    // forma de pagamento
+    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
     await saveTx(t);
   }
 
