@@ -9,17 +9,6 @@ function normalizeFormaPagamento(v){
   if (v === 'dinheiro' || v === 'pix' || v === 'cartao' || v === 'outros') return v;
   return 'outros';
 }
-// Exibe rótulo amigável para forma_pagamento
-function humanFormaPagamento(v){
-  switch(String(v||'').toLowerCase()){
-    case 'dinheiro': return 'Dinheiro';
-    case 'pix': return 'Pix';
-    case 'cartao': return 'Cartão';
-    case 'outros': return 'Outros';
-    default: return v || '-';
-  }
-}
-
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
   try {
@@ -389,8 +378,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
       if (selPag) selPag.value = "";
-      
-      var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = '';
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -522,8 +509,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
     };
-    // forma_pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');;
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -647,7 +632,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
         <div class="tag">${x.tipo}</div>
         <div>
           <div><strong>${x.descricao || "-"}</strong></div>
-          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div><div class=\"muted\" style=\"font-size:12px\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -815,7 +800,7 @@ h3.textContent = 'Lançamentos — ' + label;
           </div>
         </div>
         <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
-        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div><div class=\"muted\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
         <div class="valor">${valor}</div>
       `;
       const btnEdit = li.querySelector('.edit');
@@ -866,8 +851,8 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = (x.forma_pagamento || '');
-  }
+    const pag = qs(\"#mPagamento\"); if (pag) pag.value = (x.forma_pagamento || \"\");
+    }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
     const chk = qs("#mRepetir");
@@ -1360,7 +1345,29 @@ h3.textContent = 'Lançamentos — ' + label;
 
   
   // ===== Carteiras helpers =====
-  function computeSaldosPorCarteira(){
+  
+// === Split de despesas pessoais em Dinheiro/Pix (50% vai para o outro cônjuge) ===
+function applySplitAdjustments(items, map){
+  try{
+    if (!Array.isArray(items)) return;
+    items.forEach(function(x){
+      if (!x || x.tipo !== "Despesa") return;
+      var carteira = x.carteira || "";
+      if (carteira !== "Marido" && carteira !== "Esposa") return;
+      var fp = String(x.forma_pagamento || "").toLowerCase();
+      if (fp !== "dinheiro" && fp !== "pix") return;
+      var v = Number(x.valor) || 0;
+      if (!(v > 0)) return;
+      var metade = v * 0.5;
+      var other = (carteira === "Marido") ? "Esposa" : "Marido";
+      if (map[carteira] == null) map[carteira] = 0;
+      if (map[other] == null) map[other] = 0;
+      map[carteira] += metade; // reembolsa 50% ao pagador
+      map[other]    -= metade; // cobra 50% do outro
+    });
+  }catch(e){ console.error("applySplitAdjustments:", e); }
+}
+function computeSaldosPorCarteira(){
     const map = Object.fromEntries((S.walletList||["Casa"]).map(w=>[w,0]));
     txSelected().forEach(x=>{
       const v = money(x.valor);
@@ -2351,13 +2358,3 @@ document.addEventListener("click", function(e) {
 });
 
 try { window.toggleModal = toggleModal; } catch(e) {}
-
-function humanPagamento(code) {
-  switch(String(code)) {
-    case 'dinheiro': return 'Dinheiro';
-    case 'pix': return 'Pix';
-    case 'cartao': return 'Cartão';
-    case 'outros': return 'Outros';
-    default: return code || '-';
-  }
-}
