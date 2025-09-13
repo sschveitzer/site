@@ -1469,7 +1469,7 @@ function computeSplitDeltas(items){
       var car = x.carteira || "";
       if (car !== "Marido" && car !== "Esposa") return;
       var fp = String(x.forma_pagamento || "").toLowerCase();
-      if (fp !== "dinheiro" && fp !== "pix") return;
+      if (fp !== "outros") return;
       var v = Number(x.valor) || 0;
       if (!(v > 0)) return;
       var metade = v * 0.5;
@@ -1513,12 +1513,12 @@ function renderCarteiras(){
       var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } catch(_){ return ym; } })();
 
       host.innerHTML = ''
-        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Dinheiro/Pix) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
+        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Outros) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
         + '<div class="resumo-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
         +   '<div class="sum-box"><div class="muted">Marido</div><div class="sum-value">'+ sign(mDelta) + fmt(mDelta) +'</div></div>'
         +   '<div class="sum-box"><div class="muted">Esposa</div><div class="sum-value">'+ sign(eDelta) + fmt(eDelta) +'</div></div>'
         + '</div>'
-        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Dinheiro/Pix (sem alterar lançamentos).</div>';
+        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Outros (sem alterar lançamentos).</div>';
     }
   } catch(err) { console.error('split card render', err); }
 });
