@@ -786,7 +786,9 @@ h3.textContent = 'Lançamentos — ' + label;
 
   function openEdit(id) {
   const selPag = qs('#mPagamento');
-    const x = (S.tx || []).find(t => t.id === id);
+  // abre o modal em modo edição
+  try { toggleModal(true, 'Editar lançamento'); } catch(_) {}
+  const x = (S.tx || []).find(t => t.id === id);
     if (!x) return;
     S.editingId = id;
     modalTipo = x.tipo;
@@ -808,7 +810,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) pag.value = (x.forma_pagamento || "");
+    const pag = qs("#mPagamento"); if (pag) pag.value = (x.pagamento || "");
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
