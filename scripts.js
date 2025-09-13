@@ -97,6 +97,59 @@ function money(v){
     return new Date(y, m, 0).getDate(); // m = 1..12
   }
 
+
+// === Helpers de ciclo da fatura ===
+function clampDay(y, m, d){
+  const ld = lastDayOfMonth(y, m);
+  return Math.max(1, Math.min(d, ld));
+}
+
+function getCycleRangeForYM(ym){
+  try {
+    const parts = String(ym||'').split('-');
+    if (parts.length !== 2) throw new Error('bad ym');
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+
+    const closing = Number(S.ccClosingDay)||null;
+    if (!closing) return null;
+
+    // previous month
+    let py = y, pm = m - 1;
+    if (pm < 1){ pm = 12; py = y - 1; }
+
+    const startDay = clampDay(py, pm, closing + 1);
+    const endDay   = clampDay(y,  m, closing);
+
+    const start = toYMD(new Date(py, pm - 1, startDay));
+    const end   = toYMD(new Date(y,  m - 1, endDay));
+    return { start, end };
+  } catch(e){
+    return null;
+  }
+}
+
+function getCalendarRangeForYM(ym){
+  const [y, m] = ym.split('-').map(Number);
+  const start = toYMD(new Date(y, m - 1, 1));
+  const end   = toYMD(new Date(y, m - 1, lastDayOfMonth(y, m)));
+  return { start, end };
+}
+
+function getActiveRangeForYM(ym){
+  if (S && S.useCycleForReports) {
+    const cyc = getCycleRangeForYM(ym);
+    if (cyc) return cyc;
+  }
+  return getCalendarRangeForYM(ym);
+}
+
+function ymdInRange(ymd, start, end){
+  if (!ymd) return false;
+  return String(ymd) >= String(start) && String(ymd) <= String(end);
+}
+
+
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
     try {
@@ -635,9 +688,10 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
   
 // === Split "Casa 50/50 + ajuste Dinheiro/Pix" ===
 function computeCasaSplitForMonth(ym) {
-  // Só despesas do mês
+  // Só despesas do período ativo (mês ou ciclo de fatura)
+  const range = getActiveRangeForYM(ym);
   const list = (S.tx || []).filter(x =>
-    x && x.tipo === "Despesa" && x.data && String(x.data).startsWith(ym)
+    x && x.tipo === "Despesa" && x.data && ymdInRange(String(x.data), range.start, range.end)
   );
 
   // 1) Total de despesas na carteira Casa
