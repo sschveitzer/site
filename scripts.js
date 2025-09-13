@@ -720,7 +720,6 @@ function renderGastosCarteiras(){
         + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
-} catch(e){ console.error('renderGastosCarteiras:', e); }
 }
 
 
