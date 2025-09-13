@@ -2,6 +2,8 @@
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
+  // normaliza acentos comuns
+  if (v === 'cartão') v = 'cartao';
   if (v === 'crédito') v = 'credito';
   if (v === 'débito') v = 'debito';
   if (v === 'credito' || v === 'debito') return 'cartao';
@@ -315,10 +317,8 @@ function ensureMonthSelectLabels(){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    // forma de pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
-    await saveTx(t);
-  }
+    /* removed stray save */
+}
 
   async function applyRecurrences() {
   const selPag = qs('#mPagamento');
@@ -538,6 +538,9 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       t.carteira = (qs("#mCarteira")?.value || "Casa");
       t.carteira_origem = null;
       t.carteira_destino = null;
+    // forma de pagamento
+    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
@@ -900,7 +903,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) pag.value = (x.forma_pagamento || "");
+    const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
