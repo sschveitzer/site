@@ -1,3 +1,25 @@
+
+// Normaliza forma_pagamento para os valores aceitos pelo banco
+function normalizeFormaPagamento(v){
+  v = String(v || '').trim().toLowerCase();
+  if (v === 'crédito') v = 'credito';
+  if (v === 'débito') v = 'debito';
+  if (v === 'credito' || v === 'debito') return 'cartao';
+  if (v === 'boleto' || v === 'transferência' || v === 'transferencia') return 'outros';
+  if (v === 'dinheiro' || v === 'pix' || v === 'cartao' || v === 'outros') return v;
+  return 'outros';
+}
+// Exibe rótulo amigável para forma_pagamento
+function humanFormaPagamento(v){
+  switch(String(v||'').toLowerCase()){
+    case 'dinheiro': return 'Dinheiro';
+    case 'pix': return 'Pix';
+    case 'cartao': return 'Cartão';
+    case 'outros': return 'Outros';
+    default: return v || '-';
+  }
+}
+
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
   try {
@@ -367,6 +389,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
       if (selPag) selPag.value = "";
+      
+      var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = '';
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -621,7 +645,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
         <div class="tag">${x.tipo}</div>
         <div>
           <div><strong>${x.descricao || "-"}</strong></div>
-          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
+          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div><div class=\"muted\" style=\"font-size:12px\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -789,7 +813,7 @@ h3.textContent = 'Lançamentos — ' + label;
           </div>
         </div>
         <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
-        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
+        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div><div class=\"muted\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
         <div class="valor">${valor}</div>
       `;
       const btnEdit = li.querySelector('.edit');
@@ -840,10 +864,9 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento");
-if (pag) pag.value = (x.forma_pagamento || "");
-
-    }
+    const pag = qs(\"#mPagamento\"); if (pag) pag.value = (x.forma_pagamento || \"\");
+    var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = (x.forma_pagamento || '');
+  }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
     const chk = qs("#mRepetir");
@@ -2327,3 +2350,13 @@ document.addEventListener("click", function(e) {
 });
 
 try { window.toggleModal = toggleModal; } catch(e) {}
+
+function humanPagamento(code) {
+  switch(String(code)) {
+    case 'dinheiro': return 'Dinheiro';
+    case 'pix': return 'Pix';
+    case 'cartao': return 'Cartão';
+    case 'outros': return 'Outros';
+    default: return code || '-';
+  }
+}
