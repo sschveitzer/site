@@ -2,8 +2,6 @@
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
-  // normaliza acentos comuns
-  if (v === 'cartão') v = 'cartao';
   if (v === 'crédito') v = 'credito';
   if (v === 'débito') v = 'debito';
   if (v === 'credito' || v === 'debito') return 'cartao';
@@ -11,7 +9,7 @@ function normalizeFormaPagamento(v){
   if (v === 'dinheiro' || v === 'pix' || v === 'cartao' || v === 'outros') return v;
   return 'outros';
 }
-// Rótulos amigáveis para forma_pagamento
+// Exibe rótulo amigável para forma_pagamento
 function humanFormaPagamento(v){
   switch(String(v||'').toLowerCase()){
     case 'dinheiro': return 'Dinheiro';
@@ -317,8 +315,8 @@ function ensureMonthSelectLabels(){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    /* removed stray save */
-}
+    await saveTx(t);
+  }
 
   async function applyRecurrences() {
   const selPag = qs('#mPagamento');
@@ -391,6 +389,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
       if (selPag) selPag.value = "";
+      
+      var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = '';
       modalTipo = "Despesa";
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
@@ -522,6 +522,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
     };
+    // forma_pagamento
+    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');;
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -538,9 +540,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       t.carteira = (qs("#mCarteira")?.value || "Casa");
       t.carteira_origem = null;
       t.carteira_destino = null;
-    // forma de pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
-
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
@@ -648,7 +647,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
         <div class="tag">${x.tipo}</div>
         <div>
           <div><strong>${x.descricao || "-"}</strong></div>
-          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
+          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div><div class=\"muted\" style=\"font-size:12px\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -691,50 +690,15 @@ function computeGastosPorCarteira(ym){
 }
 
 function renderGastosCarteiras(){
-  
   if (!S || !S.month) return;
   try {
-    const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
-    // Deltas do split (Dinheiro/Pix) para Marido/Esposa
-    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
-    // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
-    const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-    const sign = (n) => (n>=0?'+':'');
-
-    const brutoCasa = Number(g.Casa||0);
-    const brutoMar  = Number(g.Marido||0);
-    const brutoEsp  = Number(g.Esposa||0);
-
-    const adjMar = Number(deltas.Marido||0);
-    const adjEsp = Number(deltas.Esposa||0);
-    const adjCasa = 0;
-
-    const liqCasa = brutoCasa - adjCasa;
-    const liqMar  = brutoMar  - adjMar;
-    const liqEsp  = brutoEsp  - adjEsp;
-
+    const g = computeGastosPorCarteira(S.month);
     const elC = document.getElementById('gastoCasa');
     const elM = document.getElementById('gastoMarido');
     const elE = document.getElementById('gastoEsposa');
-
-    if (elC) {
-      elC.innerHTML = ''
-        + '<div><strong>'+fmt(brutoCasa)+'</strong> <span class="muted">(bruto)</span></div>'
-        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjCasa)+fmt(adjCasa)+'</div>'
-        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqCasa)+'</strong></div>';
-    }
-    if (elM) {
-      elM.innerHTML = ''
-        + '<div><strong>'+fmt(brutoMar)+'</strong> <span class="muted">(bruto)</span></div>'
-        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjMar)+fmt(adjMar)+'</div>'
-        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqMar)+'</strong></div>';
-    }
-    if (elE) {
-      elE.innerHTML = ''
-        + '<div><strong>'+fmt(brutoEsp)+'</strong> <span class="muted">(bruto)</span></div>'
-        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
-        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
-    }
+    if (elC) elC.textContent = fmtMoney(g.Casa || 0);
+    if (elM) elM.textContent = fmtMoney(g.Marido || 0);
+    if (elE) elE.textContent = fmtMoney(g.Esposa || 0);
   } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
 
@@ -851,8 +815,7 @@ h3.textContent = 'Lançamentos — ' + label;
           </div>
         </div>
         <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
-        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
-        <div class="muted">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div><div class=\"muted\">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
         <div class="valor">${valor}</div>
       `;
       const btnEdit = li.querySelector('.edit');
@@ -903,8 +866,8 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
-    }
+    var selPg = document.getElementById('mPagamento'); if (selPg) selPg.value = (x.forma_pagamento || '');
+  }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
     const chk = qs("#mRepetir");
@@ -1459,8 +1422,8 @@ h3.textContent = 'Lançamentos — ' + label;
   }
 
 
-// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
-function computeSplitDeltas(items){
+// === Deltas do split para o CARD (Outros): soma só 50% para QUEM NÃO PAGOU ===
+function computeSplitDeltasCard(items){
   var delta = { Marido: 0, Esposa: 0 };
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
   try{
@@ -1474,10 +1437,10 @@ function computeSplitDeltas(items){
       if (!(v > 0)) return;
       var metade = v * 0.5;
       var other = (car === "Marido") ? "Esposa" : "Marido";
-      delta[car]  += metade;   // reembolsa 50% ao pagador
-      delta[other]-= metade;   // cobra 50% do outro
+      // CARD: registra só para quem NÃO pagou
+      delta[other] += metade;
     });
-  }catch(e){ console.error("computeSplitDeltas:", e); }
+  }catch(e){ console.error("computeSplitDeltasCard:", e); }
   return delta;
 }
 function renderCarteiras(){
@@ -1492,36 +1455,7 @@ function renderCarteiras(){
         card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
                          '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
         el.appendChild(card);
-      
-  // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
-  try {
-    var section = document.getElementById('carteiras');
-    if (section) {
-      var host = document.getElementById('splitInfoCard');
-      if (!host) {
-        host = document.createElement('div');
-        host.id = 'splitInfoCard';
-        host.className = 'card';
-        section.appendChild(host);
-      }
-      var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
-      var mDelta = Number(deltas.Marido)||0;
-      var eDelta = Number(deltas.Esposa)||0;
-      var sign = function(x){ return x>=0?'+':''; };
-      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
-      var ym = (window.S && S.month) ? S.month : new Date().toISOString().slice(0,7);
-      var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } catch(_){ return ym; } })();
-
-      host.innerHTML = ''
-        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Outros) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
-        + '<div class="resumo-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
-        +   '<div class="sum-box"><div class="muted">Marido</div><div class="sum-value">'+ sign(mDelta) + fmt(mDelta) +'</div></div>'
-        +   '<div class="sum-box"><div class="muted">Esposa</div><div class="sum-value">'+ sign(eDelta) + fmt(eDelta) +'</div></div>'
-        + '</div>'
-        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Outros (sem alterar lançamentos).</div>';
-    }
-  } catch(err) { console.error('split card render', err); }
-});
+      });
     }
     // Somas P1/P2 e listas
     const p1 = sumInOutByWallet("Marido");
@@ -2440,3 +2374,13 @@ document.addEventListener("click", function(e) {
 });
 
 try { window.toggleModal = toggleModal; } catch(e) {}
+
+function humanPagamento(code) {
+  switch(String(code)) {
+    case 'dinheiro': return 'Dinheiro';
+    case 'pix': return 'Pix';
+    case 'cartao': return 'Cartão';
+    case 'outros': return 'Outros';
+    default: return code || '-';
+  }
+}
