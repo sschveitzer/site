@@ -42,7 +42,7 @@ window.onload = function () {
   const supabaseClient = window.supabaseClient || supabase;
 
   // ========= ESTADO GLOBAL =========
-  let S = {
+  let S = { _saving: false,
     tx: [],
     cats: [],
     recs: [], // recorrências
@@ -510,6 +510,17 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
 
   // ========= TRANSAÇÕES =========
   async function addOrUpdate(keepOpen=false) {
+
+  // Prevent double-submit
+  if (S._saving) { return; }
+  S._saving = true;
+  // Disable save buttons to avoid double click
+  try {
+    document.querySelectorAll('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo').forEach(function(btn){
+      try { btn.disabled = true; btn.classList.add('is-loading'); } catch(_){}
+    });
+  } catch(_){}
+
   const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -602,6 +613,17 @@ const chkRepetir = qs("#mRepetir");
 
     await loadAll();
     toggleModal(false); return;
+
+  finally {
+    // Re-enable save buttons and clear lock
+    try {
+      document.querySelectorAll('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo').forEach(function(btn){
+        try { btn.disabled = false; btn.classList.remove('is-loading'); } catch(_){}
+      });
+    } catch(_){}
+    S._saving = false;
+  }
+
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
