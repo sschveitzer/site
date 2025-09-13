@@ -317,7 +317,7 @@ function ensureMonthSelectLabels(){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    /* removed stray save */
+    await saveTx(t); // persist generated occurrence
 }
 
   async function applyRecurrences() {
@@ -598,15 +598,6 @@ const chkRepetir = qs("#mRepetir");
     if (error) {
       console.error(error);
       return alert("Erro ao salvar recorrência.");
-    }
-
-    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
-    if (t.data === saved.proxima_data) {
-      await materializeOne(saved, saved.proxima_data);
-      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
-      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
-      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
-      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
     }
 
     await loadAll();
