@@ -9,6 +9,17 @@ function normalizeFormaPagamento(v){
   if (v === 'dinheiro' || v === 'pix' || v === 'cartao' || v === 'outros') return v;
   return 'outros';
 }
+// Rótulos amigáveis para forma_pagamento
+function humanFormaPagamento(v){
+  switch(String(v||'').toLowerCase()){
+    case 'dinheiro': return 'Dinheiro';
+    case 'pix': return 'Pix';
+    case 'cartao': return 'Cartão';
+    case 'outros': return 'Outros';
+    default: return v || '-';
+  }
+}
+
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
   try {
@@ -836,6 +847,7 @@ h3.textContent = 'Lançamentos — ' + label;
         </div>
         <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
         <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
+        <div class="muted">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
         <div class="valor">${valor}</div>
       `;
       const btnEdit = li.querySelector('.edit');
