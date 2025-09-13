@@ -420,7 +420,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     });
     modal._wiredClose = true;
   }
-
   // Save handler (delegated inside modal)
   if (modal && !modal._wiredSave) {
     modal.addEventListener('click', function(ev){
@@ -428,19 +427,20 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
         ev.preventDefault();
         try {
-          if (t.closest('#salvarENovo')) { window.addOrUpdate && window.addOrUpdate(true); }
-          else { window.addOrUpdate && window.addOrUpdate(false); }
-        } catch(e){ console.error(e); }
+          if (t.closest('#salvarENovo')) {
+            window.addOrUpdate && window.addOrUpdate(true);
+          } else {
+            window.addOrUpdate && window.addOrUpdate(false);
+          }
+        } catch(e) { console.error(e); }
       } else if (t.closest('#cancelar')) {
         ev.preventDefault();
-        try { toggleModal(false); } catch(e){}
-      } catch(e){ console.error(e); }
+        try { toggleModal(false); } catch(e) {}
       }
     });
     modal._wiredSave = true;
   }
-
-  // Esc key closes modal
+// Esc key closes modal
   if (!document._wiredEscClose) {
     document.addEventListener('keydown', function(ev){
       if (ev.key === 'Escape') {
