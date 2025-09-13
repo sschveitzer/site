@@ -211,6 +211,9 @@ function ensureMonthSelectLabels(){
 
     render();
 
+    // Atualiza a divisão Casa
+    try { renderSplitCasa(); } catch(_) {}
+
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
   if (monthSel && !monthSel._wiredLanc) {
@@ -220,6 +223,7 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
+      try { renderSplitCasa(); } catch (e) {}
     });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
@@ -477,7 +481,9 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
-    };
+    ,
+      pagamento: (qs(\"#mPagamento\")?.value || \"\").trim()
+};
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -626,6 +632,51 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
   }
+
+  
+// === Split "Casa 50/50 + ajuste Dinheiro/Pix" ===
+function computeCasaSplitForMonth(ym) {
+  // Só despesas do mês
+  const list = (S.tx || []).filter(x =>
+    x && x.tipo === "Despesa" && x.data && String(x.data).startsWith(ym)
+  );
+
+  // 1) Total de despesas na carteira Casa
+  const totalCasa = list
+    .filter(x => x.carteira === "Casa")
+    .reduce((a, b) => a + (Number(b.valor) || 0), 0);
+
+  const metadeCasa = totalCasa / 2;
+
+  // 2) Ajuste: pagou em Dinheiro/Pix nas carteiras pessoais => metade credita pro outro
+  const isCashPix = (p) => /^(dinheiro|pix)$/i.test(String(p || ""));
+
+  const cashPixMarido = list
+    .filter(x => x.carteira === "Marido" && isCashPix(x.pagamento))
+    .reduce((a, b) => a + (Number(b.valor) || 0), 0);
+
+  const cashPixEsposa = list
+    .filter(x => x.carteira === "Esposa" && isCashPix(x.pagamento))
+    .reduce((a, b) => a + (Number(b.valor) || 0), 0);
+
+  // Regra: metade do que o Marido paga em dinheiro/pix vai para a Esposa (e vice-versa)
+  const totalMarido = metadeCasa + (cashPixEsposa / 2);
+  const totalEsposa = metadeCasa + (cashPixMarido / 2);
+
+  return { totalCasa, totalMarido, totalEsposa };
+}
+
+function renderSplitCasa() {
+  try {
+    if (!S || !S.month) return;
+    const r = computeCasaSplitForMonth(S.month);
+    const elM = document.getElementById('totMaridoCasa');
+    const elE = document.getElementById('totEsposaCasa');
+    if (elM) elM.textContent = fmtMoney(r.totalMarido);
+    if (elE) elE.textContent = fmtMoney(r.totalEsposa);
+  } catch(e){ console.error('renderSplitCasa:', e); }
+}
+
 
   function renderLancamentos() {
 
@@ -1075,6 +1126,9 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
+
+    // Atualiza a divisão Casa
+    try { renderSplitCasa(); } catch(_) {}
     };
   }
 
@@ -1491,6 +1545,9 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
+
+    // Atualiza a divisão Casa
+    try { renderSplitCasa(); } catch(_) {}
     await savePrefs();
   };
 
