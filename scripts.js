@@ -493,12 +493,15 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
+    const wrapPag = qs('#wrapPagamento');
     if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
+      if (wrapPag) wrapPag.style.display = 'none';
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
     } else {
       if (selPag) selPag.disabled = false;
+      if (wrapPag) wrapPag.style.display = '';
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
     }
