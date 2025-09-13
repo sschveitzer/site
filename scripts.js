@@ -97,59 +97,6 @@ function money(v){
     return new Date(y, m, 0).getDate(); // m = 1..12
   }
 
-
-// === Helpers de ciclo da fatura ===
-function clampDay(y, m, d){
-  const ld = lastDayOfMonth(y, m);
-  return Math.max(1, Math.min(d, ld));
-}
-
-function getCycleRangeForYM(ym){
-  try {
-    const parts = String(ym||'').split('-');
-    if (parts.length !== 2) throw new Error('bad ym');
-    const y = Number(parts[0]);
-    const m = Number(parts[1]);
-
-    const closing = Number(S.ccClosingDay)||null;
-    if (!closing) return null;
-
-    // previous month
-    let py = y, pm = m - 1;
-    if (pm < 1){ pm = 12; py = y - 1; }
-
-    const startDay = clampDay(py, pm, closing + 1);
-    const endDay   = clampDay(y,  m, closing);
-
-    const start = toYMD(new Date(py, pm - 1, startDay));
-    const end   = toYMD(new Date(y,  m - 1, endDay));
-    return { start, end };
-  } catch(e){
-    return null;
-  }
-}
-
-function getCalendarRangeForYM(ym){
-  const [y, m] = ym.split('-').map(Number);
-  const start = toYMD(new Date(y, m - 1, 1));
-  const end   = toYMD(new Date(y, m - 1, lastDayOfMonth(y, m)));
-  return { start, end };
-}
-
-function getActiveRangeForYM(ym){
-  if (S && S.useCycleForReports) {
-    const cyc = getCycleRangeForYM(ym);
-    if (cyc) return cyc;
-  }
-  return getCalendarRangeForYM(ym);
-}
-
-function ymdInRange(ymd, start, end){
-  if (!ymd) return false;
-  return String(ymd) >= String(start) && String(ymd) <= String(end);
-}
-
-
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
     try {
@@ -211,7 +158,6 @@ function ensureMonthSelectLabels(){
 
 
   // ========= LOAD DATA =========
-  
   async function loadAll() {
   const selPag = qs('#mPagamento');
     // Transações
@@ -265,9 +211,6 @@ function ensureMonthSelectLabels(){
 
     render();
 
-    // Atualiza a divisão Casa
-    try { renderSplitCasa(); } catch(_) {}
-
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
   if (monthSel && !monthSel._wiredLanc) {
@@ -277,7 +220,6 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
-      try { renderSplitCasa(); } catch (e) {}
     });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
@@ -286,34 +228,7 @@ function ensureMonthSelectLabels(){
   }
 
   // ========= SAVE =========
-  async function saveTx(t) {
-    // Upsert com fallback: se der erro por coluna desconhecida (ex.: 'pagamento'),
-    // tenta novamente removendo o campo problemático.
-    const res = await supabaseClient.from("transactions").upsert([t]);
-    if (res && res.error) {
-      console.error('saveTx error (passo 1):', res.error, 'payload:', t);
-      const msg = String(res.error.message || '').toLowerCase();
-      if (msg.includes('pagamento') || msg.includes('column') || msg.includes('unknown') || msg.includes('invalid input')) {
-        try {
-          const t2 = Object.assign({}, t);
-          delete t2.pagamento;
-          const res2 = await supabaseClient.from("transactions").upsert([t2]);
-          if (res2 && res2.error) {
-            console.error('saveTx error (passo 2):', res2.error, 'payload2:', t2);
-            alert('Não foi possível salvar o lançamento. Detalhes: ' + (res2.error.message || 'Erro desconhecido'));
-          }
-          return res2;
-        } catch(e) {
-          console.error('saveTx fallback exception:', e);
-          alert('Falha ao salvar o lançamento.');
-          return { error: e };
-        }
-      } else {
-        alert('Não foi possível salvar o lançamento. Detalhes: ' + (res.error.message || 'Erro desconhecido'));
-      }
-    }
-    return res;
-  }
+  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
@@ -498,13 +413,33 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     modal.addEventListener('click', function(ev){
       var t = ev.target;
       // Any element marked to close or common close buttons
-      if (t.closest('[data-close-modal], #btnFecharModal, #btnCancelar, .icon.close')) {
+      if (t.closest('[data-close-modal], #btnFecharModal, #btnCancelar, #cancelar, .icon.close')) {
         ev.preventDefault();
         try { toggleModal(false); } catch(e) { console.error(e); }
       }
     });
     modal._wiredClose = true;
   }
+
+  // Save handler (delegated inside modal)
+  if (modal && !modal._wiredSave) {
+    modal.addEventListener('click', function(ev){
+      var t = ev.target;
+      if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
+        ev.preventDefault();
+        try {
+          if (t.closest('#salvarENovo')) { window.addOrUpdate && window.addOrUpdate(true); }
+          else { window.addOrUpdate && window.addOrUpdate(false); }
+        } catch(e){ console.error(e); }
+      } else if (t.closest('#cancelar')) {
+        ev.preventDefault();
+        try { toggleModal(false); } catch(e){}
+      } catch(e){ console.error(e); }
+      }
+    });
+    modal._wiredSave = true;
+  }
+
   // Esc key closes modal
   if (!document._wiredEscClose) {
     document.addEventListener('keydown', function(ev){
@@ -521,15 +456,12 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    const wrapPag = qs('#wrapPagamento');
     if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
-      if (wrapPag) wrapPag.style.display = 'none';
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
     } else {
       if (selPag) selPag.disabled = false;
-      if (wrapPag) wrapPag.style.display = '';
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
     }
@@ -564,9 +496,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       data: isIsoDate(qs("#mData")?.value) ? qs("#mData").value : nowYMD(),
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
-      obs: (qs("#mObs")?.value || "").trim(),
-      pagamento: (qs("#mPagamento")?.value || "").trim()
-};
+      obs: (qs("#mObs")?.value || "").trim()
+    };
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -586,12 +517,11 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
-      const r = await saveTx(t);
-      if (r && r.error) { return; } // erro já mostrado
+      await saveTx(t);
       await loadAll();
-      if (window.resetValorInput) window.resetValorInput();
-      toggleModal(false); return;
-      return;
+    if (window.resetValorInput) window.resetValorInput();
+    toggleModal(false); return;
+    return;
     }
 
     // Criar recorrência
@@ -716,52 +646,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
   }
-
-  
-// === Split "Casa 50/50 + ajuste Dinheiro/Pix" ===
-function computeCasaSplitForMonth(ym) {
-  // Só despesas do período ativo (mês ou ciclo de fatura)
-  const range = getActiveRangeForYM(ym);
-  const list = (S.tx || []).filter(x =>
-    x && x.tipo === "Despesa" && x.data && ymdInRange(String(x.data), range.start, range.end)
-  );
-
-  // 1) Total de despesas na carteira Casa
-  const totalCasa = list
-    .filter(x => x.carteira === "Casa")
-    .reduce((a, b) => a + (Number(b.valor) || 0), 0);
-
-  const metadeCasa = totalCasa / 2;
-
-  // 2) Ajuste: pagou em Dinheiro/Pix nas carteiras pessoais => metade credita pro outro
-  const isCashPix = (p) => /^(dinheiro|pix)$/i.test(String(p || ""));
-
-  const cashPixMarido = list
-    .filter(x => x.carteira === "Marido" && isCashPix(x.pagamento))
-    .reduce((a, b) => a + (Number(b.valor) || 0), 0);
-
-  const cashPixEsposa = list
-    .filter(x => x.carteira === "Esposa" && isCashPix(x.pagamento))
-    .reduce((a, b) => a + (Number(b.valor) || 0), 0);
-
-  // Regra: metade do que o Marido paga em dinheiro/pix vai para a Esposa (e vice-versa)
-  const totalMarido = metadeCasa + (cashPixEsposa / 2);
-  const totalEsposa = metadeCasa + (cashPixMarido / 2);
-
-  return { totalCasa, totalMarido, totalEsposa };
-}
-
-function renderSplitCasa() {
-  try {
-    if (!S || !S.month) return;
-    const r = computeCasaSplitForMonth(S.month);
-    const elM = document.getElementById('totMaridoCasa');
-    const elE = document.getElementById('totEsposaCasa');
-    if (elM) elM.textContent = fmtMoney(r.totalMarido);
-    if (elE) elE.textContent = fmtMoney(r.totalEsposa);
-  } catch(e){ console.error('renderSplitCasa:', e); }
-}
-
 
   function renderLancamentos() {
 
@@ -1211,9 +1095,6 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
-
-    // Atualiza a divisão Casa
-    try { renderSplitCasa(); } catch(_) {}
     };
   }
 
@@ -1630,9 +1511,6 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
-
-    // Atualiza a divisão Casa
-    try { renderSplitCasa(); } catch(_) {}
     await savePrefs();
   };
 
