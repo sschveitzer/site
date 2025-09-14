@@ -446,28 +446,28 @@
         <div class="field">
           <label for="mCategoria">Categoria</label>
           <select id="mCategoria"></select>
+		</div>
 
+		<div class="field" id="wrapPagamento">
+			<label for="mPagamento">Forma de pagamento</label>
+			<select id="mPagamento" title="Forma de pagamento">
+				<option value="">Selecione...</option>
+				<option value="dinheiro">Dinheiro</option>
+				<option value="pix">Pix</option>
+				<option value="cartao">Cartão</option>
+				<option value="outros">Outros</option>
+			</select>
+		</div>
 
-<div class="field" id="wrapPagamento">
-  <label for="mPagamento">Forma de pagamento</label>
-  <select id="mPagamento" title="Forma de pagamento">
-    <option value="">Selecione...</option>
-    <option value="dinheiro">Dinheiro</option>
-    <option value="pix">Pix</option>
-    <option value="cartao">Cartão</option>
-    <option value="outros">Outros</option>
-</select>
-</div>
-
-        
         <div class="field" id="wrapCarteira">
-          <label for="mCarteira">Carteira</label>
-          <select id="mCarteira" title="Carteira">
-            <option>Casa</option>
-            <option>Marido</option>
-            <option>Esposa</option>
-          </select>
-          </div>
+			<label for="mCarteira">Carteira</label>
+			<select id="mCarteira" title="Carteira">
+				<option>Casa</option>
+				<option>Marido</option>
+				<option>Esposa</option>
+			</select>
+        </div>
+		
 <div class="field" id="wrapTransf" style="display:none">
           <label>Transferência</label>
           <div class="row3" style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px">
@@ -480,8 +480,6 @@
             </select>
           </div>
           <div class="helper">Selecione origem → destino</div>
-        </div>
-    
         </div>
 
         <div class="field">
