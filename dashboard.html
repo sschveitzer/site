@@ -287,36 +287,36 @@
     </section>
     
     <!-- Carteiras -->
-    <!-- Carteiras -->
     <section id="carteiras">
-      <!-- Card: Gastos por carteira (mês/ciclo) --><div class="grid-carteiras">
-        <!-- Resumo familiar -->
+      <div class="grid-carteiras">
+
+        <!-- Gastos por carteira (mês/ciclo) — usado por renderGastosCarteiras() -->
         <div class="card span-2">
-          <h3><i class="ph ph-wallet"></i> Resumo familiar</h3>
+          <h3><i class="ph ph-wallet"></i> Gastos por carteira (mês/ciclo)</h3>
           <div class="resumo-grid">
             <div class="sum-box">
-              <div class="muted">Entradas (Marido + Esposa)</div>
-              <div id="famEntradas" class="sum-value">R$ 0,00</div>
+              <div class="muted">Casa</div>
+              <div id="gastoCasa" class="sum-value">R$ 0,00</div>
             </div>
             <div class="sum-box">
-              <div class="muted">Saídas (Casa + Particulares)</div>
-              <div id="famSaidas" class="sum-value">R$ 0,00</div>
+              <div class="muted">Marido</div>
+              <div id="gastoMarido" class="sum-value">R$ 0,00</div>
             </div>
             <div class="sum-box">
-              <div class="muted">Diferença</div>
-              <div id="famDiff" class="sum-value">R$ 0,00</div>
+              <div class="muted">Esposa</div>
+              <div id="gastoEsposa" class="sum-value">R$ 0,00</div>
             </div>
           </div>
-          <div class="helper">Obs.: Transferências entre carteiras não entram no cálculo de Entradas/Saídas totais.</div>
+          <div class="helper">Obs.: valores líquidos consideram ajustes do split, conforme o JS.</div>
         </div>
 
-        <!-- Saldos por carteira (full width) -->
+        <!-- Saldos por carteira (mantido) -->
         <div class="card span-2">
           <h3><i class="ph ph-wallet"></i> Saldos por carteira</h3>
           <div id="walletsGrid" class="wallets-grid"></div>
         </div>
 
-        <!-- Marido -->
+        <!-- Marido — Entradas & Saídas (mantido, IDs já usados no JS) -->
         <div class="card">
           <div class="card-head">
             <h3><i class="ph ph-user"></i> Marido — Entradas & Saídas</h3>
@@ -325,18 +325,16 @@
               <span>Saídas: <strong id="p1Out">R$ 0,00</strong></span>
             </div>
           </div>
-
           <div class="mini-toolbar" data-owner="Marido">
             <button class="pill-btn active" data-tipo="todos">Todos</button>
             <button class="pill-btn" data-tipo="Receita">Receitas</button>
             <button class="pill-btn" data-tipo="Despesa">Despesas</button>
             <a class="see-all" href="#" id="p1SeeAll">Ver todos</a>
           </div>
-
           <ul id="p1List" class="lanc-mini"></ul>
         </div>
 
-        <!-- Esposa -->
+        <!-- Esposa — Entradas & Saídas (mantido) -->
         <div class="card">
           <div class="card-head">
             <h3><i class="ph ph-user"></i> Esposa — Entradas & Saídas</h3>
@@ -345,17 +343,17 @@
               <span>Saídas: <strong id="p2Out">R$ 0,00</strong></span>
             </div>
           </div>
-
           <div class="mini-toolbar" data-owner="Esposa">
             <button class="pill-btn active" data-tipo="todos">Todos</button>
             <button class="pill-btn" data-tipo="Receita">Receitas</button>
             <button class="pill-btn" data-tipo="Despesa">Despesas</button>
             <a class="see-all" href="#" id="p2SeeAll">Ver todos</a>
           </div>
-
           <ul id="p2List" class="lanc-mini"></ul>
         </div>
-      </div></section>
+
+      </div>
+    </section>
 
 
 
