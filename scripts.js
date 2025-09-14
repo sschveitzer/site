@@ -55,7 +55,6 @@ window.onload = function () {
     ccDueDay: null,
     ccClosingDay: null,
     editingId: null
-  };
 
   // Carteiras
   S.walletList = ["Casa","Marido","Esposa"];
@@ -70,7 +69,6 @@ try {
       try { render();
     ensureMonthSelectLabels();
     try { renderPessoas(); } catch(_) {} } catch(e) {}
-    };
   }
 } catch (e) {}
 
@@ -271,7 +269,6 @@ function ensureMonthSelectLabels(){
     cc_closing_day: (Number(S.ccClosingDay) || null),
     // ✅ novo: persiste o uso do ciclo da fatura
     use_cycle_for_reports: !!S.useCycleForReports
-  };
   const { error } = await supabaseClient.from("preferences").upsert([payload]);
   if (error) {
     console.error("Erro ao salvar preferências:", error);
@@ -308,7 +305,6 @@ function ensureMonthSelectLabels(){
       obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
       recurrence_id: rec.id,
       occurrence_date: occDate
-    };
     // Carteira/Transferência
     if (selPag) selPag.disabled = false;
     t.carteira = (qs("#mCarteira")?.value || "Casa");
@@ -518,7 +514,6 @@ const selPag = qs('#mPagamento');
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
-    };
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -582,7 +577,6 @@ const chkRepetir = qs("#mRepetir");
       dia_mes: diaMes,
       dia_semana: dow,
       mes: mes
-    };
 
     const { data: saved, error } = await saveRec(rec);
     if (error) {
@@ -792,7 +786,6 @@ h3.textContent = 'Lançamentos — ' + label;
       data_asc:  (a,b)=> String(a.data||'').localeCompare(String(b.data||'')),
       valor_desc:(a,b)=> (Number(b.valor)||0) - (Number(a.valor)||0),
       valor_asc: (a,b)=> (Number(a.valor)||0) - (Number(b.valor)||0),
-    };
     list.sort(by[sort] || by.data_desc);
 
     const fmt = v=> (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -863,7 +856,6 @@ h3.textContent = 'Lançamentos — ' + label;
         chkCompact.onchange = ()=>{
           localStorage.setItem('lancCompact', chkCompact.checked ? '1':'0');
           document.body.classList.toggle('compact', chkCompact.checked);
-        };
       }
       renderLancamentos._wired = true;
     }
@@ -975,14 +967,12 @@ h3.textContent = 'Lançamentos — ' + label;
         await updateTxCategory(c.nome, novo);
         await deleteCat(c.nome);
         await loadAll();
-      };
 
       btnDel.onclick = async () => {
         if (confirm("Excluir categoria? Transações existentes manterão o nome antigo.")) {
           await deleteCat(c.nome);
           await loadAll();
         }
-      };
 
       right.appendChild(btnEdit);
       right.appendChild(btnDel);
@@ -1181,7 +1171,6 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
-    };
   }
 
   // ========= NOVOS INSIGHTS / ANÁLISES =========
@@ -1608,17 +1597,14 @@ function render() {
   if (btnClose) btnClose.onclick = () => {
     if (window.resetValorInput) window.resetValorInput();
     toggleModal(false); return;
-  };
   const btnCancelar = qs("#cancelar");
   const btnSalvar = qs("#salvar");
   if (btnSalvar) btnSalvar.onclick = (e) => {
     try { e && e.preventDefault && e.preventDefault(); } catch(_) {}
     if (typeof window.addOrUpdate === "function") window.addOrUpdate(false);
-  };
   if (btnCancelar) btnCancelar.onclick = () => {
     if (window.resetValorInput) window.resetValorInput();
     toggleModal(false); return;
-  };
 
   qsa("#tipoTabs button").forEach(b =>
     b.addEventListener("click", () => { modalTipo = b.dataset.type; syncTipoTabs(); })
@@ -1635,7 +1621,6 @@ function render() {
     await saveCat({ nome });
     const inp = qs("#newCatName"); if (inp) inp.value = "";
     loadAll();
-  };
 
   // Suporta #toggleDark (novo) e #cfgDark (antigo)
   const btnDark = qs("#toggleDark") || qs("#cfgDark");
@@ -1661,7 +1646,6 @@ function render() {
     S.hide = !!e.target.checked;
     render();
     await savePrefs();
-  };
 
   // Toggle do ciclo na topbar (ao lado de Esconder valores)
   const toggleCycle = qs('#toggleCycle') || qs('#useCycleForReports');
@@ -1671,7 +1655,6 @@ function render() {
     } catch (err) {
       console.error('Falha ao alternar ciclo:', err);
     }
-  };
 
 
   // Ícone de Config na topbar (abre a aba Config)
@@ -1730,7 +1713,6 @@ window.resetValorInput = function(){
   try { rawCents = 0; } catch(_) {}
   const el = document.getElementById('mValorBig');
   if (el) el.value = '';
-};
 const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const setAmount = () => { if (valorInput) valorInput.value = rawCents ? br.format(rawCents/100) : ''; };
 
@@ -1878,7 +1860,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         if (btnCfg){ btnCfg.click(); }
         const metasCard = document.getElementById('tblMetasCat');
         if (metasCard){ metasCard.scrollIntoView({behavior:'smooth', block:'start'}); }
-      };
     }
   }
   function renderMetasConfig(){
@@ -1906,7 +1887,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         const ok = await persistMetas(m);
         renderMetaCard();
         alert(ok ? 'Metas salvas!' : 'Não foi possível salvar as metas.');
-      };
     }
   }
 
@@ -1922,7 +1902,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         navBtns.forEach(b=>b.classList.toggle('active', b===btn));
         panels.forEach(p=>p.classList.toggle('active', p.dataset.rtab===R.tab));
         renderReports();
-      };
     });
 
     const selPeriodo = document.getElementById('rPeriodo');
@@ -2105,7 +2084,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (_origRender) _origRender();
     if (!initReportsUI._done){ initReportsUI(); initReportsUI._done = true; }
     renderReports();
-  };
 
   // ========= Billing config =========
   function wireBillingConfig() {
@@ -2250,7 +2228,6 @@ if (!window.resetValorInput) {
       const el = document.getElementById('mValorBig');
       if (el) el.value = '';
     } catch(_) {}
-  };
 }
 
 // Garante setUseCycleForReports (se a versão do script não exportar)
@@ -2259,7 +2236,6 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     try { window.S.useCycleForReports = !!v; } catch(_) {}
     try { if (typeof savePrefs === 'function') savePrefs(); } catch(_) {}
     try { if (typeof render === 'function') render(); } catch(_) {}
-  };
 }
 // === Exports for console/debug ===
 (function(){ try {
@@ -2335,7 +2311,6 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
         if (typeof setTab === 'function') setTab('lancamentos');
         const q = document.getElementById('lancSearch');
         if (q){ q.value = owner; q.dispatchEvent(new Event('input')); }
-      };
     }
   }
   function wirePessoaToolbar(owner, ids){
@@ -2451,7 +2426,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   window.render = function debouncedRender(){
     if (_raf) cancelAnimationFrame(_raf);
     _raf = requestAnimationFrame(() => { _raf = null; try { renderNow(); } catch(e) { console.error(e); } });
-  };
 
   // Normalização de forma de pagamento
   (function(){
@@ -2476,11 +2450,9 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       if (ALIASES.has(s)) return ALIASES.get(s);
       if (DIRECT.has(s))  return s;
       return 'outros';
-    };
     window.humanFormaPagamento = function(v){
       const key = String(v||'').toLowerCase();
       return LABELS.get(key) || (v || '-');
-    };
   })();
 
   // materializeOne — override mantendo assinatura
@@ -2532,6 +2504,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     ].join('\n');
     document.head.appendChild(css);
   }
+
+  // --- helpers locais (redeclara, mas isolado neste IIFE) ---
 
   // --- helpers locais (redeclara, mas isolado neste IIFE) ---
   function toISO10(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
@@ -2638,7 +2612,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   var _renderGasto = window.renderGastoTotalPessoas;
   window.renderGastoTotalPessoas = function(){
     try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
-  };
 
   // Render inicial + eventos
   function boot(){
