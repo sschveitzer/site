@@ -310,17 +310,10 @@ function ensureMonthSelectLabels(){
       occurrence_date: occDate
     };
     // Carteira/Transferência
-    if (modalTipo === ) {
-      if (selPag) selPag.disabled = true;
-      t.carteira = null;
-      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
-      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
-    } else {
-      if (selPag) selPag.disabled = false;
-      t.carteira = (qs("#mCarteira")?.value || "Casa");
-      t.carteira_origem = null;
-      t.carteira_destino = null;
-    }
+    if (selPag) selPag.disabled = false;
+    t.carteira = (qs("#mCarteira")?.value || "Casa");
+    t.carteira_origem = null;
+    t.carteira_destino = null;
     /* removed stray save */
 }
 
