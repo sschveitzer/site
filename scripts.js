@@ -477,15 +477,10 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    if (modalTipo === ) {
-      if (selPag) selPag.disabled = true;
-      if (fCarteira) fCarteira.style.display = "none";
-      if (fTransf) fTransf.style.display = "";
-    } else {
-      if (selPag) selPag.disabled = false;
-      if (fCarteira) fCarteira.style.display = "";
-      if (fTransf) fTransf.style.display = "none";
-    }
+    // Transferência não é usada: deixa sempre carteira visível e pagamento habilitado
+    if (selPag) selPag.disabled = false;
+    if (fCarteira) fCarteira.style.display = "";
+    if (fTransf) fTransf.style.display = "none";
     qsa("#tipoTabs button").forEach(b => b.classList.toggle("active", b.dataset.type === modalTipo));
     if (!S.editingId) {
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = "Nova " + modalTipo;
