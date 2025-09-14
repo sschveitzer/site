@@ -235,6 +235,7 @@ function ensureMonthSelectLabels(){
 
     render();
 
+
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
   if (monthSel && !monthSel._wiredLanc) {
@@ -244,6 +245,7 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
+
     });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
@@ -698,6 +700,9 @@ function computeGastosPorCarteira(ym){
 }
 
 function renderGastosCarteiras(){
+
+
+
   
   if (!S || !S.month) return;
   try {
@@ -1197,6 +1202,7 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
+
     };
   }
 
@@ -1500,34 +1506,26 @@ function renderCarteiras(){
                          '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
         el.appendChild(card);
       
-  // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
+  // --- 
+  // ——— Ajustes de split (Outros): atualiza elementos estáticos no HTML ———
   try {
-    var section = document.getElementById('carteiras');
-    if (section) {
-      var host = document.getElementById('splitInfoCard');
-      if (!host) {
-        host = document.createElement('div');
-        host.id = 'splitInfoCard';
-        host.className = 'card';
-        section.appendChild(host);
-      }
-      var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
-      var mDelta = Number(deltas.Marido)||0;
-      var eDelta = Number(deltas.Esposa)||0;
-      var sign = function(x){ return x>=0?'+':''; };
-      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
-      var ym = (window.S && S.month) ? S.month : new Date().toISOString().slice(0,7);
-      var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } catch(_){ return ym; } })();
+    var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+    var mDelta = Number(deltas.Marido)||0;
+    var eDelta = Number(deltas.Esposa)||0;
+    var sign = function(x){ return x>=0?'+':''; };
+    var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+    var ym = (window.S && S.month) ? S.month : new Date().toISOString().slice(0,7);
+    var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } catch(_){ return ym; } })();
 
-      host.innerHTML = ''
-        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Outros) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
-        + '<div class="resumo-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
-        +   '<div class="sum-box"><div class="muted">Marido</div><div class="sum-value">'+ sign(mDelta) + fmt(mDelta) +'</div></div>'
-        +   '<div class="sum-box"><div class="muted">Esposa</div><div class="sum-value">'+ sign(eDelta) + fmt(eDelta) +'</div></div>'
-        + '</div>'
-        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Outros (sem alterar lançamentos).</div>';
-    }
-  } catch(err) { console.error('split card render', err); }
+    var periodoEl = document.getElementById('splitPeriodo');
+    if (periodoEl) periodoEl.textContent = labelMes;
+
+    var mEl = document.getElementById('splitMaridoValue');
+    var eEl = document.getElementById('splitEsposaValue');
+    if (mEl) mEl.textContent = sign(mDelta) + fmt(mDelta);
+    if (eEl) eEl.textContent = sign(eDelta) + fmt(eDelta);
+  } catch(err){ console.error('split static update', err); }
+
 });
     }
     // Somas P1/P2 e listas
@@ -1661,6 +1659,7 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
+
     await savePrefs();
   };
 
