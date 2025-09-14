@@ -2493,24 +2493,13 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       descricao: rec.descricao,
       valor: Number(rec.valor)||0,
       obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
-      recurrence_id: rec.id,
-      occurrence_date: occDate
     };
-    if (false && window.false /*removed*/ {
-      return (function(){
-        return withPagamentoDisabled(() => {
-          t.carteira = null;
-          t.carteira_origem  = ($('#mOrigem')?.value || 'Casa');
-          t.carteira_destino = ($('#mDestino')?.value || 'Marido');
-          return t;
-        });
-      })();
-    } else {
-      t.carteira = ($('#mCarteira')?.value || 'Casa');
-      t.carteira_origem = null;
-      t.carteira_destino = null;
-      return t;
-    }
+    // Transferência desativada: sempre usa carteira simples
+    t.carteira = ($('#mCarteira')?.value || 'Casa');
+    t.carteira_origem = null;
+    t.carteira_destino = null;
+    return t;
+  };
   };
 
   // addOrUpdate — override mantendo assinatura
