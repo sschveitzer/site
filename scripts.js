@@ -91,6 +91,69 @@ try {
       .toISOString()
       .slice(0, 10);
   }
+
+
+// ===== Helpers de intervalo ativo (mês/ciclo) =====
+function ymdInRange(ymd, start, end){
+  try {
+    var s = String(ymd||''); 
+    return s >= String(start||'') && s <= String(end||'');
+  } catch(_) { return false; }
+}
+
+// Retorna { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } para o mês selecionado (ou ciclo da fatura se habilitado)
+function getActiveRangeForYM(ym){
+  try {
+    ym = String(ym||'').slice(0,7);
+    if (!/^\d{4}-\d{2}$/.test(ym)) {
+      var d = new Date();
+      ym = d.toISOString().slice(0,7);
+    }
+    var parts = ym.split('-'); 
+    var Y = parseInt(parts[0],10), M = parseInt(parts[1],10);
+    if (!(Y>0 && M>=1 && M<=12)) {
+      var d2 = new Date();
+      Y = d2.getFullYear(); M = d2.getMonth()+1;
+    }
+    // Limites do mês-calendário
+    var startMonth = new Date(Y, M-1, 1);
+    var endMonth   = new Date(Y, M, 0); // último dia
+    function toISO(d){
+      var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+      return dd.toISOString().slice(0,10);
+    }
+    function clampDay(y, m, day){
+      var ld = lastDayOfMonth(y, m);
+      return Math.max(1, Math.min(day, ld));
+    }
+
+    // Se ciclo da fatura estiver habilitado e tivermos dia de fechamento, usa ciclo
+    if (typeof S !== 'undefined' && S && S.useCycleForReports && Number(S.ccClosingDay)) {
+      var closing = Number(S.ccClosingDay);
+      // Fechamento do mês selecionado
+      var closeThis = new Date(Y, M-1, clampDay(Y, M, closing));
+      // Início do ciclo = dia seguinte ao fechamento do mês anterior
+      var prevY = Y, prevM = M-1; if (prevM < 1) { prevM = 12; prevY = Y-1; }
+      var prevClose = new Date(prevY, prevM-1, clampDay(prevY, prevM, closing));
+      var start = new Date(prevClose); start.setDate(start.getDate()+1);
+      var end   = closeThis;
+      return { start: toISO(start), end: toISO(end) };
+    }
+
+    // Caso padrão: mês-calendário
+    return { start: toISO(startMonth), end: toISO(endMonth) };
+  } catch(e){
+    // fallback seguro: mês-calendário atual
+    var d3 = new Date();
+    var s = new Date(d3.getFullYear(), d3.getMonth(), 1);
+    var e = new Date(d3.getFullYear(), d3.getMonth()+1, 0);
+    function toISO(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
+    return { start: toISO(s), end: toISO(e) };
+  }
+}
+
+
+
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
   }
