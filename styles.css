@@ -1583,3 +1583,14 @@ body.dark textarea:focus {
 }
 #modalLanc .field.span-2 { grid-column: 1 / -1; }
 #modalLanc .actions { display:flex; justify-content:flex-end; gap:12px; margin-top:18px; }
+
+
+/* === Split (Outros) summary === */
+.split-card { margin-top:16px; }
+.split-summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.split-summary .value{ font-size:18px; font-weight:800; }
+.split-summary .scol{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:var(--card); }
+
+@media (max-width: 680px){
+  .split-summary{ grid-template-columns:1fr; }
+}
