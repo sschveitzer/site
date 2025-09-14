@@ -91,114 +91,6 @@ try {
       .toISOString()
       .slice(0, 10);
   }
-
-
-// ===== Helpers de intervalo ativo (mês/ciclo) =====
-function ymdInRange(ymd, start, end){
-  try {
-    var s = String(ymd||''); 
-    return s >= String(start||'') && s <= String(end||'');
-  } catch(_) { return false; }
-}
-
-// Retorna { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } para o mês selecionado (ou ciclo da fatura se habilitado)
-function getActiveRangeForYM(ym){
-  try {
-    ym = String(ym||'').slice(0,7);
-    if (!/^\d{4}-\d{2}$/.test(ym)) {
-      var d = new Date();
-      ym = d.toISOString().slice(0,7);
-    }
-    var parts = ym.split('-'); 
-    var Y = parseInt(parts[0],10), M = parseInt(parts[1],10);
-    if (!(Y>0 && M>=1 && M<=12)) {
-      var d2 = new Date();
-      Y = d2.getFullYear(); M = d2.getMonth()+1;
-    }
-    // Limites do mês-calendário
-    var startMonth = new Date(Y, M-1, 1);
-    var endMonth   = new Date(Y, M, 0); // último dia
-    function toISO(d){
-      var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000);
-      return dd.toISOString().slice(0,10);
-    }
-    function clampDay(y, m, day){
-      var ld = lastDayOfMonth(y, m);
-      return Math.max(1, Math.min(day, ld));
-    }
-
-    // Se ciclo da fatura estiver habilitado e tivermos dia de fechamento, usa ciclo
-    if (typeof S !== 'undefined' && S && S.useCycleForReports && Number(S.ccClosingDay)) {
-      var closing = Number(S.ccClosingDay);
-      // Fechamento do mês selecionado
-      var closeThis = new Date(Y, M-1, clampDay(Y, M, closing));
-      // Início do ciclo = dia seguinte ao fechamento do mês anterior
-      var prevY = Y, prevM = M-1; if (prevM < 1) { prevM = 12; prevY = Y-1; }
-      var prevClose = new Date(prevY, prevM-1, clampDay(prevY, prevM, closing));
-      var start = new Date(prevClose); start.setDate(start.getDate()+1);
-      var end   = closeThis;
-      return { start: toISO(start), end: toISO(end) };
-    }
-
-    // Caso padrão: mês-calendário
-    return { start: toISO(startMonth), end: toISO(endMonth) };
-  } catch(e){
-    // fallback seguro: mês-calendário atual
-    var d3 = new Date();
-    var s = new Date(d3.getFullYear(), d3.getMonth(), 1);
-    var e = new Date(d3.getFullYear(), d3.getMonth()+1, 0);
-    function toISO(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
-    return { start: toISO(s), end: toISO(e) }
-
-
-// ===== Novos cálculos: Casa total e Split por pessoa =====
-function computeCasaTotal(ym){
-  try {
-    var range = getActiveRangeForYM(ym);
-    var total = 0;
-    (S.tx || []).forEach(function(x){
-      if (!x) return;
-      if (x.tipo !== "Despesa") return;
-      if (x.carteira !== "Casa") return;
-      if (!(x.data && ymdInRange(String(x.data), range.start, range.end))) return;
-      total += Number(x.valor)||0;
-    });
-    return total;
-  } catch(e){ console.error('computeCasaTotal:', e); return 0; }
-}
-
-// Retorna { Marido: valor, Esposa: valor } com os ajustes de split (Outros) no período ativo
-function computeSplitPessoas(ym){
-  var res = { Marido: 0, Esposa: 0 };
-  try {
-    var range = getActiveRangeForYM(ym);
-    (S.tx || []).forEach(function(x){
-      if (!x || x.tipo !== "Despesa") return;
-      var car = x.carteira || '';
-      if (car !== "Marido" && car !== "Esposa") return;
-      var fp = String(x.forma_pagamento || '').toLowerCase();
-      if (fp !== 'outros') return;
-      if (!(x.data && ymdInRange(String(x.data), range.start, range.end))) return;
-      var v = Number(x.valor)||0;
-      if (!(v>0)) return;
-      var metade = v * 0.5;
-      if (car === "Marido") {
-        res.Esposa += metade; // só a Esposa recebe +50%
-      } else if (car === "Esposa") {
-        res.Marido += metade; // só o Marido recebe +50%
-      }
-    });
-  } catch(e){ console.error('computeSplitPessoas:', e); }
-  return res;
-}
-
-
-;
-  }
-}
-
-
-
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
   }
@@ -352,10 +244,7 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
-    
-    try { renderGastosCarteiras(); } catch (e) {}
-  try { renderGastoTotalPessoas(); } catch (e) {}
-});
+    });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
@@ -475,9 +364,7 @@ function ensureMonthSelectLabels(){
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
-  
-  if (name === 'carteiras') { try { renderGastosCarteiras(); 
-  if (name === 'carteiras') { try { renderGastoTotalPessoas(); } catch (e) {} }} catch (e) {} }}
+  }
 
   function clearModalFields(){
   try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
@@ -857,88 +744,6 @@ function renderGastosCarteiras(){
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
-
-
-// ===== Novo renderer: dois cards de Gasto total por pessoa =====
-function renderGastoTotalPessoas(){
-  try{
-    if (!S || !S.month) return;
-    var ym = S.month;
-    // Remover o card antigo "Gastos por carteira (mês/ciclo)"
-    try {
-      var sec = document.getElementById('carteiras');
-      if (sec) {
-        var cards = sec.querySelectorAll('.card');
-        Array.prototype.forEach.call(cards, function(cd){
-          var h = cd.querySelector('h3');
-          if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
-            cd.parentNode && cd.parentNode.removeChild(cd);
-          }
-        });
-      }
-    } catch(_){}
-
-    // Garantir contêiner de inserção (no início da seção carteiras)
-    var container = document.getElementById('carteiras');
-    if (!container) return;
-
-    // Se já existem nossos cards, só atualiza valores
-    var cardM = document.getElementById('cardGastoTotalMarido');
-    var cardE = document.getElementById('cardGastoTotalEsposa');
-
-    var casaTot = Number(computeCasaTotal(ym)) || 0;
-    var meiaCasa = casaTot / 2;
-    var split = computeSplitPessoas(ym);
-    var totMar = meiaCasa + (Number(split.Marido)||0);
-    var totEsp = meiaCasa + (Number(split.Esposa)||0);
-
-    var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
-
-    function ensureCard(id, titulo){
-      var el = document.getElementById(id);
-      if (el) return el;
-      var c = document.createElement('div');
-      c.className = 'card';
-      c.id = id;
-      c.innerHTML = '<h3><i class="ph ph-wallet"></i> '+titulo+'</h3>' +
-                    '<div class="resumo-grid" style="display:grid;grid-template-columns:1fr;gap:8px">' +
-                      '<div class="sum-box"><div class="muted">50% Casa</div><div class="sum-value" data-role="meiaCasa">R$ 0,00</div></div>' +
-                      '<div class="sum-box"><div class="muted">Ajuste split (Outros)</div><div class="sum-value" data-role="split">R$ 0,00</div></div>' +
-                      '<div class="sum-box"><div class="muted">Total</div><div class="sum-value" data-role="total">R$ 0,00</div></div>' +
-                    '</div>';
-      // Inserir no topo da seção
-      var first = container.querySelector('.card');
-      if (first) container.insertBefore(c, first);
-      else container.appendChild(c);
-      return c;
-    }
-
-    cardM = ensureCard('cardGastoTotalMarido', 'Gasto total — Marido');
-    cardE = ensureCard('cardGastoTotalEsposa', 'Gasto total — Esposa');
-
-    function paint(card, splitVal, totalVal){
-      if (!card) return;
-      var elMeia = card.querySelector('[data-role="meiaCasa"]');
-      var elSplit = card.querySelector('[data-role="split"]');
-      var elTotal = card.querySelector('[data-role="total"]');
-      if (elMeia) elMeia.textContent = fmt(meiaCasa);
-      if (elSplit) elSplit.textContent = fmt(splitVal);
-      if (elTotal) elTotal.textContent = fmt(totalVal);
-    }
-
-    paint(cardM, Number(split.Marido)||0, totMar);
-    paint(cardE, Number(split.Esposa)||0, totEsp);
-  } catch(e){
-    console.error('renderGastoTotalPessoas:', e);
-  }
-}
-
-
-
-
-// expor para debug
-try { window.renderGastosCarteiras = renderGastosCarteiras; } catch (e) {}
-
 
 
   function renderLancamentos() {
@@ -1662,11 +1467,11 @@ h3.textContent = 'Lançamentos — ' + label;
 
 
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
-function computeSplitDeltas(items) {
+function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
-  try {
-    items.forEach(function(x) {
+  try{
+    items.forEach(function(x){
       if (!x || x.tipo !== "Despesa") return;
       var car = x.carteira || "";
       if (car !== "Marido" && car !== "Esposa") return;
@@ -1676,14 +1481,10 @@ function computeSplitDeltas(items) {
       if (!(v > 0)) return;
       var metade = v * 0.5;
       var other = (car === "Marido") ? "Esposa" : "Marido";
-
-      // NOVA REGRA: quem pagou (car) não recebe reembolso.
-      // Apenas o outro assume +50% (aumentar líquido => delta[other] -= metade).
-      delta[other] -= metade;
+      delta[car]  += metade;   // reembolsa 50% ao pagador
+      delta[other]-= metade;   // cobra 50% do outro
     });
-  } catch(e) {
-    console.error("computeSplitDeltas:", e);
-  }
+  }catch(e){ console.error("computeSplitDeltas:", e); }
   return delta;
 }
 function renderCarteiras(){
@@ -2878,106 +2679,198 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   console.info('[OK] Bloco de otimizações aplicado.');
 })();
 // ==== FIM: bloco de otimizações/ajustes ====/
-try { window.renderGastoTotalPessoas = renderGastoTotalPessoas; } catch(e) {}
 
 
+/* ==========================================================================
+   GASTO TOTAL POR PESSOA (MARIDO/ESPOSA) — CONSOLIDADO
+   - Respeita mês ou ciclo da fatura (se S.useCycleForReports + S.ccClosingDay)
+   - 50% da CASA + Ajuste split (Outros) com regra: só o cônjuge recebe +50%
+   - Remove o card antigo "Gastos por carteira (mês/ciclo)" se existir
+   - Insere 2 cards: "Gasto total — Marido" e "Gasto total — Esposa"
+   - Hooks: loadAll(), DOMContentLoaded, troca de mês, entrar na aba Carteiras
+   ========================================================================== */
 
-/* ===== Boot: garantir render dos novos cards ===== */
+/* ===== Helpers locais (em sandbox, sem conflitar com os nativos) ===== */
 (function(){
-  function tryRender(){
-    try { if (typeof renderGastoTotalPessoas === 'function') renderGastoTotalPessoas(); } catch(e){ console.warn(e); }
+  function toISO10(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
+  function lastDayOfMonth(y, m){ return new Date(y, m, 0).getDate(); }
+  function ymdInRange(ymd, start, end){
+    var s = String(ymd||''); return s >= String(start||'') && s <= String(end||'');
   }
-  // Monkey-patch loadAll para render após carregar dados
-  try {
-    if (typeof loadAll === 'function' && !window.__patchedLoadAllForGastoTotal) {
-      const _loadAll = loadAll;
-      window.loadAll = async function(){
-        const r = await _loadAll.apply(this, arguments);
-        tryRender();
-        return r;
-      };
-      window.__patchedLoadAllForGastoTotal = true;
+  function getActiveRangeForYM(ym){
+    try{
+      ym = String(ym||'').slice(0,7);
+      if (!/^\d{4}-\d{2}$/.test(ym)) {
+        var d0 = new Date(); ym = d0.toISOString().slice(0,7);
+      }
+      var p = ym.split('-'); var Y = parseInt(p[0],10), M = parseInt(p[1],10);
+      var startMonth = new Date(Y, M-1, 1);
+      var endMonth   = new Date(Y, M, 0);
+      // Ciclo da fatura (se preferências estiverem disponíveis)
+      if (window.S && S.useCycleForReports && Number(S.ccClosingDay)) {
+        var closing = Number(S.ccClosingDay);
+        var prevY = Y, prevM = M-1; if (prevM < 1) { prevM = 12; prevY = Y-1; }
+        var clamp = function(y,m,d){ var ld = lastDayOfMonth(y,m); return Math.max(1, Math.min(d, ld)); };
+        var prevClose = new Date(prevY, prevM-1, clamp(prevY, prevM, closing));
+        var thisClose = new Date(Y, M-1, clamp(Y, M, closing));
+        var start = new Date(prevClose); start.setDate(start.getDate()+1);
+        return { start: toISO10(start), end: toISO10(thisClose) };
+      }
+      return { start: toISO10(startMonth), end: toISO10(endMonth) };
+    } catch(e){
+      var d = new Date(); return { start: toISO10(new Date(d.getFullYear(), d.getMonth(), 1)), end: toISO10(new Date(d.getFullYear(), d.getMonth()+1, 0)) };
     }
-  } catch(e){ console.warn(e); }
-
-  // Render no DOM pronto
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryRender);
-  } else {
-    tryRender();
   }
 
-  // Pequeno retry se a seção ainda não estiver presente
-  let tries = 0;
-  const iv = setInterval(function(){
-    tries++;
-    tryRender();
-    if (tries >= 10) clearInterval(iv);
-  }, 300);
-})();
+  /* ===== Calculadoras ===== */
+  function computeCasaTotal(ym){
+    var r = getActiveRangeForYM(ym);
+    var total = 0, list = (window.S && Array.isArray(S.tx)) ? S.tx : [];
+    for (var i=0;i<list.length;i++){
+      var x = list[i]; if (!x || x.tipo!=='Despesa' || x.carteira!=='Casa') continue;
+      var d = String(x.data||''); if (!ymdInRange(d, r.start, r.end)) continue;
+      total += Number(x.valor)||0;
+    }
+    return total;
+  }
+  // split (Outros): só o cônjuge recebe +50%, pagador não recebe reembolso
+  function computeSplitPessoas(ym){
+    var r = getActiveRangeForYM(ym), res = { Marido:0, Esposa:0 };
+    var list = (window.S && Array.isArray(S.tx)) ? S.tx : [];
+    for (var i=0;i<list.length;i++){
+      var x = list[i]; if (!x || x.tipo!=='Despesa') continue;
+      var car = x.carteira||''; if (car!=='Marido' && car!=='Esposa') continue;
+      var fp = String(x.forma_pagamento||'').toLowerCase(); if (fp!=='outros') continue;
+      var d = String(x.data||''); if (!ymdInRange(d, r.start, r.end)) continue;
+      var v = Number(x.valor)||0; if (!(v>0)) continue;
+      var metade = v*0.5;
+      if (car === 'Marido') res.Esposa += metade;
+      else res.Marido += metade;
+    }
+    return res;
+  }
 
+  /* ===== Render ===== */
+  function renderGastoTotalPessoas(){
+    try{
+      if (!(window.S && S.month)) return;
+      var ym = S.month;
+      var sec = document.getElementById('carteiras');
+      if (!sec) return;
 
+      // remover o card antigo por título (se ainda existir)
+      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
+        var h = cd.querySelector('h3');
+        if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
+          cd.parentNode && cd.parentNode.removeChild(cd);
+        }
+      });
 
+      // cards existentes?
+      var cardM = document.getElementById('cardGastoTotalMarido');
+      var cardE = document.getElementById('cardGastoTotalEsposa');
+      function ensureCard(id, titulo){
+        var el = document.getElementById(id);
+        if (el) return el;
+        var c = document.createElement('div');
+        c.className = 'card'; c.id = id;
+        c.innerHTML = '<h3><i class="ph ph-wallet"></i> '+titulo+'</h3>' +
+                      '<div class="resumo-grid" style="display:grid;grid-template-columns:1fr;gap:8px">' +
+                        '<div class="sum-box"><div class="muted">50% Casa</div><div class="sum-value" data-role="meiaCasa">R$ 0,00</div></div>' +
+                        '<div class="sum-box"><div class="muted">Ajuste split (Outros)</div><div class="sum-value" data-role="split">R$ 0,00</div></div>' +
+                        '<div class="sum-box"><div class="muted">Total</div><div class="sum-value" data-role="total">R$ 0,00</div></div>' +
+                      '</div>';
+        var anchor = sec.querySelector('.grid-carteiras, .card');
+        if (anchor) sec.insertBefore(c, anchor); else sec.appendChild(c);
+        return c;
+      }
+      cardM = ensureCard('cardGastoTotalMarido', 'Gasto total — Marido');
+      cardE = ensureCard('cardGastoTotalEsposa', 'Gasto total — Esposa');
 
-/* ===== Super Boot: garantir render na troca de abas e quando a seção muda ===== */
-(function(){
-  function safe(fn){ try { return fn && fn(); } catch(e){ console.warn(e); } }
-  function tryRender(){ safe(function(){ if (typeof renderGastoTotalPessoas === 'function') renderGastoTotalPessoas(); }); }
+      var casaTot = computeCasaTotal(ym);
+      var meiaCasa = casaTot / 2;
+      var split = computeSplitPessoas(ym);
+      var totMar = meiaCasa + (Number(split.Marido)||0);
+      var totEsp = meiaCasa + (Number(split.Esposa)||0);
+      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+      function paint(card, splitVal, totalVal){
+        if (!card) return;
+        var elMeia = card.querySelector('[data-role="meiaCasa"]');
+        var elSplit = card.querySelector('[data-role="split"]');
+        var elTotal = card.querySelector('[data-role="total"]');
+        if (elMeia) elMeia.textContent = fmt(meiaCasa);
+        if (elSplit) elSplit.textContent = fmt(splitVal);
+        if (elTotal) elTotal.textContent = fmt(totalVal);
+      }
+      paint(cardM, Number(split.Marido)||0, totMar);
+      paint(cardE, Number(split.Esposa)||0, totEsp);
+    }catch(e){ console.error('renderGastoTotalPessoas:', e); }
+  }
+  window.renderGastoTotalPessoas = renderGastoTotalPessoas;
 
-  // Monkey-patch setTab para sempre renderizar ao entrar em 'carteiras'
-  try {
-    if (typeof setTab === 'function' && !window.__patchedSetTabForGastoTotal) {
-      const _setTab = setTab;
-      window.setTab = function(name){
-        const r = _setTab.apply(this, arguments);
-        if (name === 'carteiras') tryRender();
-        return r;
-      };
-      window.__patchedSetTabForGastoTotal = true;
+  /* ===== Wiring robusto ===== */
+  function boot(){
+    try {
+      if (typeof loadAll === 'function' && !window.__patchedLoadAllGastoTotal) {
+        const _loadAll = loadAll;
+        window.loadAll = async function(){
+          const r = await _loadAll.apply(this, arguments);
+          try { renderGastoTotalPessoas(); } catch(_) {}
+          return r;
+        };
+        window.__patchedLoadAllGastoTotal = true;
+      }
+    } catch(_) {}
+
+    // DOM pronto
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
     } else {
-      // se setTab ainda não existir, instala um watcher para patchar quando surgir
-      let tries = 0;
-      const iv = setInterval(function(){
-        tries++;
-        if (typeof setTab === 'function' && !window.__patchedSetTabForGastoTotal) {
-          const _setTab = setTab;
-          window.setTab = function(name){
-            const r = _setTab.apply(this, arguments);
-            if (name === 'carteiras') tryRender();
-            return r;
-          };
-          window.__patchedSetTabForGastoTotal = true;
-          clearInterval(iv);
-        }
-        if (tries > 20) clearInterval(iv);
-      }, 300);
+      try { renderGastoTotalPessoas(); } catch(_) {}
     }
-  } catch(e){ console.warn(e); }
 
-  // Observer de mudanças na seção carteiras
-  try {
-    const sec = document.getElementById('carteiras');
-    if (sec && !sec.__gastoObserver) {
-      const mo = new MutationObserver(function(){ tryRender(); });
-      mo.observe(sec, { childList: true, subtree: true });
-      sec.__gastoObserver = mo;
-    } else if (!sec) {
-      // se ainda não existe, tenta novamente algumas vezes
-      let ctries = 0;
-      const iv2 = setInterval(function(){
-        const s = document.getElementById('carteiras');
-        if (s && !s.__gastoObserver) {
-          const mo = new MutationObserver(function(){ tryRender(); });
-          mo.observe(s, { childList: true, subtree: true });
-          s.__gastoObserver = mo;
-          clearInterval(iv2);
-        }
-        if (++ctries > 20) clearInterval(iv2);
-      }, 300);
+    // Mudar mês
+    var monthSel = document.getElementById('monthSelect');
+    if (monthSel && !monthSel._wiredGastoTotal) {
+      monthSel.addEventListener('change', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
+      monthSel._wiredGastoTotal = true;
     }
-  } catch(e){ console.warn(e); }
 
-  // Prime render (caso já esteja na aba)
-  tryRender();
+    // Entrar na aba Carteiras
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]') || []);
+    tabs.forEach(function(tab){
+      if (tab._wiredGastoTotal) return;
+      tab.addEventListener('click', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
+      tab._wiredGastoTotal = true;
+    });
+
+    // Monkey-patch setTab se existir
+    try {
+      if (typeof setTab === 'function' && !window.__patchedSetTabGastoTotal) {
+        const _setTab = setTab;
+        window.setTab = function(name){
+          const r = _setTab.apply(this, arguments);
+          if (name === 'carteiras') { try { renderGastoTotalPessoas(); } catch(_) {} }
+          return r;
+        };
+        window.__patchedSetTabGastoTotal = true;
+      }
+    } catch(_) {}
+
+    // Retry inicial para garantir presença da seção
+    var tries = 0;
+    var iv = setInterval(function(){
+      try { renderGastoTotalPessoas(); } catch(_) {}
+      if (++tries > 10) clearInterval(iv);
+    }, 300);
+  }
+  // Espera S existir antes de boot
+  (function waitS(){
+    if (window.S) return boot();
+    var tries = 0;
+    var iv = setInterval(function(){
+      if (window.S) { clearInterval(iv); boot(); }
+      if (++tries > 20) clearInterval(iv);
+    }, 200);
+  })();
 })();
-
