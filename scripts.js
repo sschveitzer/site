@@ -248,7 +248,7 @@ function ensureMonthSelectLabels(){
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
-    try { renderResumoFamiliar && renderResumoFamiliar(); } catch (e) {}
+      try { renderResumoFamiliar && renderResumoFamiliar(); } catch (e) {}
       try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     });
     ensureMonthSelectLabels();
