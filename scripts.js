@@ -121,7 +121,46 @@ function money(v){
     return new Date(y, m, 0).getDate(); // m = 1..12
   }
 
-  // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
+  
+
+// === Helpers globais de período (garantem que Resumo Familiar acompanhe o seletor de mês) ===
+function ymdInRange(ymd, start, end) {
+  const s = String(ymd || '');
+  return s >= String(start || '') && s <= String(end || '');
+}
+
+// Retorna o intervalo ativo para um YYYY-MM, respeitando ciclo da fatura se habilitado
+function getActiveRangeForYM(ym) {
+  ym = String(ym || '').slice(0, 7);
+  if (!/^\d{4}-\d{2}$/.test(ym)) {
+    const d0 = new Date();
+    ym = d0.toISOString().slice(0, 7);
+  }
+  const Y = +ym.slice(0, 4), M = +ym.slice(5, 7);
+
+  // Preferências de ciclo (se existirem)
+  let closing = Number((window.S && S.ccClosingDay) || null);
+  const hasCycle = (window.S && S.useCycleForReports && Number.isFinite(closing) && closing >= 1 && closing <= 31);
+
+  const toISO10 = (d) => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0, 10);
+  const clamp = (y, m, d) => Math.max(1, Math.min(d, new Date(y, m, 0).getDate()));
+
+  if (hasCycle) {
+    const prevY = (M === 1) ? (Y - 1) : Y;
+    const prevM = (M === 1) ? 12 : (M - 1);
+    const prevClose = new Date(prevY, prevM - 1, clamp(prevY, prevM, closing));
+    const thisClose = new Date(Y, M - 1, clamp(Y, M, closing));
+    const start = new Date(prevClose); start.setDate(start.getDate() + 1);
+    return { start: toISO10(start), end: toISO10(thisClose) };
+  }
+
+  // Mês-calendário
+  const startMonth = new Date(Y, M - 1, 1);
+  const endMonth   = new Date(Y, M, 0);
+  return { start: toISO10(startMonth), end: toISO10(endMonth) };
+}
+
+// Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
     try {
       const [y, m] = ym.split("-").map(Number);
@@ -2646,8 +2685,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
         return b;
       }
-      tiles.appendChild(makeTile('Gasto total — Marido', totMar));
       tiles.appendChild(makeTile('Gasto total — Esposa', totEsp));
+      tiles.appendChild(makeTile('Gasto total — Marido', totMar));
     } catch(e){ console.error('renderGastoTotalTiles:', e); }
   }
   window.renderGastoTotalTiles = renderGastoTotalTiles;
