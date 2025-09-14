@@ -2683,3 +2683,11 @@ if (typeof getActiveRangeForYM !== 'function') {
     return (typeof getRange === 'function') ? getRange(ym) : { start: '', end: '' };
   }
 }
+
+/* === Compat global for ymdInRange used by top-level functions === */
+if (typeof ymdInRange !== 'function') {
+  function ymdInRange(ymd, start, end){
+    var s = String(ymd||''); 
+    return s >= String(start||'') && s <= String(end||'');
+  }
+}
