@@ -57,16 +57,23 @@ window.onload = function () {
     editingId: null
   };
 
+  // Carteiras
+  S.walletList = ["Casa","Marido","Esposa"];
+
+// Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
+try {
   window.S = S;
   if (typeof window.setUseCycleForReports !== 'function') {
     window.setUseCycleForReports = function(v){
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
-      try { render(); } catch(e) {}
-      try { ensureMonthSelectLabels(); } catch(e) {}
-      try { renderPessoas(); } catch(e) {}
+      try { render();
+    ensureMonthSelectLabels();
+    try { renderPessoas(); } catch(_) {} } catch(e) {}
     };
   }
+} catch (e) {}
+
 
 
   // ========= HELPERS GERAIS =========
