@@ -1471,8 +1471,33 @@ h3.textContent = 'Lançamentos — ' + label;
 
 
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
+// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
+// Regra: só quem NÃO pagou recebe ajuste (cobrança de 50%).
 function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
+  if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
+  try{
+    items.forEach(function(x){
+      if (!x || x.tipo !== "Despesa") return;
+      var car = x.carteira || "";
+      if (car !== "Marido" && car !== "Esposa") return;
+
+      // Considera somente despesas pessoais pagas em "Outros"
+      var fp = String(x.forma_pagamento || "").toLowerCase();
+      if (fp !== "outros") return;
+
+      var v = Number(x.valor) || 0;
+      if (!(v > 0)) return;
+
+      var metade = v * 0.5;
+      var other = (car === "Marido") ? "Esposa" : "Marido";
+
+      // ✅ Novo: não dá reembolso ao pagador; só lança a cobrança no outro
+      delta[other] -= metade;
+    });
+  }catch(e){ console.error("computeSplitDeltas:", e); }
+  return delta;
+};
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
   try{
     items.forEach(function(x){
