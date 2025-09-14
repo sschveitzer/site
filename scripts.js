@@ -2557,7 +2557,13 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   function lastDayOfMonth(y, m){ return new Date(y, m, 0).getDate(); }
   function ymdInRange(ymd, start, end){ var s = String(ymd||''); return s >= String(start||'') && s <= String(end||''); }
   function getRange(ym){
-    ym = String(ym||'').slice(0,7); if (!/^\d{4}-\d{2}$/.test(ym)){ var d0=new Date(); ym = d0.toISOString().slice(0,7); }
+    ym = String(ym||'').slice(0,7); if (!/^\d{4}
+
+// Alias para compatibilidade (corrige erro de ReferenceError)
+function getActiveRangeForYM(ym) {
+  return getRange(ym);
+}
+-\d{2}$/.test(ym)){ var d0=new Date(); ym = d0.toISOString().slice(0,7); }
     var Y = +ym.slice(0,4), M = +ym.slice(5,7);
     if (window.S && S.useCycleForReports && Number(S.ccClosingDay)){
       var closing = Number(S.ccClosingDay);
