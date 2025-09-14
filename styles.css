@@ -1583,3 +1583,30 @@ body.dark textarea:focus {
 }
 #modalLanc .field.span-2 { grid-column: 1 / -1; }
 #modalLanc .actions { display:flex; justify-content:flex-end; gap:12px; margin-top:18px; }
+
+/* ===== Resumo familiar / tiles ===== */
+.group-card .tiles { display:grid; gap:12px; }
+.group-card .tiles-2 { grid-template-columns: repeat(2, 1fr); }
+.group-card .tiles-3 { grid-template-columns: repeat(3, 1fr); }
+
+.group-card .tile {
+  border: 1px dashed var(--border);
+  background: var(--bg-soft);
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.group-card .tile .big { font-size: 24px; font-weight: 800; }
+
+.group-card .subcard {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+/* dark mode refinamentos */
+body.dark .group-card .tile { background: #0e142a; border-color: #1f2a44; }
+body.dark .group-card .subcard { background: #0f152b; border-color: #1f2a44; }
