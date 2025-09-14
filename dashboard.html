@@ -287,32 +287,36 @@
     </section>
     
     <!-- Carteiras -->
+    <!-- Carteiras -->
     <section id="carteiras">
-      <div class="grid-carteiras">
-
-        <!-- Gastos por carteira (mês/ciclo) — usado por renderGastosCarteiras() -->
+      <!-- Card: Gastos por carteira (mês/ciclo) --><div class="grid-carteiras">
+        <!-- Resumo familiar -->
         <div class="card span-2">
           <h3><i class="ph ph-wallet"></i> Resumo familiar</h3>
           <div class="resumo-grid">
             <div class="sum-box">
-              <div class="muted">Marido</div>
-              <div id="gastoMarido" class="sum-value">R$ 0,00</div>
+              <div class="muted">Entradas (Marido + Esposa)</div>
+              <div id="famEntradas" class="sum-value">R$ 0,00</div>
             </div>
             <div class="sum-box">
-              <div class="muted">Esposa</div>
-              <div id="gastoEsposa" class="sum-value">R$ 0,00</div>
+              <div class="muted">Saídas (Casa + Particulares)</div>
+              <div id="famSaidas" class="sum-value">R$ 0,00</div>
+            </div>
+            <div class="sum-box">
+              <div class="muted">Diferença</div>
+              <div id="famDiff" class="sum-value">R$ 0,00</div>
             </div>
           </div>
-          <div class="helper">Obs.: os valores consideram ajustes do split quando aplicável.</div>
+          <div class="helper">Obs.: Transferências entre carteiras não entram no cálculo de Entradas/Saídas totais.</div>
         </div>
 
-        <!-- Saldos por carteira (mantido) -->
+        <!-- Saldos por carteira (full width) -->
         <div class="card span-2">
           <h3><i class="ph ph-wallet"></i> Saldos por carteira</h3>
           <div id="walletsGrid" class="wallets-grid"></div>
         </div>
 
-<!-- Marido — Entradas & Saídas (restaurado) -->
+        <!-- Marido -->
         <div class="card">
           <div class="card-head">
             <h3><i class="ph ph-user"></i> Marido — Entradas & Saídas</h3>
@@ -321,16 +325,18 @@
               <span>Saídas: <strong id="p1Out">R$ 0,00</strong></span>
             </div>
           </div>
+
           <div class="mini-toolbar" data-owner="Marido">
             <button class="pill-btn active" data-tipo="todos">Todos</button>
             <button class="pill-btn" data-tipo="Receita">Receitas</button>
             <button class="pill-btn" data-tipo="Despesa">Despesas</button>
             <a class="see-all" href="#" id="p1SeeAll">Ver todos</a>
           </div>
+
           <ul id="p1List" class="lanc-mini"></ul>
         </div>
 
-        <!-- Esposa — Entradas & Saídas (restaurado) -->
+        <!-- Esposa -->
         <div class="card">
           <div class="card-head">
             <h3><i class="ph ph-user"></i> Esposa — Entradas & Saídas</h3>
@@ -339,53 +345,17 @@
               <span>Saídas: <strong id="p2Out">R$ 0,00</strong></span>
             </div>
           </div>
+
           <div class="mini-toolbar" data-owner="Esposa">
             <button class="pill-btn active" data-tipo="todos">Todos</button>
             <button class="pill-btn" data-tipo="Receita">Receitas</button>
             <button class="pill-btn" data-tipo="Despesa">Despesas</button>
             <a class="see-all" href="#" id="p2SeeAll">Ver todos</a>
           </div>
+
           <ul id="p2List" class="lanc-mini"></ul>
         </div>
-
-        <!-- Marido — Entradas & Saídas (mantido, IDs já usados no JS) -->
-        <div class="card">
-          <div class="card-head">
-            <h3><i class="ph ph-user"></i> Marido — Entradas & Saídas</h3>
-            <div class="mini-sums">
-              <span>Entradas: <strong id="p1In">R$ 0,00</strong></span>
-              <span>Saídas: <strong id="p1Out">R$ 0,00</strong></span>
-            </div>
-          </div>
-          <div class="mini-toolbar" data-owner="Marido">
-            <button class="pill-btn active" data-tipo="todos">Todos</button>
-            <button class="pill-btn" data-tipo="Receita">Receitas</button>
-            <button class="pill-btn" data-tipo="Despesa">Despesas</button>
-            <a class="see-all" href="#" id="p1SeeAll">Ver todos</a>
-          </div>
-          <ul id="p1List" class="lanc-mini"></ul>
-        </div>
-
-        <!-- Esposa — Entradas & Saídas (mantido) -->
-        <div class="card">
-          <div class="card-head">
-            <h3><i class="ph ph-user"></i> Esposa — Entradas & Saídas</h3>
-            <div class="mini-sums">
-              <span>Entradas: <strong id="p2In">R$ 0,00</strong></span>
-              <span>Saídas: <strong id="p2Out">R$ 0,00</strong></span>
-            </div>
-          </div>
-          <div class="mini-toolbar" data-owner="Esposa">
-            <button class="pill-btn active" data-tipo="todos">Todos</button>
-            <button class="pill-btn" data-tipo="Receita">Receitas</button>
-            <button class="pill-btn" data-tipo="Despesa">Despesas</button>
-            <a class="see-all" href="#" id="p2SeeAll">Ver todos</a>
-          </div>
-          <ul id="p2List" class="lanc-mini"></ul>
-        </div>
-
-      </div>
-    </section>
+      </div></section>
 
 
 
