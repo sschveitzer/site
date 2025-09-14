@@ -2493,14 +2493,11 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       descricao: rec.descricao,
       valor: Number(rec.valor)||0,
       obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
-    };
     // Transferência desativada: sempre usa carteira simples
     t.carteira = ($('#mCarteira')?.value || 'Casa');
     t.carteira_origem = null;
     t.carteira_destino = null;
     return t;
-  };
-  };
 
   // addOrUpdate — override mantendo assinatura
   window.addOrUpdate = /* módulo removido: cartões duplicados 'Gasto total — Marido/Esposa' */
