@@ -2879,3 +2879,40 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 })();
 // ==== FIM: bloco de otimizações/ajustes ====/
 try { window.renderGastoTotalPessoas = renderGastoTotalPessoas; } catch(e) {}
+
+
+
+/* ===== Boot: garantir render dos novos cards ===== */
+(function(){
+  function tryRender(){
+    try { if (typeof renderGastoTotalPessoas === 'function') renderGastoTotalPessoas(); } catch(e){ console.warn(e); }
+  }
+  // Monkey-patch loadAll para render após carregar dados
+  try {
+    if (typeof loadAll === 'function' && !window.__patchedLoadAllForGastoTotal) {
+      const _loadAll = loadAll;
+      window.loadAll = async function(){
+        const r = await _loadAll.apply(this, arguments);
+        tryRender();
+        return r;
+      };
+      window.__patchedLoadAllForGastoTotal = true;
+    }
+  } catch(e){ console.warn(e); }
+
+  // Render no DOM pronto
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryRender);
+  } else {
+    tryRender();
+  }
+
+  // Pequeno retry se a seção ainda não estiver presente
+  let tries = 0;
+  const iv = setInterval(function(){
+    tries++;
+    tryRender();
+    if (tries >= 10) clearInterval(iv);
+  }, 300);
+})();
+
