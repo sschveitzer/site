@@ -1507,14 +1507,26 @@ function renderCarteiras(){
   // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
   try {
     var section = document.getElementById('carteiras');
-    if (section) {
-      var host = document.getElementById('splitInfoCard');
-      if (!host) {
-        host = document.createElement('div');
-        host.id = 'splitInfoCard';
-        host.className = 'card';
-        section.appendChild(host);
+if (section) {
+  var grid = section.querySelector('.grid-carteiras');
+  var host = document.getElementById('splitInfoCard');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'splitInfoCard';
+    host.className = 'card';
+    if (grid) {
+      // Inserir antes do primeiro card padrão (após o span-2 de Saldos)
+      var cards = grid.querySelectorAll('.card');
+      var insertBeforeNode = null;
+      for (var i=0;i<cards.length;i++){
+        if (!cards[i].classList.contains('span-2')) { insertBeforeNode = cards[i]; break; }
       }
+      if (insertBeforeNode) grid.insertBefore(host, insertBeforeNode); else grid.appendChild(host);
+    } else {
+      section.appendChild(host);
+    }
+  }
+
       var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
       var mDelta = Number(deltas.Marido)||0;
       var eDelta = Number(deltas.Esposa)||0;
