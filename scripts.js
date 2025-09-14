@@ -1,3 +1,4 @@
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1538,11 +1539,12 @@ function renderCarteiras(){
     const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
     renderMiniList('p1List', p1.items);
     renderMiniList('p2List', p2.items);
-    // Resumo familiar
-    const fam = sumFamily();
-    const e = document.getElementById('famEntradas'); if (e) e.textContent = fmtMoney(fam.entradas);
-    const s = document.getElementById('famSaidas');   if (s) s.textContent = fmtMoney(fam.saidas);
-    const d = document.getElementById('famDiff');     if (d) d.textContent = fmtMoney(fam.diff);
+    /* Resumo familiar removido do dashboard — bloco desativado */
+// // Resumo familiar
+//     const fam = sumFamily();
+//     const e = document.getElementById('famEntradas'); if (e) e.textContent = fmtMoney(fam.entradas);
+//     const s = document.getElementById('famSaidas');   if (s) s.textContent = fmtMoney(fam.saidas);
+//     const d = document.getElementById('famDiff');     if (d) d.textContent = fmtMoney(fam.diff);
   }
 function render() {
     document.body.classList.toggle("dark", S.dark);
