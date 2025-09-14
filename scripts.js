@@ -1476,7 +1476,7 @@ h3.textContent = 'Lançamentos — ' + label;
 function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
-  try{
+  try {
     items.forEach(function(x){
       if (!x || x.tipo !== "Despesa") return;
       var car = x.carteira || "";
@@ -1495,25 +1495,9 @@ function computeSplitDeltas(items){
       // ✅ Novo: não dá reembolso ao pagador; só lança a cobrança no outro
       delta[other] -= metade;
     });
-  }catch(e){ console.error("computeSplitDeltas:", e); }
-  return delta;
-};
-  if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
-  try{
-    items.forEach(function(x){
-      if (!x || x.tipo !== "Despesa") return;
-      var car = x.carteira || "";
-      if (car !== "Marido" && car !== "Esposa") return;
-      var fp = String(x.forma_pagamento || "").toLowerCase();
-      if (fp !== "outros") return;
-      var v = Number(x.valor) || 0;
-      if (!(v > 0)) return;
-      var metade = v * 0.5;
-      var other = (car === "Marido") ? "Esposa" : "Marido";
-      delta[car]  += metade;   // reembolsa 50% ao pagador
-      delta[other]-= metade;   // cobra 50% do outro
-    });
-  }catch(e){ console.error("computeSplitDeltas:", e); }
+  } catch(e) {
+    console.error("computeSplitDeltas:", e);
+  }
   return delta;
 }
 function renderCarteiras(){
