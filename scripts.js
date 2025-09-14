@@ -55,23 +55,18 @@ window.onload = function () {
     ccDueDay: null,
     ccClosingDay: null,
     editingId: null
+  };
 
-  // Carteiras
-  S.walletList = ["Casa","Marido","Esposa"];
-
-// Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
-try {
   window.S = S;
   if (typeof window.setUseCycleForReports !== 'function') {
     window.setUseCycleForReports = function(v){
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
-      try { render();
-    ensureMonthSelectLabels();
-    try { renderPessoas(); } catch(_) {} } catch(e) {}
+      try { render(); } catch(e) {}
+      try { ensureMonthSelectLabels(); } catch(e) {}
+      try { renderPessoas(); } catch(e) {}
+    };
   }
-} catch (e) {}
-
 
 
   // ========= HELPERS GERAIS =========
@@ -269,6 +264,7 @@ function ensureMonthSelectLabels(){
     cc_closing_day: (Number(S.ccClosingDay) || null),
     // ✅ novo: persiste o uso do ciclo da fatura
     use_cycle_for_reports: !!S.useCycleForReports
+  };
   const { error } = await supabaseClient.from("preferences").upsert([payload]);
   if (error) {
     console.error("Erro ao salvar preferências:", error);
@@ -305,11 +301,19 @@ function ensureMonthSelectLabels(){
       obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
       recurrence_id: rec.id,
       occurrence_date: occDate
+    };
     // Carteira/Transferência
-    if (selPag) selPag.disabled = false;
-    t.carteira = (qs("#mCarteira")?.value || "Casa");
-    t.carteira_origem = null;
-    t.carteira_destino = null;
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+    }
     /* removed stray save */
 }
 
@@ -473,10 +477,15 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    // Transferência não é usada: deixa sempre carteira visível e pagamento habilitado
-    if (selPag) selPag.disabled = false;
-    if (fCarteira) fCarteira.style.display = "";
-    if (fTransf) fTransf.style.display = "none";
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      if (fCarteira) fCarteira.style.display = "none";
+      if (fTransf) fTransf.style.display = "";
+    } else {
+      if (selPag) selPag.disabled = false;
+      if (fCarteira) fCarteira.style.display = "";
+      if (fTransf) fTransf.style.display = "none";
+    }
     qsa("#tipoTabs button").forEach(b => b.classList.toggle("active", b.dataset.type === modalTipo));
     if (!S.editingId) {
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = "Nova " + modalTipo;
@@ -514,19 +523,27 @@ const selPag = qs('#mPagamento');
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
+    };
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
 
     
-    // ===== Carteira (sem transferência) =====
-    if (selPag) selPag.disabled = false;
-    t.carteira = (qs("#mCarteira")?.value || "Casa");
-    t.carteira_origem = null;
-    t.carteira_destino = null;
+    // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
     // forma de pagamento
-    t.forma_pagamento = normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
+    }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
       await saveTx(t);
@@ -577,6 +594,7 @@ const chkRepetir = qs("#mRepetir");
       dia_mes: diaMes,
       dia_semana: dow,
       mes: mes
+    };
 
     const { data: saved, error } = await saveRec(rec);
     if (error) {
@@ -786,6 +804,7 @@ h3.textContent = 'Lançamentos — ' + label;
       data_asc:  (a,b)=> String(a.data||'').localeCompare(String(b.data||'')),
       valor_desc:(a,b)=> (Number(b.valor)||0) - (Number(a.valor)||0),
       valor_asc: (a,b)=> (Number(a.valor)||0) - (Number(b.valor)||0),
+    };
     list.sort(by[sort] || by.data_desc);
 
     const fmt = v=> (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -856,6 +875,7 @@ h3.textContent = 'Lançamentos — ' + label;
         chkCompact.onchange = ()=>{
           localStorage.setItem('lancCompact', chkCompact.checked ? '1':'0');
           document.body.classList.toggle('compact', chkCompact.checked);
+        };
       }
       renderLancamentos._wired = true;
     }
@@ -877,16 +897,17 @@ h3.textContent = 'Lançamentos — ' + label;
     const mObs  = qs("#mObs"); if (mObs) mObs.value = x.obs || "";
     const ttl   = qs("#modalTitle"); if (ttl) ttl.textContent = "Editar lançamento";
     const fCarteira = qs("#wrapCarteira"); const fTransf = qs("#wrapTransf");
-    if (selPag) selPag.disabled = false;
-    if (fCarteira) fCarteira.style.display = "";
-    if (fTransf) fTransf.style.display = "none";
-    const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento");
-    if (pag) {
-      const _key = String(x.forma_pagamento || "").toLowerCase();
-      const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key;
-      const _opts = Array.from(pag.options).map(o => o.value);
-      pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : "");
+    if (x.tipo === "Transferência") {
+      if (fCarteira) fCarteira.style.display = "none";
+      if (fTransf) fTransf.style.display = "";
+      const o = qs("#mOrigem"); if (o) o.value = x.carteira_origem || "Casa";
+      const d = qs("#mDestino"); if (d) d.value = x.carteira_destino || "Marido";
+    } else {
+      if (selPag) selPag.disabled = false;
+      if (fCarteira) fCarteira.style.display = "";
+      if (fTransf) fTransf.style.display = "none";
+      const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
+    const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
@@ -967,12 +988,14 @@ h3.textContent = 'Lançamentos — ' + label;
         await updateTxCategory(c.nome, novo);
         await deleteCat(c.nome);
         await loadAll();
+      };
 
       btnDel.onclick = async () => {
         if (confirm("Excluir categoria? Transações existentes manterão o nome antigo.")) {
           await deleteCat(c.nome);
           await loadAll();
         }
+      };
 
       right.appendChild(btnEdit);
       right.appendChild(btnDel);
@@ -1171,6 +1194,7 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
+    };
   }
 
   // ========= NOVOS INSIGHTS / ANÁLISES =========
@@ -1383,7 +1407,7 @@ h3.textContent = 'Lançamentos — ' + label;
       const v = money(x.valor);
       if (x.tipo === "Receita" && x.carteira) map[x.carteira]+=v;
       if (x.tipo === "Despesa" && x.carteira) map[x.carteira]-=v;
-      if (false) {
+      if (x.tipo === "Transferência"){
         if (x.carteira_origem)  map[x.carteira_origem]-=v;
         if (x.carteira_destino) map[x.carteira_destino]+=v;
       }
@@ -1597,14 +1621,17 @@ function render() {
   if (btnClose) btnClose.onclick = () => {
     if (window.resetValorInput) window.resetValorInput();
     toggleModal(false); return;
+  };
   const btnCancelar = qs("#cancelar");
   const btnSalvar = qs("#salvar");
   if (btnSalvar) btnSalvar.onclick = (e) => {
     try { e && e.preventDefault && e.preventDefault(); } catch(_) {}
     if (typeof window.addOrUpdate === "function") window.addOrUpdate(false);
+  };
   if (btnCancelar) btnCancelar.onclick = () => {
     if (window.resetValorInput) window.resetValorInput();
     toggleModal(false); return;
+  };
 
   qsa("#tipoTabs button").forEach(b =>
     b.addEventListener("click", () => { modalTipo = b.dataset.type; syncTipoTabs(); })
@@ -1621,6 +1648,7 @@ function render() {
     await saveCat({ nome });
     const inp = qs("#newCatName"); if (inp) inp.value = "";
     loadAll();
+  };
 
   // Suporta #toggleDark (novo) e #cfgDark (antigo)
   const btnDark = qs("#toggleDark") || qs("#cfgDark");
@@ -1646,6 +1674,7 @@ function render() {
     S.hide = !!e.target.checked;
     render();
     await savePrefs();
+  };
 
   // Toggle do ciclo na topbar (ao lado de Esconder valores)
   const toggleCycle = qs('#toggleCycle') || qs('#useCycleForReports');
@@ -1655,6 +1684,7 @@ function render() {
     } catch (err) {
       console.error('Falha ao alternar ciclo:', err);
     }
+  };
 
 
   // Ícone de Config na topbar (abre a aba Config)
@@ -1713,6 +1743,7 @@ window.resetValorInput = function(){
   try { rawCents = 0; } catch(_) {}
   const el = document.getElementById('mValorBig');
   if (el) el.value = '';
+};
 const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const setAmount = () => { if (valorInput) valorInput.value = rawCents ? br.format(rawCents/100) : ''; };
 
@@ -1860,6 +1891,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         if (btnCfg){ btnCfg.click(); }
         const metasCard = document.getElementById('tblMetasCat');
         if (metasCard){ metasCard.scrollIntoView({behavior:'smooth', block:'start'}); }
+      };
     }
   }
   function renderMetasConfig(){
@@ -1887,6 +1919,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         const ok = await persistMetas(m);
         renderMetaCard();
         alert(ok ? 'Metas salvas!' : 'Não foi possível salvar as metas.');
+      };
     }
   }
 
@@ -1902,6 +1935,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         navBtns.forEach(b=>b.classList.toggle('active', b===btn));
         panels.forEach(p=>p.classList.toggle('active', p.dataset.rtab===R.tab));
         renderReports();
+      };
     });
 
     const selPeriodo = document.getElementById('rPeriodo');
@@ -2084,6 +2118,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (_origRender) _origRender();
     if (!initReportsUI._done){ initReportsUI(); initReportsUI._done = true; }
     renderReports();
+  };
 
   // ========= Billing config =========
   function wireBillingConfig() {
@@ -2228,6 +2263,7 @@ if (!window.resetValorInput) {
       const el = document.getElementById('mValorBig');
       if (el) el.value = '';
     } catch(_) {}
+  };
 }
 
 // Garante setUseCycleForReports (se a versão do script não exportar)
@@ -2236,6 +2272,7 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     try { window.S.useCycleForReports = !!v; } catch(_) {}
     try { if (typeof savePrefs === 'function') savePrefs(); } catch(_) {}
     try { if (typeof render === 'function') render(); } catch(_) {}
+  };
 }
 // === Exports for console/debug ===
 (function(){ try {
@@ -2311,6 +2348,7 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
         if (typeof setTab === 'function') setTab('lancamentos');
         const q = document.getElementById('lancSearch');
         if (q){ q.value = owner; q.dispatchEvent(new Event('input')); }
+      };
     }
   }
   function wirePessoaToolbar(owner, ids){
@@ -2426,6 +2464,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   window.render = function debouncedRender(){
     if (_raf) cancelAnimationFrame(_raf);
     _raf = requestAnimationFrame(() => { _raf = null; try { renderNow(); } catch(e) { console.error(e); } });
+  };
 
   // Normalização de forma de pagamento
   (function(){
@@ -2450,9 +2489,11 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       if (ALIASES.has(s)) return ALIASES.get(s);
       if (DIRECT.has(s))  return s;
       return 'outros';
+    };
     window.humanFormaPagamento = function(v){
       const key = String(v||'').toLowerCase();
       return LABELS.get(key) || (v || '-');
+    };
   })();
 
   // materializeOne — override mantendo assinatura
@@ -2465,11 +2506,25 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       descricao: rec.descricao,
       valor: Number(rec.valor)||0,
       obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
-    // Transferência desativada: sempre usa carteira simples
-    t.carteira = ($('#mCarteira')?.value || 'Casa');
-    t.carteira_origem = null;
-    t.carteira_destino = null;
-    return t;
+      recurrence_id: rec.id,
+      occurrence_date: occDate
+    };
+    if (window.modalTipo === 'Transferência') {
+      return (function(){
+        return withPagamentoDisabled(() => {
+          t.carteira = null;
+          t.carteira_origem  = ($('#mOrigem')?.value || 'Casa');
+          t.carteira_destino = ($('#mDestino')?.value || 'Marido');
+          return t;
+        });
+      })();
+    } else {
+      t.carteira = ($('#mCarteira')?.value || 'Casa');
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+      return t;
+    }
+  };
 
   // addOrUpdate — override mantendo assinatura
   window.addOrUpdate = /* módulo removido: cartões duplicados 'Gasto total — Marido/Esposa' */
@@ -2504,8 +2559,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     ].join('\n');
     document.head.appendChild(css);
   }
-
-  // --- helpers locais (redeclara, mas isolado neste IIFE) ---
 
   // --- helpers locais (redeclara, mas isolado neste IIFE) ---
   function toISO10(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
@@ -2612,6 +2665,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   var _renderGasto = window.renderGastoTotalPessoas;
   window.renderGastoTotalPessoas = function(){
     try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
+  };
 
   // Render inicial + eventos
   function boot(){
