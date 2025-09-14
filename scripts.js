@@ -234,6 +234,8 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
+    try { renderSplitOutros(); } catch(_) {}
+
 
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
@@ -244,6 +246,7 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
+      try { renderSplitOutros(); } catch (e) {}
     });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
@@ -698,6 +701,29 @@ function computeGastosPorCarteira(ym){
 }
 
 function renderGastosCarteiras(){
+
+function renderSplitOutros(){
+  try {
+    var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+    var sign = function(n){ return (n>=0?'+':''); };
+    var deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+    // Mantemos a lógica existente onde Casa não recebe ajuste direto
+    var adjCasa = 0;
+    var adjMar = Number(deltas.Marido||0);
+    var adjEsp = Number(deltas.Esposa||0);
+
+    var elC = document.getElementById('splitCasa');
+    var elM = document.getElementById('splitMarido');
+    var elE = document.getElementById('splitEsposa');
+
+    if (elC) elC.textContent = (sign(adjCasa) + fmt(adjCasa));
+    if (elM) elM.textContent = (sign(adjMar) + fmt(adjMar));
+    if (elE) elE.textContent = (sign(adjEsp) + fmt(adjEsp));
+  } catch(e){ console.error('renderSplitOutros:', e); }
+}
+try { window.renderSplitOutros = renderSplitOutros; } catch(_) {}
+
+
   
   if (!S || !S.month) return;
   try {
@@ -1197,6 +1223,8 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
+    try { renderSplitOutros(); } catch(_) {}
+
     };
   }
 
@@ -1661,6 +1689,8 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
+    try { renderSplitOutros(); } catch(_) {}
+
     await savePrefs();
   };
 
