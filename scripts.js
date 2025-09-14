@@ -697,39 +697,7 @@ function computeGastosPorCarteira(ym){
   return sum;
 }
 
-function renderGastosCarteiras(){
-  
-  if (!S || !S.month) return;
-  try {
-    const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
-    // Deltas do split (Dinheiro/Pix) para Marido/Esposa
-    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
-    // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
-    const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-    const sign = (n) => (n>=0?'+':'');
-
-    const brutoCasa = Number(g.Casa||0);
-    const brutoMar  = Number(g.Marido||0);
-    const brutoEsp  = Number(g.Esposa||0);
-
-    const adjMar = Number(deltas.Marido||0);
-    const adjEsp = Number(deltas.Esposa||0);
-    const adjCasa = 0;
-
-    const liqCasa = brutoCasa - adjCasa;
-    const liqMar  = brutoMar  - adjMar;
-    const liqEsp  = brutoEsp  - adjEsp;
-
-    const elC = document.getElementById('gastoCasa');
-    const elM = document.getElementById('gastoMarido');
-    const elE = document.getElementById('gastoEsposa');
-
-    if (elC) {
-      elC.innerHTML = ''
-        + '<div><strong>'+fmt(brutoCasa)+'</strong> <span class="muted">(bruto)</span></div>'
-        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjCasa)+fmt(adjCasa)+'</div>'
-        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqCasa)+'</strong></div>';
-    }
+function renderGastosCarteiras(){ try { /* removido a pedido: cards detalhados */ } catch(_){} }
     if (elM) {
       elM.innerHTML = ''
         + '<div><strong>'+fmt(brutoMar)+'</strong> <span class="muted">(bruto)</span></div>'
@@ -2751,19 +2719,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   }
 
   /* ===== Render ===== */
-  function renderGastoTotalPessoas(){
-    try{
-      if (!(window.S && S.month)) return;
-      var ym = S.month;
-      var sec = document.getElementById('carteiras');
-      if (!sec) return;
-
-      // remover o card antigo por título (se ainda existir)
-      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
-        var h = cd.querySelector('h3');
-        if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
-          cd.parentNode && cd.parentNode.removeChild(cd);
-        }
+  function renderGastoTotalPessoas(){ try { /* removido a pedido */ } catch(_){} }
       });
 
       // cards existentes?
@@ -2946,24 +2902,10 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   function fmt(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
   // --- Render dos tiles ---
-  function renderGastoTotalTiles(){
-    try{
-      if (!(window.S && S.month)) return;
-      var sec = document.getElementById('carteiras'); if (!sec) return;
-      ensureTilesCSS();
-
-      // Remover versões antigas
-      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
-        var h = cd.querySelector('h3');
-        if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
-               || /Gasto\s+total\s+—\s+(Marido|Esposa)/i.test(h.textContent||''))) {
-          cd.parentNode && cd.parentNode.removeChild(cd);
-        }
+  function renderGastoTotalTiles(){ try { /* removido a pedido */ } catch(_){} }
       });
       var top = document.getElementById('resumoFamiliarTop');
       if (top && top.parentNode) top.parentNode.removeChild(top);
-      var obs = document.getElementById('resumoFamiliarObs');
-      if (obs && obs.parentNode) obs.parentNode.removeChild(obs);
       var wrapOld = document.getElementById('resumoFamiliarWrap');
       if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
 
@@ -3027,4 +2969,56 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     });
   }
   if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+})();
+
+
+/* === Cleanup: remover por completo o conteúdo do print === */
+(function(){
+  function removeTudoDoPrint(){
+    var sec = document.getElementById('carteiras'); if (!sec) return;
+    // remove cards por títulos
+    sec.querySelectorAll('.card h3').forEach(function(h3){
+      var t = (h3.textContent||'').toLowerCase();
+      if (t.includes('gasto total — esposa') || t.includes('gasto total — marido') || t.trim()==='resumo familiar'){
+        var card = h3.closest('.card');
+        if (card && card.parentNode) card.parentNode.removeChild(card);
+      }
+    });
+    // remove wrappers/rows antigos
+    ['resumoFamiliarTop','resumoFamiliarObs','resumoFamiliarWrap','gastosTotalTiles'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+  // Executa já, no DOM pronto, na troca de mês e ao entrar na aba Carteiras
+  function hook(){
+    removeTudoDoPrint();
+    var monthSel = document.getElementById('monthSelect');
+    if (monthSel && !monthSel._wiredRm){
+      monthSel.addEventListener('change', removeTudoDoPrint);
+      monthSel._wiredRm = true;
+    }
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]')||[]);
+    tabs.forEach(function(tab){
+      if (tab._wiredRm) return;
+      tab.addEventListener('click', removeTudoDoPrint);
+      tab._wiredRm = true;
+    });
+    // Vigia recriações
+    var sec = document.getElementById('carteiras');
+    if (sec && !sec.__rmObserver){
+      var mo = new MutationObserver(removeTudoDoPrint);
+      mo.observe(sec, { childList: true, subtree: true });
+      sec.__rmObserver = mo;
+    }
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', hook);
+  } else {
+    hook();
+  }
+  // No-op possíveis funções antigas, se existirem
+  try { window.renderGastoTotalPessoas = function(){}; } catch(_){}
+  try { window.renderResumoFamiliarTop = function(){}; } catch(_){}
+  try { window.renderGastoTotalTiles = function(){}; } catch(_){}
 })();
