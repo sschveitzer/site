@@ -451,10 +451,10 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
         ev.preventDefault();
         try {
-          if (t.closest('#salvarENovo')) {
-            window.addOrUpdate && window.addOrUpdate(true);
+          if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
+            window.addOrUpdate && setTimeout(() => window.addOrUpdate(true), 0);
           } else {
-            window.addOrUpdate && window.addOrUpdate(false);
+            window.addOrUpdate && setTimeout(() => window.addOrUpdate(false), 0);
           }
         } catch(e) { console.error(e); }
       } else if (t.closest('#cancelar')) {
