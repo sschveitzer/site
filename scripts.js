@@ -2647,8 +2647,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
         return b;
       }
-      tiles.appendChild(makeTile('Gasto total — Esposa', totEsp));
       tiles.appendChild(makeTile('Gasto total — Marido', totMar));
+      tiles.appendChild(makeTile('Gasto total — Esposa', totEsp));
     } catch(e){ console.error('renderGastoTotalTiles:', e); }
   }
   window.renderGastoTotalTiles = renderGastoTotalTiles;
