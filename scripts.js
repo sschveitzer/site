@@ -236,7 +236,6 @@ function ensureMonthSelectLabels(){
     render();
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
-    try { renderResumoFamiliar && renderResumoFamiliar(); } catch (e) {}
 
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
@@ -248,7 +247,6 @@ function ensureMonthSelectLabels(){
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
-      try { renderResumoFamiliar && renderResumoFamiliar(); } catch (e) {}
       try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     });
     ensureMonthSelectLabels();
@@ -750,25 +748,6 @@ function renderGastosCarteiras(){
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
-// Totais por pessoa (linha de cima do Resumo familiar)
-function renderResumoFamiliar() {
-  try {
-    if (!window.S || !S.month) return;
-    const g = computeGastosPorCarteira(S.month); // bruto por carteira
-    const deltas = (typeof computeSplitDeltas === 'function')
-      ? computeSplitDeltas(txSelected())
-      : { Marido: 0, Esposa: 0 };
-    const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-    const liqMar = (Number(g.Marido||0) - Number(deltas.Marido||0));
-    const liqEsp = (Number(g.Esposa||0) - Number(deltas.Esposa||0));
-    const elMar = document.getElementById('rfTotalMarido');
-    const elEsp = document.getElementById('rfTotalEsposa');
-    if (elMar) elMar.textContent = fmt(liqMar);
-    if (elEsp) elEsp.textContent = fmt(liqEsp);
-  } catch(e){ console.error('renderResumoFamiliar:', e); }
-}
-try { window.renderResumoFamiliar = renderResumoFamiliar; } catch(_) {}
-
 
 
   function renderLancamentos() {
