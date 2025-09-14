@@ -310,7 +310,7 @@ function ensureMonthSelectLabels(){
       occurrence_date: occDate
     };
     // Carteira/Transferência
-    if (modalTipo === "Transferência") {
+    if (modalTipo === ) {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
@@ -484,7 +484,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    if (modalTipo === "Transferência") {
+    if (modalTipo === ) {
       if (selPag) selPag.disabled = true;
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
@@ -537,7 +537,7 @@ const selPag = qs('#mPagamento');
 
     
     // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
-    if (modalTipo === "Transferência") {
+    if (modalTipo === ) {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
@@ -548,7 +548,7 @@ const selPag = qs('#mPagamento');
       t.carteira_origem = null;
       t.carteira_destino = null;
     // forma de pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+    t.forma_pagamento = (modalTipo === ) ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
 const chkRepetir = qs("#mRepetir");
@@ -904,7 +904,7 @@ h3.textContent = 'Lançamentos — ' + label;
     const mObs  = qs("#mObs"); if (mObs) mObs.value = x.obs || "";
     const ttl   = qs("#modalTitle"); if (ttl) ttl.textContent = "Editar lançamento";
     const fCarteira = qs("#wrapCarteira"); const fTransf = qs("#wrapTransf");
-    if (x.tipo === "Transferência") {
+    if (x.tipo === ) {
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
       const o = qs("#mOrigem"); if (o) o.value = x.carteira_origem || "Casa";
@@ -914,7 +914,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) { const _key = String(x.forma_pagamento || "").toLowerCase(); const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key; const _opts = Array.from(pag.options).map(o => o.value); pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : ""); }
+    const pag = qs("#mPagamento"); if (pag) { const _key = String(x.forma_pagamento || "").toLowerCase(); const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key; const _opts = Array.from(pag.options).map(o => o.value); pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : ""); } }
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
@@ -1414,7 +1414,7 @@ h3.textContent = 'Lançamentos — ' + label;
       const v = money(x.valor);
       if (x.tipo === "Receita" && x.carteira) map[x.carteira]+=v;
       if (x.tipo === "Despesa" && x.carteira) map[x.carteira]-=v;
-      if (x.tipo === "Transferência"){
+      if (x.tipo === ){
         if (x.carteira_origem)  map[x.carteira_origem]-=v;
         if (x.carteira_destino) map[x.carteira_destino]+=v;
       }
@@ -2516,7 +2516,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    if (false && window.modalTipo === "Transferência") {
+    if (false && window.modalTipo === ) {
       return (function(){
         return withPagamentoDisabled(() => {
           t.carteira = null;
