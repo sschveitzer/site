@@ -1530,15 +1530,6 @@ function renderCarteiras(){
   } catch(err) { console.error('split card render', err); }
 });
     }
-    // Somas P1/P2 e listas
-    const p1 = sumInOutByWallet("Marido");
-    const p2 = sumInOutByWallet("Esposa");
-    const p1In = document.getElementById('p1In'); if (p1In) p1In.textContent = fmtMoney(p1.entradas);
-    const p1Out= document.getElementById('p1Out'); if (p1Out) p1Out.textContent = fmtMoney(p1.saidas);
-    const p2In = document.getElementById('p2In'); if (p2In) p2In.textContent = fmtMoney(p2.entradas);
-    const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
-    renderMiniList('p1List', p1.items);
-    renderMiniList('p2List', p2.items);
     // Resumo familiar
     const fam = sumFamily();
     const e = document.getElementById('famEntradas'); if (e) e.textContent = fmtMoney(fam.entradas);
