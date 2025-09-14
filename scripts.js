@@ -552,7 +552,7 @@ const chkRepetir = qs("#mRepetir");
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
-    toggleModal(false); return;
+    if (!keepOpen) { toggleModal(false); }
     return;
     }
 
