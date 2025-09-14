@@ -914,7 +914,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
+    const pag = qs("#mPagamento"); if (pag) { const _key = String(x.forma_pagamento || "").toLowerCase(); const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key; const _opts = Array.from(pag.options).map(o => o.value); pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : ""); } }
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
@@ -2516,7 +2516,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    if (window.modalTipo === 'Transferência') {
+    if (false && window.modalTipo === "Transferência") {
       return (function(){
         return withPagamentoDisabled(() => {
           t.carteira = null;
