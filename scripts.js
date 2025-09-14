@@ -1551,6 +1551,27 @@ function computeSplitDeltas(items){
       if (!(v > 0)) return;
       var metade = v * 0.5;
       var other = (car === "Marido") ? "Esposa" : "Marido";
+
+      // NOVA REGRA: quem pagou (car) não recebe reembolso.
+      // Apenas o outro assume +50% (aumentar líquido => delta[other] -= metade).
+      delta[other] -= metade;
+      // delta[car] não é alterado (sem reembolso para quem pagou).
+    });
+  }catch(e){ console.error("computeSplitDeltas:", e); }
+  return delta;
+};
+  if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
+  try{
+    items.forEach(function(x){
+      if (!x || x.tipo !== "Despesa") return;
+      var car = x.carteira || "";
+      if (car !== "Marido" && car !== "Esposa") return;
+      var fp = String(x.forma_pagamento || "").toLowerCase();
+      if (fp !== "outros") return;
+      var v = Number(x.valor) || 0;
+      if (!(v > 0)) return;
+      var metade = v * 0.5;
+      var other = (car === "Marido") ? "Esposa" : "Marido";
       delta[car]  += metade;   // reembolsa 50% ao pagador
       delta[other]-= metade;   // cobra 50% do outro
     });
