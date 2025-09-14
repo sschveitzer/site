@@ -2626,7 +2626,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       if (!header){
         header = document.createElement('div');
         header.id = 'resumoFamiliarHeader';
-        header.innerHTML = '<div class="title">Resumo familiar</div>';
+        header.innerHTML = '<div class="title"></div>';
         sec.insertBefore(header, sec.firstChild);
       }
 
