@@ -42,7 +42,7 @@ window.onload = function () {
   const supabaseClient = window.supabaseClient || supabase;
 
   // ========= ESTADO GLOBAL =========
-  let S = { _saving: false,
+  let S = {
     tx: [],
     cats: [],
     recs: [], // recorrências
@@ -317,7 +317,7 @@ function ensureMonthSelectLabels(){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    await saveTx(t); // persist generated occurrence
+    /* removed stray save */
 }
 
   async function applyRecurrences() {
@@ -510,17 +510,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
 
   // ========= TRANSAÇÕES =========
   async function addOrUpdate(keepOpen=false) {
-
-  // Prevent double-submit
-  if (S._saving) { return; }
-  S._saving = true;
-  // Disable save buttons to avoid double click
-  try {
-    document.querySelectorAll('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo').forEach(function(btn){
-      try { btn.disabled = true; btn.classList.add('is-loading'); } catch(_){}
-    });
-  } catch(_){}
-
   const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -611,19 +600,18 @@ const chkRepetir = qs("#mRepetir");
       return alert("Erro ao salvar recorrência.");
     }
 
+    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
+    if (t.data === saved.proxima_data) {
+      await materializeOne(saved, saved.proxima_data);
+      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
+      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
+      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
+    }
+
     await loadAll();
     toggleModal(false); return;
-
-  } finally {
-    // Re-enable save buttons and clear lock
-    try {
-      document.querySelectorAll('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo').forEach(function(btn){
-        try { btn.disabled = false; btn.classList.remove('is-loading'); } catch(_){}
-      });
-    } catch(_){}
-    S._saving = false;
   }
-
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
