@@ -615,7 +615,8 @@ const chkRepetir = qs("#mRepetir");
     }
 
     await loadAll();
-    toggleModal(false); return;
+    if (!keepOpen) { toggleModal(false); }
+    return;
     } finally { __savingAddOrUpdate = false; }
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
