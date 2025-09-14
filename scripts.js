@@ -1394,7 +1394,7 @@ h3.textContent = 'Lançamentos — ' + label;
       const v = money(x.valor);
       if (x.tipo === "Receita" && x.carteira) map[x.carteira]+=v;
       if (x.tipo === "Despesa" && x.carteira) map[x.carteira]-=v;
-      if (x.tipo === ){
+      if (false) {
         if (x.carteira_origem)  map[x.carteira_origem]-=v;
         if (x.carteira_destino) map[x.carteira_destino]+=v;
       }
