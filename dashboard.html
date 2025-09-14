@@ -647,5 +647,22 @@
   })();
   </script>
 <script src="scripts.js"></script>
+
+<script>
+document.addEventListener('click', function(e){
+  const b = e.target.closest('#tipoTabs button');
+  if(!b) return;
+  document.querySelectorAll('#tipoTabs button').forEach(x => x.classList.toggle('active', x === b));
+  window.modalTipo = b.dataset.type;
+  if (typeof window.syncTipoTabs === 'function') window.syncTipoTabs();
+});
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'mRepetir'){
+    const box = document.getElementById('recurrenceFields');
+    if (box) box.style.display = e.target.checked ? '' : 'none';
+  }
+});
+</script>
+
 </body>
 </html>
