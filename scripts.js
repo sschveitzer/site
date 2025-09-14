@@ -2874,3 +2874,68 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     }, 200);
   })();
 })();
+
+
+
+/* === Layout "Resumo familiar" (duas colunas responsivas) === */
+(function(){
+  function ensureResumoWrapper(){
+    var sec = document.getElementById('carteiras');
+    if (!sec) return null;
+
+    // Inject CSS once
+    if (!document.getElementById('resumoFamiliarCSS')){
+      var style = document.createElement('style');
+      style.id = 'resumoFamiliarCSS';
+      style.textContent = [
+        '#resumoFamiliarWrap{display:grid;gap:16px;grid-template-columns:1fr;margin-bottom:16px;}',
+        '@media(min-width: 920px){#resumoFamiliarWrap{grid-template-columns:1fr 1fr;}}',
+        '#resumoFamiliarWrap .card{margin:0;}',
+        '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
+        '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
+      ].join('\\n');
+      document.head.appendChild(style);
+    }
+
+    // Create header + wrapper if missing
+    var header = document.getElementById('resumoFamiliarHeader');
+    var wrap = document.getElementById('resumoFamiliarWrap');
+    if (!header){
+      header = document.createElement('div');
+      header.id = 'resumoFamiliarHeader';
+      header.innerHTML = '<div class="title">Resumo familiar</div>';
+      sec.insertBefore(header, sec.firstChild);
+    }
+    if (!wrap){
+      wrap = document.createElement('div');
+      wrap.id = 'resumoFamiliarWrap';
+      // insert right after header
+      if (header.nextSibling) sec.insertBefore(wrap, header.nextSibling);
+      else sec.appendChild(wrap);
+    }
+    return wrap;
+  }
+
+  function placeCardsSideBySide(){
+    var wrap = ensureResumoWrapper();
+    if (!wrap) return;
+    var m = document.getElementById('cardGastoTotalMarido');
+    var e = document.getElementById('cardGastoTotalEsposa');
+    // If cards exist, move them into the wrapper
+    if (e && e.parentNode !== wrap) wrap.appendChild(e);
+    if (m && m.parentNode !== wrap) wrap.appendChild(m);
+  }
+
+  // Hook into our existing render to ensure layout
+  var _render = window.renderGastoTotalPessoas;
+  window.renderGastoTotalPessoas = function(){
+    try { if (_render) _render(); } finally { placeCardsSideBySide(); }
+  };
+
+  // Also try on DOM ready in case cards are already there
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', placeCardsSideBySide);
+  } else {
+    placeCardsSideBySide();
+  }
+})();
