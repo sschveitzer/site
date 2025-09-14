@@ -1,4 +1,3 @@
-
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -2962,8 +2961,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       });
       var top = document.getElementById('resumoFamiliarTop');
       if (top && top.parentNode) top.parentNode.removeChild(top);
-      var obs = document.getElementById('resumoFamiliarObs');
-      if (obs && obs.parentNode) obs.parentNode.removeChild(obs);
       var wrapOld = document.getElementById('resumoFamiliarWrap');
       if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
 
