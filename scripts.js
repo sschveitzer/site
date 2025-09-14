@@ -235,6 +235,8 @@ function ensureMonthSelectLabels(){
 
     render();
 
+    try { renderGastosCarteiras(); } catch (e) {}
+
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
   if (monthSel && !monthSel._wiredLanc) {
@@ -244,6 +246,7 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
+      try { renderGastosCarteiras(); } catch (e) {}
     });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
