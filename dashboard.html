@@ -101,6 +101,25 @@
         <div class="meta-obs muted" id="metaObs" style="margin-top:6px">Defina uma meta para acompanhar o progresso.</div>
       </div>
 
+      
+      <div class="split-summary">
+          <div class="scol">
+            <div class="muted">Casa</div>
+            <div id="splitCasa" class="value">R$ 0,00</div>
+          </div>
+          <div class="scol">
+            <div class="muted">Marido</div>
+            <div id="splitMarido" class="value">R$ 0,00</div>
+          </div>
+          <div class="scol">
+            <div class="muted">Esposa</div>
+            <div id="splitEsposa" class="value">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="helper muted">Ajustes calculados a partir de pagamentos Dinheiro/Pix classificados como “Outros”.</div>
+      </div>
+
+
       <div class="grid two" style="margin-top:16px">
         <div class="card"><h3>Saldo acumulado (12 meses)</h3><canvas id="chartSaldo"></canvas></div>
         <div class="card"><h3>Despesas por categoria</h3><canvas id="chartPie"></canvas></div>
@@ -289,6 +308,24 @@
     <!-- Carteiras -->
     <!-- Carteiras -->
     <section id="carteiras">
+      <!-- Ajustes de split (Outros) — período: (markup estático; JS apenas preenche os valores) -->
+      <div class="card" id="splitInfoCard">
+        <h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Outros)
+          <span class="muted" style="font-weight:400">— período: <span id="splitPeriodo">—</span></span>
+        </h3>
+        <div class="resumo-grid">
+          <div class="sum-box">
+            <div class="muted">Marido</div>
+            <div id="splitMaridoValue" class="sum-value">R$ 0,00</div>
+          </div>
+          <div class="sum-box">
+            <div class="muted">Esposa</div>
+            <div id="splitEsposaValue" class="sum-value">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em “Outros” (Dinheiro/Pix), sem alterar lançamentos.</div>
+      </div>
+    
       <!-- Card: Gastos por carteira (mês/ciclo) --><div class="grid-carteiras">
           <!-- Saldos por carteira (full width) -->
         <div class="card span-2">
