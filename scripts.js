@@ -2697,3 +2697,77 @@ if (typeof ymdInRange !== 'function') {
     return s >= String(start||'') && s <= String(end||'');
   }
 }
+
+
+function openNovoLanc() {
+  document.getElementById("modalLanc").style.display = "flex";
+  document.getElementById("mValorBig").value = "";
+  document.getElementById("mDesc").value = "";
+  document.getElementById("mObs").value = "";
+  if (document.getElementById("mCategoria")) document.getElementById("mCategoria").selectedIndex = 0;
+  if (document.getElementById("mPagamento")) document.getElementById("mPagamento").selectedIndex = 0;
+  if (document.getElementById("mCarteira")) document.getElementById("mCarteira").selectedIndex = 0;
+  document.getElementById("mRepetir").checked = false;
+  if (document.getElementById("recurrenceFields")) document.getElementById("recurrenceFields").style.display = "none";
+  document.getElementById("mData").valueAsDate = new Date();
+  document.getElementById("modalTitle").textContent = "Nova Despesa";
+  document.querySelectorAll("#tipoTabs button").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.type === "Despesa");
+  });
+  window.modalTipo = "Despesa";
+  if (typeof window.syncTipoTabs === "function") window.syncTipoTabs();
+}
+document.addEventListener("DOMContentLoaded", function(){
+  var btnNovo = document.getElementById("btnNovo");
+  if(btnNovo){ btnNovo.addEventListener("click", openNovoLanc); }
+  var btnCancelar = document.getElementById("btnCancelar");
+  if(btnCancelar){ btnCancelar.addEventListener("click", () => { document.getElementById("modalLanc").style.display = "none"; }); }
+  var btnFecharModal = document.getElementById("btnFecharModal");
+  if(btnFecharModal){ btnFecharModal.addEventListener("click", () => { document.getElementById("modalLanc").style.display = "none"; }); }
+});
+
+
+
+// === Force "+ Lançamentos → Novo" to open as 'Nova Despesa' exactly like the screenshot ===
+(function ensureOpenNovoLanc(){
+  function openNovoLanc(){
+    try {
+      if (typeof toggleModal === 'function') {
+        // Use the internal opener which already resets fields, sets date, title, tabs, etc.
+        toggleModal(true, "Nova Despesa");
+      } else if (window.toggleModal) {
+        window.toggleModal(true, "Nova Despesa");
+      } else {
+        // Fallback: minimal open if toggleModal isn't available
+        var m = document.getElementById('modalLanc');
+        if (m) m.style.display = 'flex';
+        var ttl = document.getElementById('modalTitle');
+        if (ttl) ttl.textContent = 'Nova Despesa';
+        window.modalTipo = 'Despesa';
+        if (typeof window.syncTipoTabs === 'function') window.syncTipoTabs();
+        var vData = document.getElementById('mData'); if (vData) vData.valueAsDate = new Date();
+        var v = document.getElementById('mValorBig'); if (v) v.value='';
+        var d = document.getElementById('mDesc'); if (d) d.value='';
+        var o = document.getElementById('mObs'); if (o) o.value='';
+        var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
+        var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
+      }
+    } catch(e){ console.error('openNovoLanc failed:', e); }
+  }
+
+  function wire(){
+    var btn = document.getElementById('btnNovo');
+    if (!btn || btn._wiredOpenNovoLanc) return;
+    btn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      openNovoLanc();
+    });
+    btn._wiredOpenNovoLanc = true;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
