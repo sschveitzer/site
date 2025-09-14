@@ -2703,7 +2703,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 
   /* ===== Render ===== */
 function renderGastoTotalPessoas(){ /* removido a pedido: no-op seguro */ }
-)();
 
 
 
@@ -2777,7 +2776,6 @@ function renderGastoTotalPessoas(){ /* removido a pedido: no-op seguro */ }
 
   // --- Render dos tiles ---
 function renderGastoTotalTiles(){ /* removido a pedido: no-op seguro */ }
-)();
 
 
 // --- Remoção completa do conteúdo do print (defensivo) ---
@@ -2804,4 +2802,3 @@ function renderGastoTotalTiles(){ /* removido a pedido: no-op seguro */ }
     sec.__wipeObs = mo;
   }
 })();
-
