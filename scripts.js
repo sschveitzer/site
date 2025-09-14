@@ -2436,3 +2436,246 @@ document.addEventListener("click", function(e) {
 });
 
 try { window.toggleModal = toggleModal; } catch(e) {}
+
+// ==== INÍCIO: bloco de otimizações/ajustes adicionados automaticamente ====/
+(function(){
+  // Helpers básicos
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  function withPagamentoDisabled(run){
+    const el = $('#mPagamento');
+    const prev = !!(el && el.disabled);
+    if (el) el.disabled = true;
+    try { return run(); } finally { if (el && !prev) el.disabled = false; }
+  }
+
+  // Render debounced — preserva window.render original se existir
+  const renderNow = (typeof render === 'function') ? render : () => {};
+  let _raf;
+  window.render = function debouncedRender(){
+    if (_raf) cancelAnimationFrame(_raf);
+    _raf = requestAnimationFrame(() => { _raf = null; try { renderNow(); } catch(e) { console.error(e); } });
+  };
+
+  // Normalização de forma de pagamento
+  (function(){
+    const ACCENTS = { 'cartão':'cartao', 'crédito':'credito', 'débito':'debito' };
+    const DIRECT  = new Set(['dinheiro','pix','cartao','outros']);
+    const ALIASES = new Map([
+      ['credito','cartao'],
+      ['debito','cartao'],
+      ['boleto','outros'],
+      ['transferência','outros'],
+      ['transferencia','outros'],
+    ]);
+    const LABELS = new Map([
+      ['dinheiro','Dinheiro'],
+      ['pix','Pix'],
+      ['cartao','Cartão'],
+      ['outros','Outros']
+    ]);
+    window.normalizeFormaPagamento = function(v){
+      let s = String(v||'').trim().toLowerCase();
+      if (s in ACCENTS) s = ACCENTS[s];
+      if (ALIASES.has(s)) return ALIASES.get(s);
+      if (DIRECT.has(s))  return s;
+      return 'outros';
+    };
+    window.humanFormaPagamento = function(v){
+      const key = String(v||'').toLowerCase();
+      return LABELS.get(key) || (v || '-');
+    };
+  })();
+
+  // materializeOne — override mantendo assinatura
+  window.materializeOne = async function materializeOne(rec, occDate){
+    const t = {
+      id: (typeof gid==='function'? gid(): String(Date.now())),
+      tipo: rec.tipo,
+      categoria: rec.categoria,
+      data: occDate,
+      descricao: rec.descricao,
+      valor: Number(rec.valor)||0,
+      obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
+      recurrence_id: rec.id,
+      occurrence_date: occDate
+    };
+    if (window.modalTipo === 'Transferência') {
+      return (function(){
+        return withPagamentoDisabled(() => {
+          t.carteira = null;
+          t.carteira_origem  = ($('#mOrigem')?.value || 'Casa');
+          t.carteira_destino = ($('#mDestino')?.value || 'Marido');
+          return t;
+        });
+      })();
+    } else {
+      t.carteira = ($('#mCarteira')?.value || 'Casa');
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+      return t;
+    }
+  };
+
+  // addOrUpdate — override mantendo assinatura
+  window.addOrUpdate = (function(){
+    let __saving = false;
+    return async function addOrUpdate(keepOpen=false){
+      if (__saving) return; __saving = true;
+      try {
+        const vMask = $('#mValorBig')?.value;
+        const valor = (typeof parseMoneyMasked==='function') ? parseMoneyMasked(vMask) : Number(vMask||0);
+        const t = {
+          id: (window.S?.editingId) || (typeof gid==='function'? gid(): String(Date.now())),
+          tipo: window.modalTipo,
+          categoria: $('#mCategoria')?.value || '',
+          data: (typeof isIsoDate==='function' && isIsoDate($('#mData')?.value)) ? $('#mData').value : (typeof nowYMD==='function'? nowYMD(): ''),
+          descricao: String($('#mDesc')?.value||'').trim(),
+          valor: isFinite(valor) ? valor : 0,
+          obs: String($('#mObs')?.value||'').trim()
+        };
+        if (!t.categoria) return alert('Selecione categoria');
+        if (!t.descricao) return alert('Descrição obrigatória');
+        if (!(t.valor>0)) return alert('Informe o valor');
+
+        if (window.modalTipo==='Transferência') {
+          withPagamentoDisabled(() => {
+            t.carteira=null;
+            t.carteira_origem  = ($('#mOrigem')?.value || 'Casa');
+            t.carteira_destino = ($('#mDestino')?.value || 'Marido');
+          });
+        } else {
+          t.carteira = ($('#mCarteira')?.value || 'Casa');
+          t.carteira_origem = null; t.carteira_destino = null;
+          t.forma_pagamento = (typeof normalizeFormaPagamento==='function') ? normalizeFormaPagamento($('#mPagamento') ? $('#mPagamento').value : '') : null;
+        }
+
+        const chkRepetir = $('#mRepetir');
+        if (window.S?.editingId || !chkRepetir?.checked) {
+          await saveTx(t); await loadAll();
+          if (window.resetValorInput) window.resetValorInput();
+          if (!keepOpen) toggleModal(false);
+          return;
+        }
+
+        const per = $('#mPeriodicidade')?.value || 'Mensal';
+        const diaMes = Number($('#mDiaMes')?.value) || new Date().getDate();
+        const dow    = Number($('#mDiaSemana')?.value || 1);
+        const mes    = Number($('#mMes')?.value || (new Date().getMonth()+1));
+        const inicio = (typeof isIsoDate==='function' && isIsoDate($('#mInicio')?.value)) ? $('#mInicio').value : (typeof nowYMD==='function'? nowYMD(): '');
+        const fim    = (typeof isIsoDate==='function' && isIsoDate($('#mFim')?.value)) ? $('#mFim').value : null;
+        const ajuste = !!$('#mAjusteFimMes')?.checked;
+
+        let proxima = inicio;
+        if (per==='Mensal') {
+          const y = Number(inicio.slice(0,4));
+          const m = Number(inicio.slice(5,7));
+          const ld = (typeof lastDayOfMonth==='function') ? lastDayOfMonth(y, m) : 31;
+          const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+          const candidate = new Date(y, m-1, day).toISOString().slice(0,10);
+          proxima = (candidate < inicio) ? (typeof incMonthly==='function' ? incMonthly(candidate, diaMes, ajuste) : candidate) : candidate;
+        } else if (per==='Semanal') {
+          proxima = (typeof incWeekly==='function' ? incWeekly(inicio) : inicio);
+        } else if (per==='Anual') {
+          const y = Number(inicio.slice(0,4));
+          const ld = (typeof lastDayOfMonth==='function') ? lastDayOfMonth(y, mes) : 31;
+          const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+          const candidate = new Date(y, mes-1, day).toISOString().slice(0,10);
+          proxima = (candidate < inicio) ? (typeof incYearly==='function' ? incYearly(candidate, diaMes, mes, ajuste) : candidate) : candidate;
+        }
+
+        const rec = { id: undefined, tipo: t.tipo, categoria: t.categoria, descricao: t.descricao, valor: t.valor,
+          obs: t.obs, periodicidade: per, proxima_data: proxima, fim_em: fim, ativo: true, ajuste_fim_mes: ajuste,
+          dia_mes: diaMes, dia_semana: dow, mes };
+
+        const { data: saved, error } = await saveRec(rec);
+        if (error) { console.error(error); return alert('Erro ao salvar recorrência.'); }
+
+        if (t.data === saved.proxima_data) {
+          await materializeOne(saved, saved.proxima_data);
+          if (per==='Mensal') saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+          else if (per==='Semanal') saved.proxima_data = incWeekly(saved.proxima_data);
+          else if (per==='Anual') saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
+          await supabaseClient.from('recurrences').update({ proxima_data: saved.proxima_data }).eq('id', saved.id);
+        }
+
+        await loadAll(); if (!keepOpen) toggleModal(false);
+      } finally { __saving = false; }
+    }
+  })();
+
+  // Bugfix renderMiniList
+  if (typeof window.renderMiniList === 'function') {
+    window.renderMiniList = (function(_orig){
+      return function(elId, items){
+        const ul = document.getElementById(elId);
+        if (!ul) return;
+        ul.innerHTML = '';
+        if (!items?.length){
+          const li = document.createElement('li');
+          li.innerHTML = '<div class="left"><strong>Nenhum lançamento</strong><div class="muted">Cadastre no +</div></div>';
+          ul.appendChild(li);
+          return;
+        }
+        items.forEach(x => {
+          const li = document.createElement('li');
+          li.dataset.tipo = x?.tipo || '';
+          const sinal = x?.tipo === 'Despesa' ? '-' : '+';
+          li.innerHTML =
+            '<div class="left"><strong>'+ (x.descricao || x.descr || '-') + '</strong>' +
+            '<div class="sub">'+ (x.data||'') +' • '+ (x.categoria||'-') +'</div></div>' +
+            '<div class="right">'+ sinal +' '+ ((typeof fmtMoney==='function')? fmtMoney(Number(x.valor)||0) : (Number(x.valor)||0)) +'</div>';
+          ul.appendChild(li);
+        });
+      };
+    })(window.renderMiniList);
+  }
+
+  // Extras utilitários seguros
+  window.delegate = function(rootSel, eventType, matchSel, handler){
+    const root = (typeof rootSel === 'string') ? $(rootSel) : rootSel;
+    if (!root) return () => {};
+    function onEvt(e){
+      const path = e.composedPath ? e.composedPath() : (function(n, acc=[]){ while(n){ acc.push(n); n=n.parentNode; } return acc; })(e.target);
+      for (const el of path){
+        if (el instanceof Element && el.matches && el.matches(matchSel)) { handler.call(el, e); break; }
+        if (el === root) break;
+      }
+    }
+    root.addEventListener(eventType, onEvt);
+    return () => root.removeEventListener(eventType, onEvt);
+  };
+
+  window.memoize = function(fn){
+    const cache = new Map();
+    return function(...args){
+      const k = JSON.stringify(args);
+      if (cache.has(k)) return cache.get(k);
+      const v = fn.apply(this, args);
+      cache.set(k, v);
+      return v;
+    };
+  };
+
+  window.safeFormReset = function(formSel){
+    const form = (typeof formSel === 'string') ? $(formSel) : formSel;
+    if (!form) return;
+    form.reset();
+    $$('input', form).forEach(i => { if (i.type==='text' && i.placeholder) i.value=''; });
+    if (window.resetValorInput) window.resetValorInput();
+  };
+
+  // Noops defensivos
+  ['fmtMoney','parseMoneyMasked','incMonthly','incWeekly','incYearly','lastDayOfMonth','nowYMD','isIsoDate'].forEach(name=>{
+    if (typeof window[name] !== 'function') window[name] = (..._) => _[0];
+  });
+
+  // Guard Supabase em ambientes sem client
+  if (typeof window.supabaseClient === 'undefined') {
+    window.supabaseClient = { from(){ return { update(){ return { eq(){ return Promise.resolve(); } }; } }; } };
+  }
+
+  console.info('[OK] Bloco de otimizações aplicado.');
+})();
+// ==== FIM: bloco de otimizações/ajustes ====/
