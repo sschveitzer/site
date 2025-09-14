@@ -524,19 +524,13 @@ const selPag = qs('#mPagamento');
     if (!(t.valor > 0)) return alert("Informe o valor");
 
     
-    // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
-    if (modalTipo === ) {
-      if (selPag) selPag.disabled = true;
-      t.carteira = null;
-      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
-      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
-    } else {
-      if (selPag) selPag.disabled = false;
-      t.carteira = (qs("#mCarteira")?.value || "Casa");
-      t.carteira_origem = null;
-      t.carteira_destino = null;
+    // ===== Carteira (sem transferência) =====
+    if (selPag) selPag.disabled = false;
+    t.carteira = (qs("#mCarteira")?.value || "Casa");
+    t.carteira_origem = null;
+    t.carteira_destino = null;
     // forma de pagamento
-    t.forma_pagamento = (modalTipo === ) ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+    t.forma_pagamento = normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
 const chkRepetir = qs("#mRepetir");
@@ -2504,7 +2498,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       recurrence_id: rec.id,
       occurrence_date: occDate
     };
-    if (false && window.modalTipo === ) {
+    if (false && window.false /*removed*/ {
       return (function(){
         return withPagamentoDisabled(() => {
           t.carteira = null;
