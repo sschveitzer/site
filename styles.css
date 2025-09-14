@@ -1583,3 +1583,12 @@ body.dark textarea:focus {
 }
 #modalLanc .field.span-2 { grid-column: 1 / -1; }
 #modalLanc .actions { display:flex; justify-content:flex-end; gap:12px; margin-top:18px; }
+
+/* Split card aligns with grid items */
+#splitInfoCard .resumo-grid .sum-box { 
+  border:1px solid var(--border); 
+  border-radius:14px; 
+  padding:12px; 
+  background:var(--card); 
+  box-shadow:var(--shadow); 
+}
