@@ -1513,21 +1513,15 @@ if (section) {
   if (!host) {
     host = document.createElement('div');
     host.id = 'splitInfoCard';
-    host.className = 'card';
+    host.className = 'card span-2';
     if (grid) {
-      // Inserir antes do primeiro card padrão (após o span-2 de Saldos)
-      var cards = grid.querySelectorAll('.card');
-      var insertBeforeNode = null;
-      for (var i=0;i<cards.length;i++){
-        if (!cards[i].classList.contains('span-2')) { insertBeforeNode = cards[i]; break; }
-      }
-      if (insertBeforeNode) grid.insertBefore(host, insertBeforeNode); else grid.appendChild(host);
+      // Inserir AO FINAL do grid para ficar abaixo dos cards Marido/Esposa
+      grid.appendChild(host);
     } else {
       section.appendChild(host);
     }
   }
-
-      var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
       var mDelta = Number(deltas.Marido)||0;
       var eDelta = Number(deltas.Esposa)||0;
       var sign = function(x){ return x>=0?'+':''; };
