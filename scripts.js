@@ -1,3 +1,4 @@
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -884,17 +885,16 @@ h3.textContent = 'Lançamentos — ' + label;
     const mObs  = qs("#mObs"); if (mObs) mObs.value = x.obs || "";
     const ttl   = qs("#modalTitle"); if (ttl) ttl.textContent = "Editar lançamento";
     const fCarteira = qs("#wrapCarteira"); const fTransf = qs("#wrapTransf");
-    if (x.tipo === ) {
-      if (fCarteira) fCarteira.style.display = "none";
-      if (fTransf) fTransf.style.display = "";
-      const o = qs("#mOrigem"); if (o) o.value = x.carteira_origem || "Casa";
-      const d = qs("#mDestino"); if (d) d.value = x.carteira_destino || "Marido";
-    } else {
-      if (selPag) selPag.disabled = false;
-      if (fCarteira) fCarteira.style.display = "";
-      if (fTransf) fTransf.style.display = "none";
-      const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) { const _key = String(x.forma_pagamento || "").toLowerCase(); const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key; const _opts = Array.from(pag.options).map(o => o.value); pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : ""); } }
+    if (selPag) selPag.disabled = false;
+    if (fCarteira) fCarteira.style.display = "";
+    if (fTransf) fTransf.style.display = "none";
+    const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
+    const pag = qs("#mPagamento");
+    if (pag) {
+      const _key = String(x.forma_pagamento || "").toLowerCase();
+      const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key;
+      const _opts = Array.from(pag.options).map(o => o.value);
+      pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : "");
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
