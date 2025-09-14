@@ -614,7 +614,7 @@ const chkRepetir = qs("#mRepetir");
     await loadAll();
     toggleModal(false); return;
 
-  finally {
+  } finally {
     // Re-enable save buttons and clear lock
     try {
       document.querySelectorAll('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo').forEach(function(btn){
@@ -624,7 +624,6 @@ const chkRepetir = qs("#mRepetir");
     S._saving = false;
   }
 
-  }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
