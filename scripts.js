@@ -696,7 +696,8 @@ function computeGastosPorCarteira(ym){
   });
   return sum;
 }
-  function renderLancamentos() {
+function renderGastosCarteiras(){ /* removido a pedido: no-op seguro */ }
+function renderLancamentos() {
 
     // Atualiza o título com o mês selecionado (ex.: "Lançamentos — Setembro/2025")
     (function(){
@@ -1489,6 +1490,7 @@ function renderCarteiras(){
     const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
     renderMiniList('p1List', p1.items);
     renderMiniList('p2List', p2.items);
+    // Resumo familiar
     const fam = sumFamily();
     const e = document.getElementById('famEntradas'); if (e) e.textContent = fmtMoney(fam.entradas);
     const s = document.getElementById('famSaidas');   if (s) s.textContent = fmtMoney(fam.saidas);
@@ -2635,6 +2637,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
    - Respeita mês ou ciclo da fatura (se S.useCycleForReports + S.ccClosingDay)
    - 50% da CASA + Ajuste split (Outros) com regra: só o cônjuge recebe +50%
    - Remove o card antigo "Gastos por carteira (mês/ciclo)" se existir
+   - Insere 2 cards: "Gasto total — Marido" e "Gasto total — Esposa"
    - Hooks: loadAll(), DOMContentLoaded, troca de mês, entrar na aba Carteiras
    ========================================================================== */
 
@@ -2699,125 +2702,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   }
 
   /* ===== Render ===== */
-  function renderGastoTotalPessoas(){
-    try{
-      if (!(window.S && S.month)) return;
-      var ym = S.month;
-      var sec = document.getElementById('carteiras');
-      if (!sec) return;
-
-      // remover o card antigo por título (se ainda existir)
-      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
-        var h = cd.querySelector('h3');
-        if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
-          cd.parentNode && cd.parentNode.removeChild(cd);
-        }
-      });
-
-      // cards existentes?
-      function ensureCard(id, titulo){
-        var el = document.getElementById(id);
-        if (el) return el;
-        var c = document.createElement('div');
-        c.className = 'card'; c.id = id;
-        c.innerHTML = '<h3><i class="ph ph-wallet"></i> '+titulo+'</h3>' +
-                      '<div class="resumo-grid" style="display:grid;grid-template-columns:1fr;gap:8px">' +
-                        '<div class="sum-box"><div class="muted">50% Casa</div><div class="sum-value" data-role="meiaCasa">R$ 0,00</div></div>' +
-                        '<div class="sum-box"><div class="muted">Ajuste split (Outros)</div><div class="sum-value" data-role="split">R$ 0,00</div></div>' +
-                        '<div class="sum-box"><div class="muted">Total</div><div class="sum-value" data-role="total">R$ 0,00</div></div>' +
-                      '</div>';
-        var anchor = sec.querySelector('.grid-carteiras, .card');
-        if (anchor) sec.insertBefore(c, anchor); else sec.appendChild(c);
-        return c;
-      }
-
-      var casaTot = computeCasaTotal(ym);
-      var meiaCasa = casaTot / 2;
-      var split = computeSplitPessoas(ym);
-      var totMar = meiaCasa + (Number(split.Marido)||0);
-      var totEsp = meiaCasa + (Number(split.Esposa)||0);
-      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
-      function paint(card, splitVal, totalVal){
-        if (!card) return;
-        var elMeia = card.querySelector('[data-role="meiaCasa"]');
-        var elSplit = card.querySelector('[data-role="split"]');
-        var elTotal = card.querySelector('[data-role="total"]');
-        if (elMeia) elMeia.textContent = fmt(meiaCasa);
-        if (elSplit) elSplit.textContent = fmt(splitVal);
-        if (elTotal) elTotal.textContent = fmt(totalVal);
-      }
-      paint(cardM, Number(split.Marido)||0, totMar);
-      paint(cardE, Number(split.Esposa)||0, totEsp);
-    }catch(e){ console.error('renderGastoTotalPessoas:', e); }
-  }
-  window.renderGastoTotalPessoas = renderGastoTotalPessoas;
-
-  /* ===== Wiring robusto ===== */
-  function boot(){
-    try {
-      if (typeof loadAll === 'function' && !window.__patchedLoadAllGastoTotal) {
-        const _loadAll = loadAll;
-        window.loadAll = async function(){
-          const r = await _loadAll.apply(this, arguments);
-          try { renderGastoTotalPessoas(); } catch(_) {}
-          return r;
-        };
-        window.__patchedLoadAllGastoTotal = true;
-      }
-    } catch(_) {}
-
-    // DOM pronto
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
-    } else {
-      try { renderGastoTotalPessoas(); } catch(_) {}
-    }
-
-    // Mudar mês
-    var monthSel = document.getElementById('monthSelect');
-    if (monthSel && !monthSel._wiredGastoTotal) {
-      monthSel.addEventListener('change', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
-      monthSel._wiredGastoTotal = true;
-    }
-
-    // Entrar na aba Carteiras
-    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]') || []);
-    tabs.forEach(function(tab){
-      if (tab._wiredGastoTotal) return;
-      tab.addEventListener('click', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
-      tab._wiredGastoTotal = true;
-    });
-
-    // Monkey-patch setTab se existir
-    try {
-      if (typeof setTab === 'function' && !window.__patchedSetTabGastoTotal) {
-        const _setTab = setTab;
-        window.setTab = function(name){
-          const r = _setTab.apply(this, arguments);
-          if (name === 'carteiras') { try { renderGastoTotalPessoas(); } catch(_) {} }
-          return r;
-        };
-        window.__patchedSetTabGastoTotal = true;
-      }
-    } catch(_) {}
-
-    // Retry inicial para garantir presença da seção
-    var tries = 0;
-    var iv = setInterval(function(){
-      try { renderGastoTotalPessoas(); } catch(_) {}
-      if (++tries > 10) clearInterval(iv);
-    }, 300);
-  }
-  // Espera S existir antes de boot
-  (function waitS(){
-    if (window.S) return boot();
-    var tries = 0;
-    var iv = setInterval(function(){
-      if (window.S) { clearInterval(iv); boot(); }
-      if (++tries > 20) clearInterval(iv);
-    }, 200);
-  })();
-})();
+function renderGastoTotalPessoas(){ /* removido a pedido: no-op seguro */ }
+)();
 
 
 
@@ -2831,8 +2717,15 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 (function(){
   // --- CSS dos tiles ---
   function ensureTilesCSS(){
+    if (document.getElementById('gastosTotalTilesCSS')) return;
     var css = document.createElement('style');
+    css.id = 'gastosTotalTilesCSS';
     css.textContent = [
+      '#gastosTotalTiles{display:grid;gap:16px;grid-template-columns:1fr;margin:8px 0 16px 0;}',
+      '@media(min-width: 920px){#gastosTotalTiles{grid-template-columns:1fr 1fr;}}',
+      '#gastosTotalTiles .sum-box{background:rgba(0,0,0,0.03);border:1px dashed rgba(0,0,0,0.08);padding:14px 16px;border-radius:12px;}',
+      '#gastosTotalTiles .sum-box .muted{opacity:.7;margin-bottom:6px;}',
+      '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
       '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
     ].join('\n');
@@ -2883,75 +2776,32 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   function fmt(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
   // --- Render dos tiles ---
-  function renderGastoTotalTiles(){
-    try{
-      if (!(window.S && S.month)) return;
-      var sec = document.getElementById('carteiras'); if (!sec) return;
-      ensureTilesCSS();
+function renderGastoTotalTiles(){ /* removido a pedido: no-op seguro */ }
+)();
 
-      // Remover versões antigas
-      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
-        var h = cd.querySelector('h3');
-        if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
-               || /Gasto\s+total\s+—\s+(Marido|Esposa)/i.test(h.textContent||''))) {
-          cd.parentNode && cd.parentNode.removeChild(cd);
-        }
-      });
-      if (top && top.parentNode) top.parentNode.removeChild(top);
-      if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
 
-      var header = document.getElementById('resumoFamiliarHeader');
-      if (!header){
-        header = document.createElement('div');
-        header.id = 'resumoFamiliarHeader';
-        sec.insertBefore(header, sec.firstChild);
+// --- Remoção completa do conteúdo do print (defensivo) ---
+(function(){
+  function wipe(){
+    var sec = document.getElementById('carteiras'); if (!sec) return;
+    // remover cards com títulos do print
+    sec.querySelectorAll('.card h3').forEach(function(h3){
+      var t = (h3.textContent||'').toLowerCase().trim();
+      if (t === 'resumo familiar' || t === 'gasto total — esposa' || t === 'gasto total — marido'){
+        var cd = h3.closest('.card'); if (cd && cd.parentNode) cd.parentNode.removeChild(cd);
       }
-
-      // Container dos tiles
-      if (!tiles){
-        tiles = document.createElement('div');
-        header.insertAdjacentElement('afterend', tiles);
-      } else {
-        tiles.innerHTML = '';
-      }
-
-      // Cálculo
-      var ym = S.month;
-      var casaTot = computeCasaTotal(ym);
-      var meiaCasa = casaTot/2;
-      var split = computeSplitPessoas(ym);
-      var totMar = meiaCasa + (Number(split.Marido)||0);
-      var totEsp = meiaCasa + (Number(split.Esposa)||0);
-
-      function makeTile(titulo, valor){
-        var b = document.createElement('div'); b.className = 'sum-box';
-        b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
-        return b;
-      }
-    } catch(e){ console.error('renderGastoTotalTiles:', e); }
-  }
-  window.renderGastoTotalTiles = renderGastoTotalTiles;
-
-  // --- Integrar no pipeline existente ---
-  var _renderGasto = window.renderGastoTotalPessoas;
-  window.renderGastoTotalPessoas = function(){
-    try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
-  };
-
-  // Render inicial + eventos
-  function boot(){
-    try { renderGastoTotalTiles(); } catch(_) {}
-    var monthSel = document.getElementById('monthSelect');
-    if (monthSel && !monthSel._wiredGastoTotalTiles){
-      monthSel.addEventListener('change', function(){ try { renderGastoTotalTiles(); } catch(_) {} });
-      monthSel._wiredGastoTotalTiles = true;
-    }
-    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]')||[]);
-    tabs.forEach(function(tab){
-      if (tab._wiredGastoTotalTiles) return;
-      tab.addEventListener('click', function(){ try { renderGastoTotalTiles(); } catch(_) {} });
-      tab._wiredGastoTotalTiles = true;
+    });
+    // remover elementos por id
+    ['resumoFamiliarTop','resumoFamiliarWrap','resumoFamiliarObs','cardGastoTotalMarido','cardGastoTotalEsposa','gastosTotalTiles'].forEach(function(id){
+      var el = document.getElementById(id); if (el && el.parentNode) el.parentNode.removeChild(el);
     });
   }
-  if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wipe); else wipe();
+  var sec = document.getElementById('carteiras');
+  if (sec && !sec.__wipeObs){
+    var mo = new MutationObserver(wipe);
+    mo.observe(sec, { childList:true, subtree:true });
+    sec.__wipeObs = mo;
+  }
 })();
+
