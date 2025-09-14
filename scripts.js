@@ -244,8 +244,9 @@ function ensureMonthSelectLabels(){
       try { render(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
-      try { renderGastosCarteiras(); } catch (e) {}
-    });
+    
+    try { renderGastosCarteiras(); } catch (e) {}
+});
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
@@ -365,8 +366,8 @@ function ensureMonthSelectLabels(){
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
-    if (name === 'carteiras') { try { renderGastosCarteiras(); } catch (e) {} }
-}
+  
+  if (name === 'carteiras') { try { renderGastosCarteiras(); } catch (e) {} }}
 
   function clearModalFields(){
   try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
@@ -705,8 +706,7 @@ function renderGastosCarteiras(){
   try {
     const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
     // Deltas do split (Dinheiro/Pix) para Marido/Esposa
-    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 }try { window.renderGastosCarteiras = renderGastosCarteiras; } catch (e) {}
-;
+    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
     // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
     const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
     const sign = (n) => (n>=0?'+':'');
@@ -747,6 +747,10 @@ function renderGastosCarteiras(){
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
+
+// expor para debug
+try { window.renderGastosCarteiras = renderGastosCarteiras; } catch (e) {}
+
 
 
   function renderLancamentos() {
