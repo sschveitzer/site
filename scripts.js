@@ -696,24 +696,6 @@ function computeGastosPorCarteira(ym){
   });
   return sum;
 }
-
-function renderGastosCarteiras(){ try { /* removido a pedido: cards detalhados */ } catch(_){} }
-    if (elM) {
-      elM.innerHTML = ''
-        + '<div><strong>'+fmt(brutoMar)+'</strong> <span class="muted">(bruto)</span></div>'
-        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjMar)+fmt(adjMar)+'</div>'
-        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqMar)+'</strong></div>';
-    }
-    if (elE) {
-      elE.innerHTML = ''
-        + '<div><strong>'+fmt(brutoEsp)+'</strong> <span class="muted">(bruto)</span></div>'
-        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
-        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
-    }
-  } catch(e){ console.error('renderGastosCarteiras:', e); }
-}
-
-
   function renderLancamentos() {
 
     // Atualiza o título com o mês selecionado (ex.: "Lançamentos — Setembro/2025")
@@ -1507,7 +1489,6 @@ function renderCarteiras(){
     const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
     renderMiniList('p1List', p1.items);
     renderMiniList('p2List', p2.items);
-    // Resumo familiar
     const fam = sumFamily();
     const e = document.getElementById('famEntradas'); if (e) e.textContent = fmtMoney(fam.entradas);
     const s = document.getElementById('famSaidas');   if (s) s.textContent = fmtMoney(fam.saidas);
@@ -2654,7 +2635,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
    - Respeita mês ou ciclo da fatura (se S.useCycleForReports + S.ccClosingDay)
    - 50% da CASA + Ajuste split (Outros) com regra: só o cônjuge recebe +50%
    - Remove o card antigo "Gastos por carteira (mês/ciclo)" se existir
-   - Insere 2 cards: "Gasto total — Marido" e "Gasto total — Esposa"
    - Hooks: loadAll(), DOMContentLoaded, troca de mês, entrar na aba Carteiras
    ========================================================================== */
 
@@ -2719,12 +2699,22 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   }
 
   /* ===== Render ===== */
-  function renderGastoTotalPessoas(){ try { /* removido a pedido */ } catch(_){} }
+  function renderGastoTotalPessoas(){
+    try{
+      if (!(window.S && S.month)) return;
+      var ym = S.month;
+      var sec = document.getElementById('carteiras');
+      if (!sec) return;
+
+      // remover o card antigo por título (se ainda existir)
+      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
+        var h = cd.querySelector('h3');
+        if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
+          cd.parentNode && cd.parentNode.removeChild(cd);
+        }
       });
 
       // cards existentes?
-      var cardM = document.getElementById('cardGastoTotalMarido');
-      var cardE = document.getElementById('cardGastoTotalEsposa');
       function ensureCard(id, titulo){
         var el = document.getElementById(id);
         if (el) return el;
@@ -2740,8 +2730,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         if (anchor) sec.insertBefore(c, anchor); else sec.appendChild(c);
         return c;
       }
-      cardM = ensureCard('cardGastoTotalMarido', 'Gasto total — Marido');
-      cardE = ensureCard('cardGastoTotalEsposa', 'Gasto total — Esposa');
 
       var casaTot = computeCasaTotal(ym);
       var meiaCasa = casaTot / 2;
@@ -2843,15 +2831,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 (function(){
   // --- CSS dos tiles ---
   function ensureTilesCSS(){
-    if (document.getElementById('gastosTotalTilesCSS')) return;
     var css = document.createElement('style');
-    css.id = 'gastosTotalTilesCSS';
     css.textContent = [
-      '#gastosTotalTiles{display:grid;gap:16px;grid-template-columns:1fr;margin:8px 0 16px 0;}',
-      '@media(min-width: 920px){#gastosTotalTiles{grid-template-columns:1fr 1fr;}}',
-      '#gastosTotalTiles .sum-box{background:rgba(0,0,0,0.03);border:1px dashed rgba(0,0,0,0.08);padding:14px 16px;border-radius:12px;}',
-      '#gastosTotalTiles .sum-box .muted{opacity:.7;margin-bottom:6px;}',
-      '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
       '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
     ].join('\n');
@@ -2902,27 +2883,33 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   function fmt(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
   // --- Render dos tiles ---
-  function renderGastoTotalTiles(){ try { /* removido a pedido */ } catch(_){} }
+  function renderGastoTotalTiles(){
+    try{
+      if (!(window.S && S.month)) return;
+      var sec = document.getElementById('carteiras'); if (!sec) return;
+      ensureTilesCSS();
+
+      // Remover versões antigas
+      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
+        var h = cd.querySelector('h3');
+        if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
+               || /Gasto\s+total\s+—\s+(Marido|Esposa)/i.test(h.textContent||''))) {
+          cd.parentNode && cd.parentNode.removeChild(cd);
+        }
       });
-      var top = document.getElementById('resumoFamiliarTop');
       if (top && top.parentNode) top.parentNode.removeChild(top);
-      var wrapOld = document.getElementById('resumoFamiliarWrap');
       if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
 
-      // Header "Resumo familiar"
       var header = document.getElementById('resumoFamiliarHeader');
       if (!header){
         header = document.createElement('div');
         header.id = 'resumoFamiliarHeader';
-        header.innerHTML = '<div class="title">Resumo familiar</div>';
         sec.insertBefore(header, sec.firstChild);
       }
 
       // Container dos tiles
-      var tiles = document.getElementById('gastosTotalTiles');
       if (!tiles){
         tiles = document.createElement('div');
-        tiles.id = 'gastosTotalTiles';
         header.insertAdjacentElement('afterend', tiles);
       } else {
         tiles.innerHTML = '';
@@ -2941,8 +2928,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
         return b;
       }
-      tiles.appendChild(makeTile('Gasto total — Esposa', totEsp));
-      tiles.appendChild(makeTile('Gasto total — Marido', totMar));
     } catch(e){ console.error('renderGastoTotalTiles:', e); }
   }
   window.renderGastoTotalTiles = renderGastoTotalTiles;
@@ -2969,56 +2954,4 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     });
   }
   if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
-})();
-
-
-/* === Cleanup: remover por completo o conteúdo do print === */
-(function(){
-  function removeTudoDoPrint(){
-    var sec = document.getElementById('carteiras'); if (!sec) return;
-    // remove cards por títulos
-    sec.querySelectorAll('.card h3').forEach(function(h3){
-      var t = (h3.textContent||'').toLowerCase();
-      if (t.includes('gasto total — esposa') || t.includes('gasto total — marido') || t.trim()==='resumo familiar'){
-        var card = h3.closest('.card');
-        if (card && card.parentNode) card.parentNode.removeChild(card);
-      }
-    });
-    // remove wrappers/rows antigos
-    ['resumoFamiliarTop','resumoFamiliarObs','resumoFamiliarWrap','gastosTotalTiles'].forEach(function(id){
-      var el = document.getElementById(id);
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-    });
-  }
-  // Executa já, no DOM pronto, na troca de mês e ao entrar na aba Carteiras
-  function hook(){
-    removeTudoDoPrint();
-    var monthSel = document.getElementById('monthSelect');
-    if (monthSel && !monthSel._wiredRm){
-      monthSel.addEventListener('change', removeTudoDoPrint);
-      monthSel._wiredRm = true;
-    }
-    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]')||[]);
-    tabs.forEach(function(tab){
-      if (tab._wiredRm) return;
-      tab.addEventListener('click', removeTudoDoPrint);
-      tab._wiredRm = true;
-    });
-    // Vigia recriações
-    var sec = document.getElementById('carteiras');
-    if (sec && !sec.__rmObserver){
-      var mo = new MutationObserver(removeTudoDoPrint);
-      mo.observe(sec, { childList: true, subtree: true });
-      sec.__rmObserver = mo;
-    }
-  }
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', hook);
-  } else {
-    hook();
-  }
-  // No-op possíveis funções antigas, se existirem
-  try { window.renderGastoTotalPessoas = function(){}; } catch(_){}
-  try { window.renderResumoFamiliarTop = function(){}; } catch(_){}
-  try { window.renderGastoTotalTiles = function(){}; } catch(_){}
 })();
