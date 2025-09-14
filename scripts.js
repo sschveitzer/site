@@ -1,4 +1,3 @@
-
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -532,7 +531,6 @@ const selPag = qs('#mPagamento');
     // forma de pagamento
     t.forma_pagamento = normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
-    }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
       await saveTx(t);
