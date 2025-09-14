@@ -696,8 +696,57 @@ function computeGastosPorCarteira(ym){
   });
   return sum;
 }
-function renderGastosCarteiras(){ /* removido a pedido: no-op seguro */ }
-function renderLancamentos() {
+
+function renderGastosCarteiras(){
+  
+  if (!S || !S.month) return;
+  try {
+    const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
+    // Deltas do split (Dinheiro/Pix) para Marido/Esposa
+    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+    // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
+    const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const sign = (n) => (n>=0?'+':'');
+
+    const brutoCasa = Number(g.Casa||0);
+    const brutoMar  = Number(g.Marido||0);
+    const brutoEsp  = Number(g.Esposa||0);
+
+    const adjMar = Number(deltas.Marido||0);
+    const adjEsp = Number(deltas.Esposa||0);
+    const adjCasa = 0;
+
+    const liqCasa = brutoCasa - adjCasa;
+    const liqMar  = brutoMar  - adjMar;
+    const liqEsp  = brutoEsp  - adjEsp;
+
+    const elC = document.getElementById('gastoCasa');
+    const elM = document.getElementById('gastoMarido');
+    const elE = document.getElementById('gastoEsposa');
+
+    if (elC) {
+      elC.innerHTML = ''
+        + '<div><strong>'+fmt(brutoCasa)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjCasa)+fmt(adjCasa)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqCasa)+'</strong></div>';
+    }
+    if (elM) {
+      elM.innerHTML = ''
+        + '<div><strong>'+fmt(brutoMar)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjMar)+fmt(adjMar)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqMar)+'</strong></div>';
+    }
+    if (elE) {
+      elE.innerHTML = ''
+        + '<div><strong>'+fmt(brutoEsp)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
+    }
+  } catch(e){ console.error('renderGastosCarteiras:', e); }
+}
+
+
+  function renderLancamentos() {
 
     // Atualiza o título com o mês selecionado (ex.: "Lançamentos — Setembro/2025")
     (function(){
@@ -2702,7 +2751,129 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   }
 
   /* ===== Render ===== */
-function renderGastoTotalPessoas(){ /* removido a pedido: no-op seguro */ }
+  function renderGastoTotalPessoas(){
+    try{
+      if (!(window.S && S.month)) return;
+      var ym = S.month;
+      var sec = document.getElementById('carteiras');
+      if (!sec) return;
+
+      // remover o card antigo por título (se ainda existir)
+      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
+        var h = cd.querySelector('h3');
+        if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
+          cd.parentNode && cd.parentNode.removeChild(cd);
+        }
+      });
+
+      // cards existentes?
+      var cardM = document.getElementById('cardGastoTotalMarido');
+      var cardE = document.getElementById('cardGastoTotalEsposa');
+      function ensureCard(id, titulo){
+        var el = document.getElementById(id);
+        if (el) return el;
+        var c = document.createElement('div');
+        c.className = 'card'; c.id = id;
+        c.innerHTML = '<h3><i class="ph ph-wallet"></i> '+titulo+'</h3>' +
+                      '<div class="resumo-grid" style="display:grid;grid-template-columns:1fr;gap:8px">' +
+                        '<div class="sum-box"><div class="muted">50% Casa</div><div class="sum-value" data-role="meiaCasa">R$ 0,00</div></div>' +
+                        '<div class="sum-box"><div class="muted">Ajuste split (Outros)</div><div class="sum-value" data-role="split">R$ 0,00</div></div>' +
+                        '<div class="sum-box"><div class="muted">Total</div><div class="sum-value" data-role="total">R$ 0,00</div></div>' +
+                      '</div>';
+        var anchor = sec.querySelector('.grid-carteiras, .card');
+        if (anchor) sec.insertBefore(c, anchor); else sec.appendChild(c);
+        return c;
+      }
+      cardM = ensureCard('cardGastoTotalMarido', 'Gasto total — Marido');
+      cardE = ensureCard('cardGastoTotalEsposa', 'Gasto total — Esposa');
+
+      var casaTot = computeCasaTotal(ym);
+      var meiaCasa = casaTot / 2;
+      var split = computeSplitPessoas(ym);
+      var totMar = meiaCasa + (Number(split.Marido)||0);
+      var totEsp = meiaCasa + (Number(split.Esposa)||0);
+      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+      function paint(card, splitVal, totalVal){
+        if (!card) return;
+        var elMeia = card.querySelector('[data-role="meiaCasa"]');
+        var elSplit = card.querySelector('[data-role="split"]');
+        var elTotal = card.querySelector('[data-role="total"]');
+        if (elMeia) elMeia.textContent = fmt(meiaCasa);
+        if (elSplit) elSplit.textContent = fmt(splitVal);
+        if (elTotal) elTotal.textContent = fmt(totalVal);
+      }
+      paint(cardM, Number(split.Marido)||0, totMar);
+      paint(cardE, Number(split.Esposa)||0, totEsp);
+    }catch(e){ console.error('renderGastoTotalPessoas:', e); }
+  }
+  window.renderGastoTotalPessoas = renderGastoTotalPessoas;
+
+  /* ===== Wiring robusto ===== */
+  function boot(){
+    try {
+      if (typeof loadAll === 'function' && !window.__patchedLoadAllGastoTotal) {
+        const _loadAll = loadAll;
+        window.loadAll = async function(){
+          const r = await _loadAll.apply(this, arguments);
+          try { renderGastoTotalPessoas(); } catch(_) {}
+          return r;
+        };
+        window.__patchedLoadAllGastoTotal = true;
+      }
+    } catch(_) {}
+
+    // DOM pronto
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
+    } else {
+      try { renderGastoTotalPessoas(); } catch(_) {}
+    }
+
+    // Mudar mês
+    var monthSel = document.getElementById('monthSelect');
+    if (monthSel && !monthSel._wiredGastoTotal) {
+      monthSel.addEventListener('change', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
+      monthSel._wiredGastoTotal = true;
+    }
+
+    // Entrar na aba Carteiras
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]') || []);
+    tabs.forEach(function(tab){
+      if (tab._wiredGastoTotal) return;
+      tab.addEventListener('click', function(){ try { renderGastoTotalPessoas(); } catch(_) {} });
+      tab._wiredGastoTotal = true;
+    });
+
+    // Monkey-patch setTab se existir
+    try {
+      if (typeof setTab === 'function' && !window.__patchedSetTabGastoTotal) {
+        const _setTab = setTab;
+        window.setTab = function(name){
+          const r = _setTab.apply(this, arguments);
+          if (name === 'carteiras') { try { renderGastoTotalPessoas(); } catch(_) {} }
+          return r;
+        };
+        window.__patchedSetTabGastoTotal = true;
+      }
+    } catch(_) {}
+
+    // Retry inicial para garantir presença da seção
+    var tries = 0;
+    var iv = setInterval(function(){
+      try { renderGastoTotalPessoas(); } catch(_) {}
+      if (++tries > 10) clearInterval(iv);
+    }, 300);
+  }
+  // Espera S existir antes de boot
+  (function waitS(){
+    if (window.S) return boot();
+    var tries = 0;
+    var iv = setInterval(function(){
+      if (window.S) { clearInterval(iv); boot(); }
+      if (++tries > 20) clearInterval(iv);
+    }, 200);
+  })();
+})();
 
 
 
@@ -2775,30 +2946,83 @@ function renderGastoTotalPessoas(){ /* removido a pedido: no-op seguro */ }
   function fmt(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
   // --- Render dos tiles ---
-function renderGastoTotalTiles(){ /* removido a pedido: no-op seguro */ }
+  function renderGastoTotalTiles(){
+    try{
+      if (!(window.S && S.month)) return;
+      var sec = document.getElementById('carteiras'); if (!sec) return;
+      ensureTilesCSS();
 
+      // Remover versões antigas
+      Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
+        var h = cd.querySelector('h3');
+        if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
+               || /Gasto\s+total\s+—\s+(Marido|Esposa)/i.test(h.textContent||''))) {
+          cd.parentNode && cd.parentNode.removeChild(cd);
+        }
+      });
+      var top = document.getElementById('resumoFamiliarTop');
+      if (top && top.parentNode) top.parentNode.removeChild(top);
+      var wrapOld = document.getElementById('resumoFamiliarWrap');
+      if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
 
-// --- Remoção completa do conteúdo do print (defensivo) ---
-(function(){
-  function wipe(){
-    var sec = document.getElementById('carteiras'); if (!sec) return;
-    // remover cards com títulos do print
-    sec.querySelectorAll('.card h3').forEach(function(h3){
-      var t = (h3.textContent||'').toLowerCase().trim();
-      if (t === 'resumo familiar' || t === 'gasto total — esposa' || t === 'gasto total — marido'){
-        var cd = h3.closest('.card'); if (cd && cd.parentNode) cd.parentNode.removeChild(cd);
+      // Header "Resumo familiar"
+      var header = document.getElementById('resumoFamiliarHeader');
+      if (!header){
+        header = document.createElement('div');
+        header.id = 'resumoFamiliarHeader';
+        header.innerHTML = '<div class="title">Resumo familiar</div>';
+        sec.insertBefore(header, sec.firstChild);
       }
-    });
-    // remover elementos por id
-    ['resumoFamiliarTop','resumoFamiliarWrap','resumoFamiliarObs','cardGastoTotalMarido','cardGastoTotalEsposa','gastosTotalTiles'].forEach(function(id){
-      var el = document.getElementById(id); if (el && el.parentNode) el.parentNode.removeChild(el);
+
+      // Container dos tiles
+      var tiles = document.getElementById('gastosTotalTiles');
+      if (!tiles){
+        tiles = document.createElement('div');
+        tiles.id = 'gastosTotalTiles';
+        header.insertAdjacentElement('afterend', tiles);
+      } else {
+        tiles.innerHTML = '';
+      }
+
+      // Cálculo
+      var ym = S.month;
+      var casaTot = computeCasaTotal(ym);
+      var meiaCasa = casaTot/2;
+      var split = computeSplitPessoas(ym);
+      var totMar = meiaCasa + (Number(split.Marido)||0);
+      var totEsp = meiaCasa + (Number(split.Esposa)||0);
+
+      function makeTile(titulo, valor){
+        var b = document.createElement('div'); b.className = 'sum-box';
+        b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
+        return b;
+      }
+      tiles.appendChild(makeTile('Gasto total — Esposa', totEsp));
+      tiles.appendChild(makeTile('Gasto total — Marido', totMar));
+    } catch(e){ console.error('renderGastoTotalTiles:', e); }
+  }
+  window.renderGastoTotalTiles = renderGastoTotalTiles;
+
+  // --- Integrar no pipeline existente ---
+  var _renderGasto = window.renderGastoTotalPessoas;
+  window.renderGastoTotalPessoas = function(){
+    try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
+  };
+
+  // Render inicial + eventos
+  function boot(){
+    try { renderGastoTotalTiles(); } catch(_) {}
+    var monthSel = document.getElementById('monthSelect');
+    if (monthSel && !monthSel._wiredGastoTotalTiles){
+      monthSel.addEventListener('change', function(){ try { renderGastoTotalTiles(); } catch(_) {} });
+      monthSel._wiredGastoTotalTiles = true;
+    }
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]')||[]);
+    tabs.forEach(function(tab){
+      if (tab._wiredGastoTotalTiles) return;
+      tab.addEventListener('click', function(){ try { renderGastoTotalTiles(); } catch(_) {} });
+      tab._wiredGastoTotalTiles = true;
     });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wipe); else wipe();
-  var sec = document.getElementById('carteiras');
-  if (sec && !sec.__wipeObs){
-    var mo = new MutationObserver(wipe);
-    mo.observe(sec, { childList:true, subtree:true });
-    sec.__wipeObs = mo;
-  }
+  if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
 })();
