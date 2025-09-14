@@ -509,8 +509,13 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
   }
 
   // ========= TRANSAÇÕES =========
-  async function addOrUpdate(keepOpen=false) {
-  const selPag = qs('#mPagamento');
+  let __savingAddOrUpdate = false;
+async function addOrUpdate(keepOpen=false) {
+  
+    if (__savingAddOrUpdate) { return; }
+    __savingAddOrUpdate = true;
+    try {
+const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
     const t = {
@@ -611,6 +616,7 @@ const chkRepetir = qs("#mRepetir");
 
     await loadAll();
     toggleModal(false); return;
+    } finally { __savingAddOrUpdate = false; }
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
@@ -2222,18 +2228,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   } catch(e){ console.warn('enhanceNewCategory error:', e); }
 })();
 
-// Bind 'Salvar e novo' after DOM is ready
-(function(){
-  const btnSalvarENovo = document.getElementById('salvarENovo');
-  if (btnSalvarENovo && !btnSalvarENovo._bound) {
-    btnSalvarENovo.addEventListener('click', async () => {
-      await addOrUpdate(false);
-      if (typeof clearModalFields === 'function') clearModalFields();
-      const v = document.getElementById('mValorBig'); if (v) v.focus();
-    });
-    btnSalvarENovo._bound = true;
-  }
-})();
+
 
 
 // Prevent form submission inside modal (avoid page reload)
