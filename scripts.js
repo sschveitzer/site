@@ -1432,6 +1432,7 @@ h3.textContent = 'Lançamentos — ' + label;
     // Transferências não entram em entradas/saídas (apenas mudam saldo entre carteiras)
     return { entradas, saidas, items: tx.slice().sort((a,b)=> (b.data||'').localeCompare(a.data||'')).slice(0,10) };
   }
+  function sumFamily(){
     const p1 = sumInOutByWallet("Marido");
     const p2 = sumInOutByWallet("Esposa");
     // Entradas totais = receitas P1+P2 (não contamos transferências entre carteiras)
@@ -1538,6 +1539,7 @@ function renderCarteiras(){
     const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
     renderMiniList('p1List', p1.items);
     renderMiniList('p2List', p2.items);
+
   }
 function render() {
     document.body.classList.toggle("dark", S.dark);
@@ -2609,10 +2611,12 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       var wrapOld = document.getElementById('resumoFamiliarWrap');
       if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
 
+      // Header "Resumo familiar"
       var header = document.getElementById('resumoFamiliarHeader');
       if (!header){
         header = document.createElement('div');
         header.id = 'resumoFamiliarHeader';
+        header.innerHTML = '<div class="title">Resumo familiar</div>';
         sec.insertBefore(header, sec.firstChild);
       }
 
