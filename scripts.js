@@ -914,7 +914,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fCarteira) fCarteira.style.display = "";
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
-    const pag = qs("#mPagamento"); if (pag) { const _key = String(x.forma_pagamento || "").toLowerCase(); const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key; const _opts = Array.from(pag.options).map(o => o.value); pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : ""); } }
+    const pag = qs("#mPagamento"); if (pag) { const _key = String(x.forma_pagamento || "").toLowerCase(); const _label = (typeof humanFormaPagamento === "function") ? humanFormaPagamento(_key) : _key; const _opts = Array.from(pag.options).map(o => o.value); pag.value = _opts.includes(_key) ? _key : (_opts.includes(_label) ? _label : ""); }
     }
 
     // Edição: esconde blocos de recorrência (edita só esta instância)
