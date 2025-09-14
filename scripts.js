@@ -2916,3 +2916,68 @@ try { window.renderGastoTotalPessoas = renderGastoTotalPessoas; } catch(e) {}
   }, 300);
 })();
 
+
+
+
+/* ===== Super Boot: garantir render na troca de abas e quando a seção muda ===== */
+(function(){
+  function safe(fn){ try { return fn && fn(); } catch(e){ console.warn(e); } }
+  function tryRender(){ safe(function(){ if (typeof renderGastoTotalPessoas === 'function') renderGastoTotalPessoas(); }); }
+
+  // Monkey-patch setTab para sempre renderizar ao entrar em 'carteiras'
+  try {
+    if (typeof setTab === 'function' && !window.__patchedSetTabForGastoTotal) {
+      const _setTab = setTab;
+      window.setTab = function(name){
+        const r = _setTab.apply(this, arguments);
+        if (name === 'carteiras') tryRender();
+        return r;
+      };
+      window.__patchedSetTabForGastoTotal = true;
+    } else {
+      // se setTab ainda não existir, instala um watcher para patchar quando surgir
+      let tries = 0;
+      const iv = setInterval(function(){
+        tries++;
+        if (typeof setTab === 'function' && !window.__patchedSetTabForGastoTotal) {
+          const _setTab = setTab;
+          window.setTab = function(name){
+            const r = _setTab.apply(this, arguments);
+            if (name === 'carteiras') tryRender();
+            return r;
+          };
+          window.__patchedSetTabForGastoTotal = true;
+          clearInterval(iv);
+        }
+        if (tries > 20) clearInterval(iv);
+      }, 300);
+    }
+  } catch(e){ console.warn(e); }
+
+  // Observer de mudanças na seção carteiras
+  try {
+    const sec = document.getElementById('carteiras');
+    if (sec && !sec.__gastoObserver) {
+      const mo = new MutationObserver(function(){ tryRender(); });
+      mo.observe(sec, { childList: true, subtree: true });
+      sec.__gastoObserver = mo;
+    } else if (!sec) {
+      // se ainda não existe, tenta novamente algumas vezes
+      let ctries = 0;
+      const iv2 = setInterval(function(){
+        const s = document.getElementById('carteiras');
+        if (s && !s.__gastoObserver) {
+          const mo = new MutationObserver(function(){ tryRender(); });
+          mo.observe(s, { childList: true, subtree: true });
+          s.__gastoObserver = mo;
+          clearInterval(iv2);
+        }
+        if (++ctries > 20) clearInterval(iv2);
+      }, 300);
+    }
+  } catch(e){ console.warn(e); }
+
+  // Prime render (caso já esteja na aba)
+  tryRender();
+})();
+
