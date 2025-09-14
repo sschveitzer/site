@@ -2882,9 +2882,10 @@ try { window.toggleModal = toggleModal; } catch(e) {}
    - Estilo compacto como o print: título pequeno + valor grande
    - Cálculo: 50% Casa + Ajuste split (Outros, só cônjuge recebe +50%)
    - Respeita mês/ciclo da fatura
-   - Nenhum outro "Resumo familiar" é criado (sem blocos antigos)
+   - Remove renderizações antigas (cards detalhados ou linha de 3)
    ========================================================================= */
 (function(){
+  // --- CSS dos tiles ---
   function ensureTilesCSS(){
     if (document.getElementById('gastosTotalTilesCSS')) return;
     var css = document.createElement('style');
@@ -2894,11 +2895,14 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '@media(min-width: 920px){#gastosTotalTiles{grid-template-columns:1fr 1fr;}}',
       '#gastosTotalTiles .sum-box{background:rgba(0,0,0,0.03);border:1px dashed rgba(0,0,0,0.08);padding:14px 16px;border-radius:12px;}',
       '#gastosTotalTiles .sum-box .muted{opacity:.7;margin-bottom:6px;}',
-      '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}'
-    ].join('\\n');
+      '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
+      '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
+      '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
+    ].join('\n');
     document.head.appendChild(css);
   }
 
+  // --- helpers locais (redeclara, mas isolado neste IIFE) ---
   function toISO10(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
   function lastDayOfMonth(y, m){ return new Date(y, m, 0).getDate(); }
   function ymdInRange(ymd, start, end){ var s = String(ymd||''); return s >= String(start||'') && s <= String(end||''); }
@@ -2917,7 +2921,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     var startMonth = new Date(Y, M-1, 1), endMonth = new Date(Y, M, 0);
     return { start: toISO10(startMonth), end: toISO10(endMonth) };
   }
-
   function computeCasaTotal(ym){
     var r = getRange(ym), total = 0, list = (window.S && Array.isArray(S.tx)) ? S.tx : [];
     for (var i=0;i<list.length;i++){
@@ -2927,7 +2930,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     }
     return total;
   }
-
   function computeSplitPessoas(ym){
     var r = getRange(ym), res = { Marido:0, Esposa:0 }, list = (window.S && Array.isArray(S.tx)) ? S.tx : [];
     for (var i=0;i<list.length;i++){
@@ -2941,16 +2943,16 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     }
     return res;
   }
-
   function fmt(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
+  // --- Render dos tiles ---
   function renderGastoTotalTiles(){
     try{
       if (!(window.S && S.month)) return;
       var sec = document.getElementById('carteiras'); if (!sec) return;
       ensureTilesCSS();
 
-      // Remove cards antigos e blocos extras
+      // Remover versões antigas
       Array.prototype.forEach.call(sec.querySelectorAll('.card'), function(cd){
         var h = cd.querySelector('h3');
         if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
@@ -2958,19 +2960,28 @@ try { window.toggleModal = toggleModal; } catch(e) {}
           cd.parentNode && cd.parentNode.removeChild(cd);
         }
       });
-      var old1 = document.getElementById('resumoFamiliarTop');
-      if (old1 && old1.parentNode) old1.parentNode.removeChild(old1);
-      var old2 = document.getElementById('resumoFamiliarWrap');
-      if (old2 && old2.parentNode) old2.parentNode.removeChild(old2);
-      var old3 = document.getElementById('resumoFamiliarHeader');
-      if (old3 && old3.parentNode) old3.parentNode.removeChild(old3);
+      var top = document.getElementById('resumoFamiliarTop');
+      if (top && top.parentNode) top.parentNode.removeChild(top);
+      var obs = document.getElementById('resumoFamiliarObs');
+      if (obs && obs.parentNode) obs.parentNode.removeChild(obs);
+      var wrapOld = document.getElementById('resumoFamiliarWrap');
+      if (wrapOld && wrapOld.parentNode) wrapOld.parentNode.removeChild(wrapOld);
+
+      // Header "Resumo familiar"
+      var header = document.getElementById('resumoFamiliarHeader');
+      if (!header){
+        header = document.createElement('div');
+        header.id = 'resumoFamiliarHeader';
+        header.innerHTML = '<div class="title">Resumo familiar</div>';
+        sec.insertBefore(header, sec.firstChild);
+      }
 
       // Container dos tiles
       var tiles = document.getElementById('gastosTotalTiles');
       if (!tiles){
         tiles = document.createElement('div');
         tiles.id = 'gastosTotalTiles';
-        sec.insertBefore(tiles, sec.firstChild);
+        header.insertAdjacentElement('afterend', tiles);
       } else {
         tiles.innerHTML = '';
       }
@@ -2994,12 +3005,13 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   }
   window.renderGastoTotalTiles = renderGastoTotalTiles;
 
-  // Hook
-  var _renderOld = window.renderGastoTotalPessoas;
+  // --- Integrar no pipeline existente ---
+  var _renderGasto = window.renderGastoTotalPessoas;
   window.renderGastoTotalPessoas = function(){
-    try { if (_renderOld) _renderOld(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
+    try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
   };
 
+  // Render inicial + eventos
   function boot(){
     try { renderGastoTotalTiles(); } catch(_) {}
     var monthSel = document.getElementById('monthSelect');
