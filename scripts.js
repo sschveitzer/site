@@ -148,7 +148,52 @@ function getActiveRangeForYM(ym){
     var s = new Date(d3.getFullYear(), d3.getMonth(), 1);
     var e = new Date(d3.getFullYear(), d3.getMonth()+1, 0);
     function toISO(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
-    return { start: toISO(s), end: toISO(e) };
+    return { start: toISO(s), end: toISO(e) }
+
+
+// ===== Novos cálculos: Casa total e Split por pessoa =====
+function computeCasaTotal(ym){
+  try {
+    var range = getActiveRangeForYM(ym);
+    var total = 0;
+    (S.tx || []).forEach(function(x){
+      if (!x) return;
+      if (x.tipo !== "Despesa") return;
+      if (x.carteira !== "Casa") return;
+      if (!(x.data && ymdInRange(String(x.data), range.start, range.end))) return;
+      total += Number(x.valor)||0;
+    });
+    return total;
+  } catch(e){ console.error('computeCasaTotal:', e); return 0; }
+}
+
+// Retorna { Marido: valor, Esposa: valor } com os ajustes de split (Outros) no período ativo
+function computeSplitPessoas(ym){
+  var res = { Marido: 0, Esposa: 0 };
+  try {
+    var range = getActiveRangeForYM(ym);
+    (S.tx || []).forEach(function(x){
+      if (!x || x.tipo !== "Despesa") return;
+      var car = x.carteira || '';
+      if (car !== "Marido" && car !== "Esposa") return;
+      var fp = String(x.forma_pagamento || '').toLowerCase();
+      if (fp !== 'outros') return;
+      if (!(x.data && ymdInRange(String(x.data), range.start, range.end))) return;
+      var v = Number(x.valor)||0;
+      if (!(v>0)) return;
+      var metade = v * 0.5;
+      if (car === "Marido") {
+        res.Esposa += metade; // só a Esposa recebe +50%
+      } else if (car === "Esposa") {
+        res.Marido += metade; // só o Marido recebe +50%
+      }
+    });
+  } catch(e){ console.error('computeSplitPessoas:', e); }
+  return res;
+}
+
+
+;
   }
 }
 
@@ -309,6 +354,7 @@ function ensureMonthSelectLabels(){
       try { renderLancamentos(); } catch (e) {}
     
     try { renderGastosCarteiras(); } catch (e) {}
+  try { renderGastoTotalPessoas(); } catch (e) {}
 });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
@@ -430,7 +476,8 @@ function ensureMonthSelectLabels(){
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
   
-  if (name === 'carteiras') { try { renderGastosCarteiras(); } catch (e) {} }}
+  if (name === 'carteiras') { try { renderGastosCarteiras(); 
+  if (name === 'carteiras') { try { renderGastoTotalPessoas(); } catch (e) {} }} catch (e) {} }}
 
   function clearModalFields(){
   try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
@@ -810,6 +857,84 @@ function renderGastosCarteiras(){
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
+
+
+// ===== Novo renderer: dois cards de Gasto total por pessoa =====
+function renderGastoTotalPessoas(){
+  try{
+    if (!S || !S.month) return;
+    var ym = S.month;
+    // Remover o card antigo "Gastos por carteira (mês/ciclo)"
+    try {
+      var sec = document.getElementById('carteiras');
+      if (sec) {
+        var cards = sec.querySelectorAll('.card');
+        Array.prototype.forEach.call(cards, function(cd){
+          var h = cd.querySelector('h3');
+          if (h && /Gastos?\s+por\s+carteira/i.test(h.textContent||'')) {
+            cd.parentNode && cd.parentNode.removeChild(cd);
+          }
+        });
+      }
+    } catch(_){}
+
+    // Garantir contêiner de inserção (no início da seção carteiras)
+    var container = document.getElementById('carteiras');
+    if (!container) return;
+
+    // Se já existem nossos cards, só atualiza valores
+    var cardM = document.getElementById('cardGastoTotalMarido');
+    var cardE = document.getElementById('cardGastoTotalEsposa');
+
+    var casaTot = Number(computeCasaTotal(ym)) || 0;
+    var meiaCasa = casaTot / 2;
+    var split = computeSplitPessoas(ym);
+    var totMar = meiaCasa + (Number(split.Marido)||0);
+    var totEsp = meiaCasa + (Number(split.Esposa)||0);
+
+    var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+
+    function ensureCard(id, titulo){
+      var el = document.getElementById(id);
+      if (el) return el;
+      var c = document.createElement('div');
+      c.className = 'card';
+      c.id = id;
+      c.innerHTML = '<h3><i class="ph ph-wallet"></i> '+titulo+'</h3>' +
+                    '<div class="resumo-grid" style="display:grid;grid-template-columns:1fr;gap:8px">' +
+                      '<div class="sum-box"><div class="muted">50% Casa</div><div class="sum-value" data-role="meiaCasa">R$ 0,00</div></div>' +
+                      '<div class="sum-box"><div class="muted">Ajuste split (Outros)</div><div class="sum-value" data-role="split">R$ 0,00</div></div>' +
+                      '<div class="sum-box"><div class="muted">Total</div><div class="sum-value" data-role="total">R$ 0,00</div></div>' +
+                    '</div>';
+      // Inserir no topo da seção
+      var first = container.querySelector('.card');
+      if (first) container.insertBefore(c, first);
+      else container.appendChild(c);
+      return c;
+    }
+
+    cardM = ensureCard('cardGastoTotalMarido', 'Gasto total — Marido');
+    cardE = ensureCard('cardGastoTotalEsposa', 'Gasto total — Esposa');
+
+    function paint(card, splitVal, totalVal){
+      if (!card) return;
+      var elMeia = card.querySelector('[data-role="meiaCasa"]');
+      var elSplit = card.querySelector('[data-role="split"]');
+      var elTotal = card.querySelector('[data-role="total"]');
+      if (elMeia) elMeia.textContent = fmt(meiaCasa);
+      if (elSplit) elSplit.textContent = fmt(splitVal);
+      if (elTotal) elTotal.textContent = fmt(totalVal);
+    }
+
+    paint(cardM, Number(split.Marido)||0, totMar);
+    paint(cardE, Number(split.Esposa)||0, totEsp);
+  } catch(e){
+    console.error('renderGastoTotalPessoas:', e);
+  }
+}
+
+
+
 
 // expor para debug
 try { window.renderGastosCarteiras = renderGastosCarteiras; } catch (e) {}
@@ -2753,3 +2878,4 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   console.info('[OK] Bloco de otimizações aplicado.');
 })();
 // ==== FIM: bloco de otimizações/ajustes ====/
+try { window.renderGastoTotalPessoas = renderGastoTotalPessoas; } catch(e) {}
