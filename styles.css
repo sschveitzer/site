@@ -1592,3 +1592,37 @@ body.dark textarea:focus {
   background:var(--card); 
   box-shadow:var(--shadow); 
 }
+
+
+/* === PATCH: Botões do modal sempre visíveis === */
+/* Mantém o footer de ações do modal de lançamentos fixo no rodapé da área rolável */
+#modalLanc .actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--card);
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  z-index: 2;
+}
+
+/* Garante que o conteúdo do modal tenha um pequeno respiro abaixo do footer sticky */
+.modal .content {
+  padding-bottom: 8px;
+}
+
+/* Dark mode do footer do modal (segue o tema atual) */
+body.dark #modalLanc .actions {
+  background: var(--card);
+  border-top-color: var(--border);
+}
+
+/* iOS/Safari: melhora a colagem do sticky em containers roláveis */
+@supports (-webkit-touch-callout: none) {
+  #modalLanc .actions {
+    transform: translateZ(0);
+  }
+}
