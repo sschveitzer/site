@@ -1706,3 +1706,17 @@ canvas { border-radius: 12px; background: var(--card); }
 /* Dark polish */
 .dark .card:hover { border-color: rgba(255,255,255,.06); }
 .dark .chip { border-color: rgba(139,92,246,.25); }
+
+
+/* Fix: prevent Chart.js canvas from expanding page height */
+.card canvas#chartSaldo {
+  width: 100% !important;
+  height: 300px !important; /* fixed stable height */
+  display: block;
+}
+/* Optional: keep other dashboard canvases stable */
+.card canvas#chartPie {
+  width: 100% !important;
+  height: 300px !important;
+  display: block;
+}
