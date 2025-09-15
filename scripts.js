@@ -2797,34 +2797,6 @@ document.addEventListener("DOMContentLoaded", function(){
 
 // === Premium UI/UX Enhancements ===
 
-// Theme toggle (persists in Supabase preferences already used by the app)
-(function(){
-  function applyDark(dark){
-    document.body.classList.toggle('dark', !!dark);
-    try {
-      const icon = document.querySelector('#btnTheme i');
-      if (icon) icon.className = dark ? 'ph ph-sun' : 'ph ph-moon-stars';
-    } catch(_){}
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    // If S exists and has dark preference, respect it
-    try { if (window.S && typeof S.dark === 'boolean') applyDark(S.dark); } catch(_){}
-    var btn = document.getElementById('btnTheme');
-    if (btn && !btn._wired){
-      btn.addEventListener('click', async function(){
-        try {
-          window.S = window.S || {};
-          S.dark = !document.body.classList.contains('dark');
-          applyDark(S.dark);
-          try { if (typeof savePrefs === 'function') await savePrefs(); } catch(_){}
-          toast(S.dark ? 'Tema escuro ativado' : 'Tema claro ativado');
-        } catch(e){ console.error(e); }
-      });
-      btn._wired = true;
-    }
-  });
-})();
-
 // Tiny toast helper
 function toast(msg, timeout){
   try {
