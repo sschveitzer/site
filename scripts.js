@@ -2794,3 +2794,150 @@ document.addEventListener("DOMContentLoaded", function(){
     wire();
   }
 })();
+
+// ========= CONFIG (Recorrências) =========
+(function setupConfig(){
+  try {
+    const btn = document.getElementById('btnConfig');
+    const modal = document.getElementById('configModal');
+    const closeBtn = document.getElementById('cfgClose');
+    const tblBody = () => document.querySelector('#tblRecs tbody');
+    const btnApply = document.getElementById('cfgApplyRecs');
+    const btnNew = document.getElementById('cfgNewRec');
+
+    function openConfig(){
+      if (!modal) return;
+      renderCfgRecs();
+      modal.style.display = 'flex';
+      document.body.classList.add('modal-open');
+    }
+    function closeConfig(){
+      if (!modal) return;
+      modal.style.display = 'none';
+      document.body.classList.remove('modal-open');
+    }
+
+    function humanPeriod(r){
+      if (!r) return '-';
+      const p = String(r.periodicidade||'Mensal');
+      if (p === 'Mensal') return 'Mensal' + (r.dia_mes ? ' (dia '+r.dia_mes+')' : '');
+      if (p === 'Semanal') return 'Semanal';
+      if (p === 'Anual') return 'Anual' + (r.mes ? ' (mês '+r.mes+')' : '');
+      return p;
+    }
+
+    window.renderCfgRecs = function(){
+      const body = tblBody();
+      if (!body) return;
+      const list = (window.S && Array.isArray(S.recs)) ? S.recs.slice().sort((a,b)=>(String(a.descricao||'').localeCompare(String(b.descricao||'')))) : [];
+      body.innerHTML = '';
+      if (!list.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 9;
+        td.className = 'muted';
+        td.textContent = 'Nenhuma recorrência cadastrada ainda.';
+        tr.appendChild(td);
+        body.appendChild(tr);
+        return;
+      }
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = [
+          `<td><strong>${r.descricao||'-'}</strong></td>`,
+          `<td>${r.tipo||'-'}</td>`,
+          `<td>${r.categoria||'-'}</td>`,
+          `<td>${(Number(r.valor)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>`,
+          `<td>${humanPeriod(r)}</td>`,
+          `<td>${r.proxima_data||'-'}</td>`,
+          `<td>${r.fim_em||'-'}</td>`,
+          `<td><label class="cfg-switch"><input type="checkbox" data-act="${r.id}" ${r.ativo?'checked':''}> ${r.ativo?'Ativa':'Inativa'}</label></td>`,
+          `<td class="cfg-actions">
+              <button class="icon" title="Excluir" data-del="${r.id}"><i class="ph ph-trash"></i></button>
+            </td>`
+        ].join('');
+        body.appendChild(tr);
+      });
+    };
+
+    if (btn && !btn._wiredCfgOpen){
+      btn.addEventListener('click', openConfig);
+      btn._wiredCfgOpen = true;
+    }
+    if (closeBtn && !closeBtn._wiredCfgClose){
+      closeBtn.addEventListener('click', closeConfig);
+      closeBtn._wiredCfgClose = true;
+    }
+    if (modal && !modal._wiredCfgClicks){
+      modal.addEventListener('click', async (ev)=>{
+        const t = ev.target.closest('[data-del],[data-act]');
+        if (!t) return;
+        // Toggle ativo
+        if (t.hasAttribute('data-act')){
+          const id = t.getAttribute('data-act');
+          const checked = t.checked;
+          try {
+            await toggleRecAtivo(id, !!checked);
+            const rec = (S.recs||[]).find(x=>String(x.id)===String(id));
+            if (rec) rec.ativo = !!checked;
+            renderCfgRecs();
+          } catch(e) {
+            console.error(e);
+            alert('Não foi possível atualizar a recorrência.');
+          }
+        }
+        // Delete
+        if (t.hasAttribute('data-del')){
+          const id = t.getAttribute('data-del');
+          if (confirm('Excluir esta recorrência?')){
+            try{
+              await deleteRec(id);
+              await loadAll();
+              renderCfgRecs();
+            } catch(e){
+              console.error(e);
+              alert('Falha ao excluir.');
+            }
+          }
+        }
+      });
+      modal._wiredCfgClicks = true;
+    }
+    if (btnApply && !btnApply._wired){
+      btnApply.addEventListener('click', async ()=>{
+        try {
+          await applyRecurrences();
+          await loadAll();
+          renderCfgRecs();
+          alert('Recorrências aplicadas e lançamentos atualizados.');
+        } catch(e){
+          console.error(e);
+          alert('Falha ao aplicar recorrências.');
+        }
+      });
+      btnApply._wired = true;
+    }
+    if (btnNew && !btnNew._wired){
+      btnNew.addEventListener('click', ()=>{
+        // abre o modal de lançamento já com "Repetir" ligado
+        try {
+          toggleConfig(false);
+        } catch(_){}
+        try {
+          toggleModal(true, 'Nova recorrência');
+          const chk = document.querySelector('#mRepetir');
+          const box = document.querySelector('#recurrenceFields');
+          if (chk) chk.checked = true;
+          if (box) box.style.display = '';
+        } catch(e){ console.error(e); }
+      });
+      btnNew._wired = true;
+    }
+
+    // Helper to close via code
+    window.toggleConfig = function(show){
+      if (show) openConfig(); else closeConfig();
+    };
+
+  } catch(e){ console.error('setupConfig:', e); }
+})();
