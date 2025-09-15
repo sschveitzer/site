@@ -2794,3 +2794,64 @@ document.addEventListener("DOMContentLoaded", function(){
     wire();
   }
 })();
+
+// === Premium UI/UX Enhancements ===
+
+// Theme toggle (persists in Supabase preferences already used by the app)
+(function(){
+  function applyDark(dark){
+    document.body.classList.toggle('dark', !!dark);
+    try {
+      const icon = document.querySelector('#btnTheme i');
+      if (icon) icon.className = dark ? 'ph ph-sun' : 'ph ph-moon-stars';
+    } catch(_){}
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    // If S exists and has dark preference, respect it
+    try { if (window.S && typeof S.dark === 'boolean') applyDark(S.dark); } catch(_){}
+    var btn = document.getElementById('btnTheme');
+    if (btn && !btn._wired){
+      btn.addEventListener('click', async function(){
+        try {
+          window.S = window.S || {};
+          S.dark = !document.body.classList.contains('dark');
+          applyDark(S.dark);
+          try { if (typeof savePrefs === 'function') await savePrefs(); } catch(_){}
+          toast(S.dark ? 'Tema escuro ativado' : 'Tema claro ativado');
+        } catch(e){ console.error(e); }
+      });
+      btn._wired = true;
+    }
+  });
+})();
+
+// Tiny toast helper
+function toast(msg, timeout){
+  try {
+    var host = document.getElementById('toastHost');
+    if (!host) return alert(msg);
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(10px)'; }, (timeout||2500));
+    setTimeout(()=>{ try{ host.removeChild(el); }catch(_){}} , (timeout||2500)+300);
+  } catch(_){}
+}
+
+// Chart.js polish: rounded bars/lines, responsive tooltips
+(function(){
+  if (!window.Chart) return;
+  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+  Chart.defaults.plugins.legend.labels.boxWidth = 10;
+  Chart.defaults.plugins.legend.labels.boxHeight = 10;
+  Chart.defaults.elements.bar.borderRadius = 8;
+  Chart.defaults.animation.duration = 700;
+  Chart.defaults.responsive = true;
+  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, .9)';
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+})();
+
+// Month select label shortener (idempotent)
+try { ensureMonthSelectLabels && ensureMonthSelectLabels(); } catch(_){}
