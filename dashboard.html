@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <meta name="theme-color" content="#7c3aed">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sistema de Gestão Financeira - S.Schveitzer</title>
@@ -17,10 +18,13 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="nav">
+  <div class="nav" data-premium="1">
     <div class="wrap">
       <div class="badge">
         <img src="img/logo.png" alt="S.Schveitzer" class="logo">
@@ -36,6 +40,7 @@
         <select id="monthSelect" title="Mês"></select>
         <!-- Ícone de Config substitui os controles rápidos na topbar -->
         <button class="icon" id="btnConfig" title="Configurações"><i class="ph ph-gear"></i></button>
+        <button class="icon" id="btnTheme" title="Alternar tema"><i class="ph ph-moon-stars"></i></button>
         <button class="icon" id="logoutBtn" title="Sair"><i class="ph ph-sign-out"></i></button>
       
         <button class="icon hamburger" id="menuBtn" title="Menu"><i class="ph ph-list"></i></button>
@@ -658,5 +663,7 @@ document.addEventListener('change', function(e){
 });
 </script>
 
+
+  <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>
