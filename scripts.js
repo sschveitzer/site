@@ -2805,8 +2805,14 @@ document.addEventListener("DOMContentLoaded", function(){
     const btnApply = document.getElementById('cfgApplyRecs');
     const btnNew = document.getElementById('cfgNewRec');
 
-    function openConfig(){
+    async function openConfig(){
       if (!modal) return;
+      // loading hint
+      const body = document.querySelector('#tblRecs tbody');
+      if (body){ body.innerHTML = '<tr><td class="muted" colspan="9">Carregando recorrências…</td></tr>'; }
+      try {
+        if (typeof loadAll === 'function') { await loadAll(); }
+      } catch(_) {}
       renderCfgRecs();
       modal.style.display = 'flex';
       document.body.classList.add('modal-open');
