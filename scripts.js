@@ -923,6 +923,20 @@ h3.textContent = 'Lançamentos — ' + label;
     if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
+    
+    // Garantir exibição da forma de pagamento ao editar
+    try {
+      const __selPag = qs('#mPagamento');
+      if (x && __selPag) {
+        if (x.tipo !== "Transferência") {
+          __selPag.disabled = false;
+          __selPag.value = normalizeFormaPagamento(x.forma_pagamento || "");
+        } else {
+          __selPag.disabled = true;
+        }
+      }
+    } catch(__e){}
+
     setTimeout(() => qs("#mValorBig")?.focus(), 0);
   }
   try { window.openEdit = openEdit; } catch(e) {}
