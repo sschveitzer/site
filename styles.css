@@ -1626,3 +1626,13 @@ body.dark #modalLanc .actions {
     transform: translateZ(0);
   }
 }
+
+
+/* === Config modal === */
+.cfg-panel { margin-top: 8px; }
+#tblRecs th, #tblRecs td { font-size: 13px; white-space: nowrap; }
+#tblRecs td:nth-child(1) { white-space: normal; }
+.cfg-switch { display:inline-flex; align-items:center; gap:6px; }
+.cfg-actions { display:flex; gap:6px; justify-content:flex-end; }
+.cfg-actions .icon { border:1px solid var(--border); background:var(--card); border-radius:10px; width:32px; height:32px; }
+    
