@@ -2848,7 +2848,7 @@ function toast(msg, timeout){
   Chart.defaults.elements.bar.borderRadius = 8;
   Chart.defaults.animation.duration = 700;
   Chart.defaults.responsive = true;
-  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.maintainAspectRatio = true;
   Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, .9)';
   Chart.defaults.plugins.tooltip.cornerRadius = 8;
 })();
