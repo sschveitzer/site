@@ -61,18 +61,21 @@ window.addEventListener("load", function(){
   S.walletList = ["Casa","Marido","Esposa"];
 
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
-try {
-  window.S = S;
-  if (typeof window.setUseCycleForReports !== 'function') {
-    window.setUseCycleForReports = function(v){
-      S.useCycleForReports = !!v;
-      try { savePrefs(); } catch(e) {}
-      try { render(); } catch(e) {}
-      try { ensureMonthSelectLabels(); } catch(e) {}
-      try { renderPessoas(); } catch(e) {}
-    };
-  }
-} catch (e) {}
+  // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
+  try {
+    window.S = S;
+    if (typeof window.setUseCycleForReports !== 'function') {
+      window.setUseCycleForReports = function(v){
+        S.useCycleForReports = !!v;
+        try { savePrefs(); } catch(e) {}
+        try { render(); } catch(e) {}
+        try { ensureMonthSelectLabels(); } catch(e) {}
+        try { renderPessoas(); } catch(e) {}
+      };
+    }
+  } catch (e) {}
+
+
 
   // ========= HELPERS GERAIS =========
   function gid() {
@@ -3045,5 +3048,4 @@ try {
   }
 } catch(_) {}
 
-}
 });
