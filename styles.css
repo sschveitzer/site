@@ -1690,3 +1690,14 @@ body.dark #modalLanc .actions {
 /* keep responsive behavior */
 @media (max-width: 1024px){ .grid.cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px){ .grid.cards { grid-template-columns: 1fr; } }
+
+
+/* === Privacy: blur all key values when body has .hide-values === */
+body.hide-values .kpi .value,
+body.hide-values #kpiReceitasDelta,
+body.hide-values #kpiDespesasPct,
+body.hide-values #kpiSaldoDelta,
+body.hide-values #metaTotalLabel,
+body.hide-values #metaGastoMes {
+  filter: blur(8px);
+}

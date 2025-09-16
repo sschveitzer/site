@@ -24,6 +24,20 @@ function humanFormaPagamento(v){
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
+
+/* ===== Privacy helper: toggle blur based on S.hide ===== */
+function applyPrivacy(){
+  try {
+    var hide = !!(window.S && window.S.hide);
+    document.body.classList.toggle('hide-values', hide);
+    // Target specific IDs as fallback
+    ['kpiReceitas','kpiDespesas','kpiSaldo','kpiReceitasDelta','kpiDespesasPct','kpiSaldoDelta','metaTotalLabel','metaGastoMes'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('blurred', hide);
+    });
+  } catch(_) {}
+}
+
   try {
     if (typeof window !== 'undefined') {
       window.S = window.S || {};
@@ -2851,7 +2865,9 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   function enhanceKpis(){
     try {
-      var S = window.S || {};
+      var S = window.S || {
+  try { applyPrivacy(); } catch(_) {}
+};
       if (!S.month) return;
       var rec = sumByTypeInMonth(S, 'Receita', S.month);
       var des = sumByTypeInMonth(S, 'Despesa', S.month);
@@ -2946,6 +2962,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
       setTimeout(bind, 0);
+      try { applyPrivacy(); } catch(_){ }
     } else {
       document.addEventListener('DOMContentLoaded', bind);
     }
