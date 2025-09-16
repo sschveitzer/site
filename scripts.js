@@ -513,6 +513,16 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     });
   }
 
+
+// Floating Action Button (FAB) for new entry
+var fabBtn = document.getElementById('btnNovoFab');
+if (fabBtn && !fabBtn._wired) {
+  fabBtn.addEventListener('click', function(){
+    try { toggleModal(true); } catch(e) { console.error(e); }
+  });
+  fabBtn._wired = true;
+}
+
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
 async function addOrUpdate(keepOpen=false) {

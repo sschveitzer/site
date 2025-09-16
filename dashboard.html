@@ -404,7 +404,15 @@
 
       </div>
 
-	<!-- Modal Lançamento (atualizado para recorrência) -->
+      <!-- Lista de transações recorrentes -->
+      <div class="card" style="margin-top:16px">
+        <h3>Transações recorrentes</h3>
+        <ul id="listaRecorrentes" class="list"></ul>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal Lançamento (atualizado para recorrência) -->
   <div class="modal" id="modalLanc" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="content" tabindex="-1">
       <div class="title">
@@ -641,5 +649,11 @@ document.addEventListener('change', function(e){
 </script>
 
   <div id="toasts" class="toast-wrap" aria-live="polite"></div>
+
+
+<!-- Botão flutuante de Novo Lançamento -->
+    <button class="fab" id="btnNovoFab" title="Novo lançamento">
+      <i class="ph ph-plus"></i>
+    </button>
 </body>
 </html>
