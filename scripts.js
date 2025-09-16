@@ -37,7 +37,7 @@ function humanFormaPagamento(v){
   } catch(_) {}
 })();
 
-window.addEventListener("load", function(){
+window.onload = function () {
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
 
@@ -61,19 +61,18 @@ window.addEventListener("load", function(){
   S.walletList = ["Casa","Marido","Esposa"];
 
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
-  // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
-  try {
-    window.S = S;
-    if (typeof window.setUseCycleForReports !== 'function') {
-      window.setUseCycleForReports = function(v){
-        S.useCycleForReports = !!v;
-        try { savePrefs(); } catch(e) {}
-        try { render(); } catch(e) {}
-        try { ensureMonthSelectLabels(); } catch(e) {}
-        try { renderPessoas(); } catch(e) {}
-      };
-    }
-  } catch (e) {}
+try {
+  window.S = S;
+  if (typeof window.setUseCycleForReports !== 'function') {
+    window.setUseCycleForReports = function(v){
+      S.useCycleForReports = !!v;
+      try { savePrefs(); } catch(e) {}
+      try { render();
+    ensureMonthSelectLabels();
+    try { renderPessoas(); } catch(_) {} } catch(e) {}
+    };
+  }
+} catch (e) {}
 
 
 
@@ -466,8 +465,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       } else if (t.closest('#cancelar')) {
         ev.preventDefault();
         try { toggleModal(false); } catch(e) {}
-      
-        }
+      }
     });
     modal._wiredSave = true;
   }
@@ -1488,6 +1486,7 @@ h3.textContent = 'Lançamentos — ' + label;
 
 
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
+// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
 // Regra: só quem NÃO pagou recebe ajuste (cobrança de 50%).
 function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
@@ -2177,7 +2176,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
-
+}
 
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
@@ -3047,5 +3046,3 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
-
-});
