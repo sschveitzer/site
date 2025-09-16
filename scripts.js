@@ -70,7 +70,7 @@ try {
       try { render();
     ensureMonthSelectLabels();
     try { renderPessoas(); } catch(_) {} } catch(e) {}
-    };
+    ;
   }
 } catch (e) {}
 
@@ -465,7 +465,8 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       } else if (t.closest('#cancelar')) {
         ev.preventDefault();
         try { toggleModal(false); } catch(e) {}
-      }
+      
+        }
     });
     modal._wiredSave = true;
   }
@@ -2176,6 +2177,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.loadAll = loadAll;
   } catch (e) {}
 
+
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
@@ -3044,3 +3046,6 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
+
+}
+});
