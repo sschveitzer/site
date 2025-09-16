@@ -2885,8 +2885,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var recs = yms.map(function(k){ return +(map[k].rec.toFixed(2)); });
         var desps= yms.map(function(k){ return +(map[k].desp.toFixed(2)); });
         // limpa chart anterior se existir
-        if (ctx.__chart) { ctx.__chart.destroy(); }
-        ctx.__chart = new Chart(ctx, {
+        createOrUpdateChart(ctx, {
           type: 'bar',
           data: {
             labels: yms,
@@ -2921,8 +2920,7 @@ document.addEventListener("DOMContentLoaded", function(){
         });
         var labels = Object.keys(map);
         var values = labels.map(function(k){ return +(map[k].toFixed(2)); });
-        if (ctx.__chart) ctx.__chart.destroy();
-        ctx.__chart = new Chart(ctx, {
+        createOrUpdateChart(ctx, {
           type: 'pie',
           data: { labels: labels, datasets: [{ data: values }] },
           options: { responsive:true, maintainAspectRatio:false }
@@ -2968,8 +2966,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var m3 = saldo.slice(-3);
         var proj = m3.length ? m3.reduce((a,b)=>a+b,0)/m3.length : 0;
         var kpi = document.getElementById('kpiForecastFinal2'); if (kpi) kpi.textContent = (proj||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-        if (ctx.__chart) ctx.__chart.destroy();
-        ctx.__chart = new Chart(ctx, {
+        createOrUpdateChart(ctx, {
           type: 'line',
           data: { labels: yms, datasets: [{ label:'Saldo', data: saldo }] },
           options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:true} } }
@@ -2997,8 +2994,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var years = Object.keys(by).sort();
         var labels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
         var datasets = years.map(function(y){ return { label: y, data: by[y].map(v=>+v.toFixed(2)) }; });
-        if (ctx.__chart) ctx.__chart.destroy();
-        ctx.__chart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options:{ responsive:true, maintainAspectRatio:false } });
+        createOrUpdateChart(ctx, { type:'line', data:{ labels, datasets }, options:{ responsive:true, maintainAspectRatio:false } });
       } catch(e){ console.error('renderYoY:', e); }
     };
   }
@@ -3023,8 +3019,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var yms = Object.keys(map).sort();
         var recs = yms.map(k => +map[k].rec.toFixed(2));
         var desps = yms.map(k => +map[k].desp.toFixed(2));
-        if (ctx.__chart) ctx.__chart.destroy();
-        ctx.__chart = new Chart(ctx, {
+        createOrUpdateChart(ctx, {
           type:'bar',
           data:{ labels:yms, datasets:[ {label:'Receitas', data:recs, stack:'a'}, {label:'Despesas', data:desps, stack:'a'} ] },
           options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true}, y:{stacked:true, beginAtZero:true} } }
@@ -3044,6 +3039,15 @@ document.addEventListener("DOMContentLoaded", function(){
     } catch(e){ console.error('refreshReports:', e); }
   }
   window.refreshReports = window.refreshReports || refreshReports;
+  try {
+    // debounce
+    var _rr = window.refreshReports;
+    window.refreshReports = function(){
+      clearTimeout(window.__rrTO);
+      window.__rrTO = setTimeout(function(){ _rr(); }, 40);
+    };
+  } catch(_){}
+
 
   // Ganchos de mudança nos filtros
   try {
@@ -3060,3 +3064,16 @@ document.addEventListener("DOMContentLoaded", function(){
     setTimeout(function(){ refreshReports(); }, 60);
   } catch(_){}
 })();
+
+
+// === Chart.js safe helper: destroy existing chart before creating a new one ===
+function createOrUpdateChart(canvas, cfg){
+  try {
+    if (!canvas || !window.Chart) return null;
+    var inst = window.Chart.getChart ? window.Chart.getChart(canvas) : (canvas.__chart || null);
+    if (inst && typeof inst.destroy === 'function') { try { inst.destroy(); } catch(_){ } }
+    var c = new Chart(canvas, cfg);
+    try { canvas.__chart = c; } catch(_){}
+    return c;
+  } catch(e){ console.error('createOrUpdateChart:', e); return null; }
+}
