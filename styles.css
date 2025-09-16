@@ -1683,3 +1683,10 @@ body.dark #modalLanc .actions {
 @media (max-width: 1024px){ .grid.cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px){ .grid.cards { grid-template-columns: 1fr; } }
 
+
+
+/* === Override: KPI row uses exactly 3 columns (since there are 3 cards) === */
+.grid.cards { grid-template-columns: repeat(3, 1fr); }
+/* keep responsive behavior */
+@media (max-width: 1024px){ .grid.cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px){ .grid.cards { grid-template-columns: 1fr; } }

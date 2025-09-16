@@ -2877,6 +2877,15 @@ document.addEventListener("DOMContentLoaded", function(){
         var pct = (rec>0) ? (100*des/rec) : null;
         chip.textContent = (pct==null) ? '—' : (pct.toFixed(0) + '%');
       }
+      // Apply privacy blur to KPI and metas values
+      try {
+        var hide = !!(window.S && window.S.hide);
+        ['kpiReceitas','kpiDespesas','kpiSaldo','metaTotalLabel','metaGastoMes'].forEach(function(id){
+          var el = document.getElementById(id);
+          if (el) el.classList.toggle('blurred', hide);
+        });
+      } catch(_) {}
+
     } catch(e){ /* silent */ }
   }
 
