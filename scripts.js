@@ -176,8 +176,6 @@ function ensureMonthSelectLabels(){
       }
     });
   } /*fix: stray catch removed*/ { }
-}
-
 
   // ========= LOAD DATA =========
   async function loadAll() {
