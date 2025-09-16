@@ -630,7 +630,7 @@
     window.addEventListener('load', updatePct);
   })();
   </script>
-<script src="scripts.js"></script>
+
 
 <script>
 document.addEventListener('click', function(e){
@@ -652,7 +652,7 @@ document.addEventListener('change', function(e){
 
 
 <!-- Botão flutuante de Novo Lançamento -->
-    <button class="fab" id="btnNovoFab" title="Novo lançamento">
+    <button class="fab" id="btnNovoFab" title="Novo lançamento" onclick="try{toggleModal(true)}catch(e){console.error(e)}" onclick="try{openNovoLanc()}catch(e){console.error(e)}">
       <i class="ph ph-plus"></i>
     </button>
 </body>
