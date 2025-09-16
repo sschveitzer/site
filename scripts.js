@@ -236,7 +236,9 @@ function ensureMonthSelectLabels(){
 
     render();
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
-    try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
+    
+    try { renderRecorrentes(); } catch (e) {}
+try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
@@ -249,13 +251,13 @@ function ensureMonthSelectLabels(){
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
       try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
-    });
+    
+    try { renderRecorrentes(); } catch (e) {}
+});
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
   try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
-
-  try { renderRecorrentes(); } catch(e) {}
 }
 
   // ========= SAVE =========
@@ -367,7 +369,9 @@ function ensureMonthSelectLabels(){
     S.tx = tx || [];
   }
 
-  // ========= UI BÁSICA =========
+  
+    try { renderRecorrentes(); } catch (e) {}
+// ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
@@ -514,6 +518,16 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       sel.append(o);
     });
   }
+
+
+// Floating Action Button (FAB) for new entry
+var fabBtn = document.getElementById('btnNovoFab');
+if (fabBtn && !fabBtn._wired) {
+  fabBtn.addEventListener('click', function(){
+    try { toggleModal(true); } catch(e) { console.error(e); }
+  });
+  fabBtn._wired = true;
+}
 
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
@@ -677,7 +691,52 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     return li;
   }
 
-  function renderRecentes() {
+  
+
+// ========= RECORRENTES (UI) =========
+function itemRec(r) {
+  const li = document.createElement('li');
+  li.className = 'item';
+  const ativo = !!r.ativo;
+  const chip = `<span class="chip" style="margin-left:8px">${ativo ? 'Ativa' : 'Inativa'}</span>`;
+  const per = String(r.periodicidade || '-');
+  const prox = r.proxima_data ? String(r.proxima_data) : '—';
+  const fim  = r.fim_em ? String(r.fim_em) : '—';
+  const v = Number(r.valor) || 0;
+  li.innerHTML = `
+    <div class="left">
+      <div class="tag">${per}</div>
+      <div>
+        <div class="titulo"><strong>${r.descricao || '-'}</strong> ${chip}</div>
+        <div class="subinfo">${r.categoria || '-'} • Próxima: ${prox} • Fim: ${fim}</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(v)}</div>
+    </div>`;
+  return li;
+}
+
+function renderRecorrentes() {
+  try {
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul) return;
+    ul.innerHTML = '';
+    const list = Array.isArray(S.recs) ? S.recs.slice().sort((a,b)=>String(a.descricao||'').localeCompare(String(b.descricao||''))) : [];
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'item';
+      li.innerHTML = '<div class="muted">Nenhuma recorrência cadastrada.</div>';
+      ul.appendChild(li);
+      return;
+    }
+    list.forEach(r => ul.appendChild(itemRec(r)));
+  } catch (e) {
+    console.error('renderRecorrentes:', e);
+  }
+}
+
+function renderRecentes() {
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
@@ -2561,78 +2620,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 
 
 
-
-
-/* ========= RECORRÊNCIAS (UI) ========= */
-function itemRec(r) {
-  var li = document.createElement('li');
-  li.className = 'item';
-  var ativo = !!r.ativo;
-  var chip = '<span class="chip" style="margin-left:8px">' + (ativo ? 'Ativa' : 'Inativa') + '</span>';
-  var per = String(r.periodicidade || '-');
-  var prox = r.proxima_data ? String(r.proxima_data) : '—';
-  var fim  = r.fim_em ? String(r.fim_em) : '—';
-  var v = Number(r.valor) || 0;
-  li.innerHTML = ''
-    + '<div class="left">'
-    +   '<div class="tag">' + per + '</div>'
-    +   '<div>'
-    +     '<div class="titulo"><strong>' + (r.descricao || '-') + '</strong> ' + chip + '</div>'
-    +     '<div class="subinfo">' + (r.categoria || '-') + ' • Próxima: ' + prox + ' • Fim: ' + fim + '</div>'
-    +   '</div>'
-    + '</div>'
-    + '<div class="right" style="display:flex;gap:8px;align-items:center">'
-    +   '<div class="' + (S && S.hide ? 'blurred' : '') + '" style="font-weight:700">' + fmtMoney(v) + '</div>'
-    +   '<button class="btn-acao toggle" title="' + (ativo ? 'Desativar' : 'Ativar') + ' recorrência" aria-label="' + (ativo ? 'Desativar' : 'Ativar') + '">'
-    +     '<i class="ph ' + (ativo ? 'ph-pause-circle' : 'ph-play-circle') + '"></i>'
-    +   '</button>'
-    +   '<button class="btn-acao del" title="Excluir recorrência" aria-label="Excluir">'
-    +     '<i class="ph ph-trash"></i>'
-    +   '</button>'
-    + '</div>';
-
-  // Bind actions (se existirem no app)
-  var btnT = li.querySelector('.toggle');
-  var btnD = li.querySelector('.del');
-  if (btnT && typeof toggleRecAtivo === 'function') btnT.addEventListener('click', async function(){
-    try {
-      await toggleRecAtivo(r.id, !ativo);
-      if (typeof loadAll === 'function') await loadAll();
-      if (typeof renderRecorrentes === 'function') renderRecorrentes();
-    } catch(e) { console.error('Falha ao alternar recorrência:', e); }
-  });
-  if (btnD && typeof deleteRec === 'function') btnD.addEventListener('click', async function(){
-    try {
-      var ok = (typeof confirm === 'function') ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.') : true;
-      if (!ok) return;
-      await deleteRec(r.id);
-      if (typeof loadAll === 'function') await loadAll();
-      if (typeof renderRecorrentes === 'function') renderRecorrentes();
-    } catch(e) { console.error('Falha ao excluir recorrência:', e); }
-  });
-
-  return li;
-}
-
-function renderRecorrentes() {
-  try {
-    var ul = document.getElementById('listaRecorrentes');
-    if (!ul) return;
-    ul.innerHTML = '';
-    var list = Array.isArray(S && S.recs) ? S.recs.slice().sort(function(a,b){ return String(a.descricao||'').localeCompare(String(b.descricao||'')); }) : [];
-    if (!list.length) {
-      var li = document.createElement('li');
-      li.className = 'item';
-      li.innerHTML = '<div class="muted">Nenhuma recorrência cadastrada.</div>';
-      ul.appendChild(li);
-      return;
-    }
-    list.forEach(function(r){ ul.appendChild(itemRec(r)); });
-  } catch (e) {
-    console.error('renderRecorrentes:', e);
-  }
-}
-
 /* =========================================================================
    GASTO TOTAL — TILES (2 colunas): Esposa e Marido
    - Estilo compacto como o print: título pequeno + valor grande
@@ -3120,15 +3107,3 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
-
-
-/* ========= FAB (Novo Lançamento) ========= */
-document.addEventListener('DOMContentLoaded', function(){
-  var fabBtn = document.getElementById('btnNovoFab');
-  if (fabBtn && !fabBtn._wired) {
-    fabBtn.addEventListener('click', function(){
-      try { if (typeof toggleModal === 'function') toggleModal(true); } catch(e){ console.error(e); }
-    });
-    fabBtn._wired = true;
-  }
-});
