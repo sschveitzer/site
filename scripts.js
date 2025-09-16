@@ -236,7 +236,9 @@ function ensureMonthSelectLabels(){
 
     render();
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
-    try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
+    
+    try { renderRecorrentes(); } catch (e) {}
+try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
@@ -249,7 +251,9 @@ function ensureMonthSelectLabels(){
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
       try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
-    });
+    
+    try { renderRecorrentes(); } catch (e) {}
+});
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
@@ -365,7 +369,9 @@ function ensureMonthSelectLabels(){
     S.tx = tx || [];
   }
 
-  // ========= UI BÁSICA =========
+  
+    try { renderRecorrentes(); } catch (e) {}
+// ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
@@ -685,7 +691,52 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     return li;
   }
 
-  function renderRecentes() {
+  
+
+// ========= RECORRENTES (UI) =========
+function itemRec(r) {
+  const li = document.createElement('li');
+  li.className = 'item';
+  const ativo = !!r.ativo;
+  const chip = `<span class="chip" style="margin-left:8px">${ativo ? 'Ativa' : 'Inativa'}</span>`;
+  const per = String(r.periodicidade || '-');
+  const prox = r.proxima_data ? String(r.proxima_data) : '—';
+  const fim  = r.fim_em ? String(r.fim_em) : '—';
+  const v = Number(r.valor) || 0;
+  li.innerHTML = `
+    <div class="left">
+      <div class="tag">${per}</div>
+      <div>
+        <div class="titulo"><strong>${r.descricao || '-'}</strong> ${chip}</div>
+        <div class="subinfo">${r.categoria || '-'} • Próxima: ${prox} • Fim: ${fim}</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(v)}</div>
+    </div>`;
+  return li;
+}
+
+function renderRecorrentes() {
+  try {
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul) return;
+    ul.innerHTML = '';
+    const list = Array.isArray(S.recs) ? S.recs.slice().sort((a,b)=>String(a.descricao||'').localeCompare(String(b.descricao||''))) : [];
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'item';
+      li.innerHTML = '<div class="muted">Nenhuma recorrência cadastrada.</div>';
+      ul.appendChild(li);
+      return;
+    }
+    list.forEach(r => ul.appendChild(itemRec(r)));
+  } catch (e) {
+    console.error('renderRecorrentes:', e);
+  }
+}
+
+function renderRecentes() {
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
