@@ -342,7 +342,8 @@ function ensureMonthSelectLabels(){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    /* removed stray save */
+    /* save generated occurrence into transactions */
+    try { await saveTx(t); } catch(e){ console.error('save recurrence tx', e); }
 }
 
   async function applyRecurrences() {
@@ -722,7 +723,6 @@ function renderRecorrentes() {
   if (!ul) return;
 
   ul.innerHTML = "";
-  // Caso não haja recorrências
   if (!Array.isArray(S.recs) || !S.recs.length) {
     const li = document.createElement("li");
     li.className = "muted";
@@ -731,7 +731,6 @@ function renderRecorrentes() {
     return;
   }
 
-  // Ordena por próxima data crescente e mostra até 12
   const list = [...S.recs]
     .filter(r => r && r.ativo !== false)
     .sort((a,b) => String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')))
@@ -756,6 +755,10 @@ function renderRecorrentes() {
     ul.appendChild(li);
   });
 }
+
+
+
+
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
 function computeGastosPorCarteira(ym){
