@@ -3011,3 +3011,38 @@ try {
     if (btn) { try { window.renderHeatmapMesAtual(); } catch(_) {} }
   });
 } catch(_){}
+
+
+// Re-render heatmap when report/dashboard filters change
+try {
+  document.addEventListener('change', function(ev){
+    var id = ev.target && ev.target.id;
+    if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
+      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+    }
+  });
+} catch(_) {}
+
+
+// Ensure heatmap renders when entering the Relatórios top tab
+try {
+  document.addEventListener('click', function(ev){
+    var btn = ev.target.closest('.tab[data-tab="relatorios"]');
+    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
+  });
+} catch(_) {}
+
+
+// Safety net: render when the heatmap panel becomes visible via mutations
+try {
+  var hmObsTarget = document.getElementById('relatorios');
+  if (hmObsTarget && 'MutationObserver' in window) {
+    var hmObserver = new MutationObserver(function(){
+      var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
+      if (panel && panel.classList.contains('active')) {
+        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+      }
+    });
+    hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
+  }
+} catch(_) {}
