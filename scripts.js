@@ -26,7 +26,7 @@ function humanFormaPagamento(v){
 (function(){
   
     if (typeof window !== 'undefined') {
-      window.S = window.S || {;
+      window.S = window.S || {};
       // If a Supabase client exists on window, alias it to a global var name used by the app
       if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
         window.supabaseClient = window.supabase;
