@@ -2012,7 +2012,20 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   }
 
   function ensureChart(id, cfg){
-    if (R.charts[id]){ R.charts[id].destroy(); }
+  // Safe destroy any existing chart on this canvas (Chart.js v3+)
+  try {
+    var ctx = document.getElementById(id);
+    if (!ctx || !window.Chart) return;
+    var inst = (Chart.getChart ? Chart.getChart(ctx) : (ctx.__chart||null));
+    if (inst && typeof inst.destroy === 'function') { try{ inst.destroy(); }catch(_){ } }
+    // Also destroy any reference we might be tracking
+    if (typeof R !== 'undefined' && R.charts && R.charts[id]) {
+      try { R.charts[id].destroy(); } catch(_){}
+    }
+    var c = new Chart(ctx, cfg);
+    try { if (typeof R !== 'undefined'){ R.charts[id] = c; } ctx.__chart = c; } catch(_){}
+  } catch(e){ console.error('ensureChart:', e); }
+}
     const ctx = document.getElementById(id);
     if (!ctx || !window.Chart) return;
     R.charts[id] = new Chart(ctx, cfg);
@@ -3038,18 +3051,19 @@ document.addEventListener("DOMContentLoaded", function(){
       if (typeof window.renderRxV === 'function') window.renderRxV();
     } catch(e){ console.error('refreshReports:', e); }
   }
-  window.refreshReports = window.refreshReports || refreshReports;
-  try {
-    // debounce
-    var _rr = window.refreshReports;
-    window.refreshReports = function(){
+  window.refreshReports = function(){
+    try {
+      // If the app already has a consolidated renderReports(), use it.
+      if (typeof window.renderReports === 'function') {
+        return window.renderReports();
+      }
+    } catch(_) {}
+    // Fallback to our local refreshReports impl with debounce
+    try {
       clearTimeout(window.__rrTO);
-      window.__rrTO = setTimeout(function(){ _rr(); }, 40);
-    };
-  } catch(_){}
-
-
-  // Ganchos de mudança nos filtros
+      window.__rrTO = setTimeout(function(){ try { refreshReports(); } catch(_){ } }, 40);
+    } catch(_) {}
+  };// Ganchos de mudança nos filtros
   try {
     document.addEventListener('change', function(ev){
       var id = ev.target && ev.target.id;
