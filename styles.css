@@ -3,13 +3,13 @@
   --bg-soft: #f6f7fb;
   --text: #0f172a;
   --muted: #6b7280;
-  --brand: #0D9F67;
-  --brand-2: #0b7e53;
+  --brand: #7c3aed;
+  --brand-2: #5b21b6;
   --ok: #16a34a;
   --warn: #dc2626;
   --card: #ffffff;
   --border: #e5e7eb;
-  --chip: #eaf7f2;
+  --chip: #eef2ff;
   --shadow: 0 10px 30px rgba(2, 6, 23, .06);
   --radius: 16px;
 }
@@ -19,13 +19,13 @@
   --bg-soft: #0e142a;
   --text: #e5e7eb;
   --muted: #9ca3af;
-  --brand: #0ec07a;
-  --brand-2: #0aa368;
+  --brand: #8b5cf6;
+  --brand-2: #7c3aed;
   --ok: #22c55e;
   --warn: #f87171;
   --card: #0f152b;
   --border: #1f2a44;
-  --chip: #12202a;
+  --chip: #1c1f3a;
   --shadow: 0 10px 40px rgba(0, 0, 0, .45);
 }
 
@@ -50,7 +50,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: linear-gradient(180deg, rgba(13, 159, 103, .12), transparent 70%), var(--bg);
+  background: linear-gradient(180deg, rgba(124, 58, 237, .15), transparent 70%), var(--bg);
   border-bottom: 1px solid var(--border);
   backdrop-filter: saturate(1.2) blur(6px);
 }
@@ -68,7 +68,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: linear-gradient(90deg, #0ec07a, #0D9F67);
+  color: linear-gradient(90deg, #8b5cf6, #7c3aed);
   border-radius: 12px;
   padding: 8px 12px;
   font-weight: 700;
@@ -327,8 +327,8 @@ button.icon {
 
 .typetabs button.active[data-type="Transferência"] {
   background: rgba(124, 58, 237, .12);
-  border-color: #0D9F67;
-  color: #0D9F67;
+  border-color: #7c3aed;
+  color: #7c3aed;
   font-weight: 700;
 }
 
@@ -429,7 +429,7 @@ body.dark .typetabs button.active {
 
 .segmented button.active[data-type="Receita"] { background: rgba(34,197,94,.12); border-color:#22c55e; color:#16a34a; font-weight:700; }
 
-.segmented button.active[data-type="Transferência"] { background: rgba(124,58,237,.12); border-color:#0D9F67; color:#0D9F67; font-weight:700; }
+.segmented button.active[data-type="Transferência"] { background: rgba(124,58,237,.12); border-color:#7c3aed; color:#7c3aed; font-weight:700; }
 
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
 
@@ -541,7 +541,7 @@ body.dark .error { background:#3b1f20; border-color:#ef4444; color:#fecaca; }
 
 #listaLanc li[data-tipo="Receita"] .chip,#listaRecentes li[data-tipo="Receita"] .chip{ background: rgba(34,197,94,.10);  color:#16a34a; }
 
-#listaLanc li[data-tipo="Transferência"] .chip,#listaRecentes li[data-tipo="Transferência"] .chip{ background: rgba(124,58,237,.10); color:#0D9F67; }
+#listaLanc li[data-tipo="Transferência"] .chip,#listaRecentes li[data-tipo="Transferência"] .chip{ background: rgba(124,58,237,.10); color:#7c3aed; }
 
 /* Acessibilidade: menos animações */
 
@@ -1015,17 +1015,17 @@ button.btn {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(13, 159, 103, .25);
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
   transition: background .2s ease, box-shadow .2s ease, transform .1s ease;
 }
 button.btn:hover {
   background: linear-gradient(90deg, var(--brand-2), var(--brand));
-  box-shadow: 0 6px 14px rgba(13, 159, 103, .30);
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.35);
   transform: translateY(-1px);
 }
 button.btn:active {
   transform: translateY(0);
-  box-shadow: 0 3px 8px rgba(13, 159, 103, 0.18);
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.2);
 }
 
 button.btn.secondary {
@@ -1248,8 +1248,8 @@ body.dark textarea:focus {
 #tipoTabs button.active[data-type="Transferência"],
 .typetabs button.active[data-type="Transferência"] {
   background: rgba(124,58,237,.12);
-  border-color: #0D9F67;
-  color: #0D9F67;
+  border-color: #7c3aed;
+  color: #7c3aed;
 }
 
 /* Form rows inside modal */
@@ -1284,14 +1284,14 @@ body.dark textarea:focus {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(13, 159, 103, .25);
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
   transition: background .2s ease, box-shadow .2s ease, transform .1s ease;
 }
 
 .modal .footer .btn:hover,
 .modal .actions .btn:hover {
   background: linear-gradient(90deg, var(--brand-2), var(--brand));
-  box-shadow: 0 6px 14px rgba(13, 159, 103, .30);
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.35);
   transform: translateY(-1px);
 }
 
@@ -1452,11 +1452,11 @@ body.dark textarea:focus {
 /* Cores por tipo */
 .lanc-mini li[data-tipo="Despesa"] .chip{ background: rgba(220,38,38,.10); color:#dc2626; }
 .lanc-mini li[data-tipo="Receita"] .chip{ background: rgba(34,197,94,.10); color:#16a34a; }
-.lanc-mini li[data-tipo="Transferência"] .chip{ background: rgba(124,58,237,.10); color:#0D9F67; }
+.lanc-mini li[data-tipo="Transferência"] .chip{ background: rgba(124,58,237,.10); color:#7c3aed; }
 
 .lanc-mini li[data-tipo="Despesa"] .valor{ color:#dc2626; }
 .lanc-mini li[data-tipo="Receita"] .valor{ color:#16a34a; }
-.lanc-mini li[data-tipo="Transferência"] .valor{ color:#0D9F67; }
+.lanc-mini li[data-tipo="Transferência"] .valor{ color:#7c3aed; }
 
 
 /* === iPhone-friendly adjustments (<=480px) === */
