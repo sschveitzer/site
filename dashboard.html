@@ -35,10 +35,10 @@
       <div class="right">
         <select id="monthSelect" title="Mês"></select>
         <!-- Ícone de Config substitui os controles rápidos na topbar -->
-        <button class="icon" id="btnConfig" title="Configurações"><i class="ph ph-gear"></i></button>
-        <button class="icon" id="logoutBtn" title="Sair"><i class="ph ph-sign-out"></i></button>
+        <button class="icon" id="btnConfig" title="Configurações" aria-label="Abrir configurações"><i class="ph ph-gear"></i></button>
+        <button class="icon" id="logoutBtn" title="Sair" aria-label="Sair"><i class="ph ph-sign-out"></i></button>
       
-        <button class="icon hamburger" id="menuBtn" title="Menu"><i class="ph ph-list"></i></button>
+        <button class="icon hamburger" id="menuBtn" title="Menu" aria-label="Abrir menu"><i class="ph ph-list"></i></button>
 </div>
     
   <div id="mobileMenu" class="mobile-menu">
@@ -183,8 +183,8 @@
               <div class="head">
                 <h3><i class="ph ph-chart-bar"></i> Fluxo por mês</h3>
                 <div class="actions">
-                  <button class="icon" data-fs="fluxo" title="Tela cheia"><i class="ph ph-corners-out"></i></button>
-                  <button class="icon" data-export="fluxo" title="Exportar PNG"><i class="ph ph-download-simple"></i></button>
+                  <button class="icon" data-fs="fluxo" title="Tela cheia" aria-label="Exibir gráfico em tela cheia"><i class="ph ph-corners-out"></i></button>
+                  <button class="icon" data-export="fluxo" title="Exportar PNG" aria-label="Exportar gráfico como PNG"><i class="ph ph-download-simple"></i></button>
                 </div>
               </div>
               <canvas id="chartFluxo2"></canvas>
@@ -280,7 +280,7 @@
       <!-- Contêiner para tela cheia de gráficos -->
       <div class="chart-fs" id="chartFs" hidden>
         <div class="inner">
-          <button class="icon close" id="fsClose" aria-label="Fechar"><i class="ph ph-x"></i></button>
+          <button class="icon close" id="fsClose" aria-label="Fechar tela cheia"><i class="ph ph-x"></i></button>
           <canvas id="chartFsCanvas"></canvas>
         </div>
       </div>
