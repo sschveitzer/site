@@ -67,14 +67,12 @@ try {
     window.setUseCycleForReports = function(v){
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
-      try { render();
-    ensureMonthSelectLabels();
-    try { renderPessoas(); } catch(_) {} } catch(e) {}
-    ;
+      try { render(); } catch(e) {}
+      try { ensureMonthSelectLabels(); } catch(e) {}
+      try { renderPessoas(); } catch(e) {}
+    };
   }
 } catch (e) {}
-
-
 
   // ========= HELPERS GERAIS =========
   function gid() {
