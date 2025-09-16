@@ -26,8 +26,8 @@ function humanFormaPagamento(v){
 (function(){
   try {
     if (typeof window !== 'undefined') {
-      window.S = window.S || {};
-}
+      window.S = window.S || {}
+
       // If a Supabase client exists on window, alias it to a global var name used by the app
       if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
         window.supabaseClient = window.supabase;
@@ -131,8 +131,8 @@ if (typeof window.Utils === "undefined") { window.Utils = {
       default: return v || '-';
     }
   }
-};
 }
+
 
 // Mantém compatibilidade com funções globais já usadas
 try {
@@ -160,8 +160,8 @@ if (typeof window.Data === "undefined") { window.Data = {
   client(){ return window.supabaseClient || window.supabase; },
   async saveTx(t){ return await Data.client().from("transactions").upsert([t]); },
   async deleteTx(id){ return await Data.client().from("transactions").delete().eq("id", id); }
-};
 }
+
 
 // UI helpers incrementais (atualização parcial)
 if (typeof window.UI === "undefined") { window.UI = {
@@ -2447,8 +2447,8 @@ if (!window.resetValorInput) {
       const el = document.getElementById('mValorBig');
       if (el) el.value = '';
     } catch(_) {}
-  };
-}
+  }
+
 
 // Garante setUseCycleForReports (se a versão do script não exportar)
 if (typeof window.setUseCycleForReports !== 'function' && window.S) {
@@ -2456,8 +2456,8 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     try { window.S.useCycleForReports = !!v; } catch(_) {}
     try { if (typeof savePrefs === 'function') savePrefs(); } catch(_) {}
     try { if (typeof render === 'function') render(); } catch(_) {}
-  };
-}
+  }
+
 // === Exports for console/debug ===
 (function(){ try {
   if (typeof window !== 'undefined'){
