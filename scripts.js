@@ -127,7 +127,7 @@ function money(v){
       const [y, m] = ym.split("-").map(Number);
       const d = new Date(y, (m - 1) - 1, 1);
       return d.toISOString().slice(0, 7);
-    } catch (e) {
+    } /*fix: stray catch removed*/ { 
       const d = new Date();
       d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
@@ -163,7 +163,7 @@ function abbrevLabelFromYM(ym){
     var abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
     var mes = (m>=1 && m<=12) ? abrev[m-1] : ym;
     return mes + '/' + String(y).slice(2);
-  } catch(_) { return String(ym); }
+  } /*fix: stray catch removed*/ {  return String(ym); }
 }
 
 function ensureMonthSelectLabels(){
@@ -177,7 +177,7 @@ function ensureMonthSelectLabels(){
         opt.textContent = abbrevLabelFromYM(v);
       }
     });
-  } catch(_) {}
+  } /*fix: stray catch removed*/ { }
 }
 
 
@@ -235,9 +235,8 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
-    try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
-    
-    try { renderRecorrentes(); } catch (e) {}
+    try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch(e) { }
+   renderRecorrentes(); 
 try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
   // === Re-render de Lançamentos ao trocar o mês no topo ===
@@ -250,9 +249,8 @@ try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
-      try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
-    
-    try { renderRecorrentes(); } catch (e) {}
+      try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch(e) { }
+   renderRecorrentes(); 
 });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
@@ -370,7 +368,7 @@ try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
   }
 
   
-    try { renderRecorrentes(); } catch (e) {}
+    renderRecorrentes();
 // ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
@@ -467,7 +465,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
           } else {
             window.addOrUpdate && setTimeout(() => window.addOrUpdate(false), 0);
           }
-        } catch(e) { console.error(e); }
+        } /*fix: stray catch removed*/ {  console.error(e); }
       } else if (t.closest('#cancelar')) {
         ev.preventDefault();
         try { toggleModal(false); } catch(e) {}
@@ -652,7 +650,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       if (!ok) return;
       await deleteTx(id);
       await loadAll();
-    } catch (err) {
+    } /*fix: stray catch removed*/ { 
       console.error("Falha ao excluir lançamento:", err);
       alert("Não foi possível excluir o lançamento.");
     }
@@ -695,7 +693,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 // ========= RECORRENTES (UI) =========
 
-    } catch (e) {
+    } /*fix: stray catch removed*/ { 
       console.error('Falha ao alternar recorrência:', e);
       alert('Não foi possível atualizar o status da recorrência.');
     }
@@ -706,7 +704,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       if (!ok) return;
       await deleteRec(r.id);
       await loadAll();
-      try { renderRecorrentes(); } catch(_) {}
+      try { renderRecorrentes(); } catch (e) { console.error(e); }
     } catch (e) {
       console.error('Falha ao excluir recorrência:', e);
       alert('Não foi possível excluir a recorrência.');
@@ -802,7 +800,7 @@ function renderGastosCarteiras(){
         + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
         + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
     }
-  } catch(e){ console.error('renderGastosCarteiras:', e); }
+  } /*fix: stray catch removed*/ {  console.error('renderGastosCarteiras:', e); }
 }
 
 
@@ -991,7 +989,7 @@ h3.textContent = 'Lançamentos — ' + label;
           __selPag.disabled = true;
         }
       }
-    } catch(__e){}
+    } /*fix: stray catch removed*/ { }
 
     setTimeout(() => qs("#mValorBig")?.focus(), 0);
   }
@@ -1108,7 +1106,7 @@ h3.textContent = 'Lançamentos — ' + label;
       try {
         const parts = ym.split('-'); const y = parseInt(parts[0],10); const m = parseInt(parts[1],10);
         const d = new Date(y, m-2, 1); return d.toISOString().slice(0,7);
-      } catch(_) { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
+      } /*fix: stray catch removed*/ {  const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
     }
     const _ymSel = (S && S.month) ? S.month : (new Date()).toISOString().slice(0,7);
     const _ymPrevSel = _ymPrev(_ymSel);
@@ -1565,7 +1563,7 @@ function computeSplitDeltas(items){
       // ✅ Novo: não dá reembolso ao pagador; só lança a cobrança no outro
       delta[other] -= metade;
     });
-  } catch(e) {
+  } /*fix: stray catch removed*/ { 
     console.error("computeSplitDeltas:", e);
   }
   return delta;
@@ -1616,7 +1614,7 @@ var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSel
         + '</div>'
         + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Outros (sem alterar lançamentos).</div>';
     }
-  } catch(err) { console.error('split card render', err); }
+  } /*fix: stray catch removed*/ {  console.error('split card render', err); }
 });
     }
     // Somas P1/P2 e listas
@@ -1904,7 +1902,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         .maybeSingle();
       if (error) { console.error('Erro ao carregar metas:', error); }
       S.metas = data ? { total: Number(data.total)||0, porCat: (data.por_cat||{}) } : { total: 0, porCat: {} };
-    } catch(e){
+    } /*fix: stray catch removed*/ { 
       console.error(e);
       S.metas = { total: 0, porCat: {} };
     }
@@ -1916,7 +1914,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       if (error) { console.error('Erro ao salvar metas:', error); return false; }
       S.metas = { total: payload.total, porCat: payload.por_cat };
       return true;
-    } catch(e){
+    } /*fix: stray catch removed*/ { 
       console.error(e);
       return false;
     }
@@ -2256,7 +2254,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         if (mm > 12) { mm = 1; yy += 1; }
         return String(yy) + '-' + String(mm).padStart(2, '0');
       }
-    } catch (e) {
+    } /*fix: stray catch removed*/ { 
       return (String((x && x.data) || '').slice(0, 7) || '');
     }
   }
@@ -2313,7 +2311,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     });
 
     updateState();
-  } catch(e){ console.warn('enhanceNewCategory error:', e); }
+  } /*fix: stray catch removed*/ {  console.warn('enhanceNewCategory error:', e); }
 })();
 
 
@@ -2360,7 +2358,7 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     window.parseMoneyMasked = window.parseMoneyMasked || parseMoneyMasked;
     window.money = window.money || money;
   }
-} catch(_){} })();
+} /*fix: stray catch removed*/ { } })();
 
 
 // ===== Pessoas (Marido/Esposa): mini-list, filtros e totais =====
@@ -2736,7 +2734,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       }
       tiles.appendChild(makeTile('Total Divisão de Despesas — Marido', totMar));
       tiles.appendChild(makeTile('Total Divisão de Despesas — Esposa', totEsp));
-    } catch(e){ console.error('renderGastoTotalTiles:', e); }
+    } /*fix: stray catch removed*/ {  console.error('renderGastoTotalTiles:', e); }
   }
   window.renderGastoTotalTiles = renderGastoTotalTiles;
 
@@ -2833,7 +2831,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
         var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
       }
-    } catch(e){ console.error('openNovoLanc failed:', e); }
+    } /*fix: stray catch removed*/ {  console.error('openNovoLanc failed:', e); }
   }
 
   function wire(){
@@ -3023,7 +3021,7 @@ document.addEventListener("DOMContentLoaded", function(){
               // Oculta após 1.8s
               clearTimeout(window.__heatmapTipTO);
               window.__heatmapTipTO = setTimeout(function(){ if (tip) tip.style.opacity='0'; }, 1800);
-            } catch(_){}
+            } /*fix: stray catch removed*/ { }
           };
         })(ymd, tot));
 grid.appendChild(cell);
@@ -3039,7 +3037,7 @@ grid.appendChild(cell);
       foot.className = 'muted';
       foot.textContent = 'Total de despesas no mês: ' + fmtBRL(sum);
       cont.appendChild(foot);
-    } catch(e){
+    } /*fix: stray catch removed*/ { 
       console.error('renderHeatmapMesAtual:', e);
     }
   }
@@ -3100,7 +3098,7 @@ try {
     });
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
-} catch(_) {}
+} /*fix: stray catch removed*/ { }
 
 
 
@@ -3139,7 +3137,7 @@ function itemRec(r) {
     try {
       await toggleRecAtivo(r.id, !ativo);
       await loadAll();
-      try { renderRecorrentes(); } catch(_) {}
+      try { renderRecorrentes(); } catch (e) { console.error(e); }
     } catch (e) {
       console.error('Falha ao alternar recorrência:', e);
       alert('Não foi possível atualizar o status da recorrência.');
@@ -3153,7 +3151,7 @@ function itemRec(r) {
       if (!ok) return;
       await deleteRec(r.id);
       await loadAll();
-      try { renderRecorrentes(); } catch(_) {}
+      try { renderRecorrentes(); } catch (e) { console.error(e); }
     } catch (e) {
       console.error('Falha ao excluir recorrência:', e);
       alert('Não foi possível excluir a recorrência.');
