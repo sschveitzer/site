@@ -27,6 +27,7 @@ function humanFormaPagamento(v){
   try {
     if (typeof window !== 'undefined') {
       window.S = window.S || {};
+}
       // If a Supabase client exists on window, alias it to a global var name used by the app
       if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
         window.supabaseClient = window.supabase;
@@ -39,7 +40,7 @@ function humanFormaPagamento(v){
 
 // ==== Namespaces de modularização (compatível com o código atual) ====
 // Helpers / utilidades
-const Utils = {
+if (typeof window.Utils === "undefined") { window.Utils = {
   gid(){
     return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
   },
@@ -131,6 +132,7 @@ const Utils = {
     }
   }
 };
+}
 
 // Mantém compatibilidade com funções globais já usadas
 try {
@@ -154,14 +156,15 @@ try {
 } catch(_) {}
 
 // Camada de dados (Supabase wrappers mínimos)
-const Data = {
+if (typeof window.Data === "undefined") { window.Data = {
   client(){ return window.supabaseClient || window.supabase; },
   async saveTx(t){ return await Data.client().from("transactions").upsert([t]); },
   async deleteTx(id){ return await Data.client().from("transactions").delete().eq("id", id); }
 };
+}
 
 // UI helpers incrementais (atualização parcial)
-const UI = {
+if (typeof window.UI === "undefined") { window.UI = {
   showFormError(msg){
     const box = document.querySelector('#modalLanc .error') || (()=>{
       const c = document.querySelector('#modalLanc .content');
