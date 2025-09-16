@@ -24,17 +24,17 @@ function humanFormaPagamento(v){
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
-  
-    if (typeof window !== 'undefined') {
-      window.S = window.S || {};
-      // If a Supabase client exists on window, alias it to a global var name used by the app
-      if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
-        window.supabaseClient = window.supabase;
-      }
-      // Also expose a global identifier (var) to avoid ReferenceError when the code uses bare supabaseClient
-      try { window.supabaseClient = window.supabaseClient || null; } catch(_){}
+  if (typeof window !== 'undefined') {
+    window.S = window.S || {};
+    // If a Supabase client exists on window, alias it to a global var name used by the app
+    if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
+      window.supabaseClient = window.supabase;
     }
-  } catch(_) {}
+    // Also expose a global identifier (var) to avoid ReferenceError when the code uses bare supabaseClient
+    try { 
+      window.supabaseClient = window.supabaseClient || null; 
+    } catch(_) {}
+  }
 })();
 
 window.onload = function () {
