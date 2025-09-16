@@ -123,11 +123,9 @@ function money(v){
 
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
-    try {
-      const [y, m] = ym.split("-").map(Number);
+    const [y, m] = ym.split("-").map(Number);
       const d = new Date(y, (m - 1) - 1, 1);
-      return d.toISOString().slice(0, 7);
-    } /*fix: stray catch removed*/ { 
+      return d.toISOString().slice(0, 7); /*fix: stray catch removed*/ { 
       const d = new Date();
       d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
@@ -644,13 +642,11 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
   
   // ========= EXCLUIR LANÇAMENTO =========
   async function delTx(id) {
-    try {
-      if (!id) return;
+    if (!id) return;
       const ok = typeof confirm === 'function' ? confirm("Excluir lançamento?") : true;
       if (!ok) return;
       await deleteTx(id);
-      await loadAll();
-    } /*fix: stray catch removed*/ { 
+      await loadAll(); /*fix: stray catch removed*/ { 
       console.error("Falha ao excluir lançamento:", err);
       alert("Não foi possível excluir o lançamento.");
     }
@@ -704,7 +700,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       if (!ok) return;
       await deleteRec(r.id);
       await loadAll();
-      try { renderRecorrentes(); } catch (e) { console.error(e); }
+      renderRecorrentes(); catch (e) { console.error(e); }
     } catch (e) {
       console.error('Falha ao excluir recorrência:', e);
       alert('Não foi possível excluir a recorrência.');
@@ -1103,10 +1099,8 @@ h3.textContent = 'Lançamentos — ' + label;
     // ==== mês anterior para comparação ====
     function _ymPrev(ym){
       if (!ym || ym.length < 7) { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
-      try {
-        const parts = ym.split('-'); const y = parseInt(parts[0],10); const m = parseInt(parts[1],10);
-        const d = new Date(y, m-2, 1); return d.toISOString().slice(0,7);
-      } /*fix: stray catch removed*/ {  const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
+      const parts = ym.split('-'); const y = parseInt(parts[0],10); const m = parseInt(parts[1],10);
+        const d = new Date(y, m-2, 1); return d.toISOString().slice(0,7); /*fix: stray catch removed*/ {  const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
     }
     const _ymSel = (S && S.month) ? S.month : (new Date()).toISOString().slice(0,7);
     const _ymPrevSel = _ymPrev(_ymSel);
@@ -3137,7 +3131,7 @@ function itemRec(r) {
     try {
       await toggleRecAtivo(r.id, !ativo);
       await loadAll();
-      try { renderRecorrentes(); } catch (e) { console.error(e); }
+      renderRecorrentes(); catch (e) { console.error(e); }
     } catch (e) {
       console.error('Falha ao alternar recorrência:', e);
       alert('Não foi possível atualizar o status da recorrência.');
@@ -3151,7 +3145,7 @@ function itemRec(r) {
       if (!ok) return;
       await deleteRec(r.id);
       await loadAll();
-      try { renderRecorrentes(); } catch (e) { console.error(e); }
+      renderRecorrentes(); catch (e) { console.error(e); }
     } catch (e) {
       console.error('Falha ao excluir recorrência:', e);
       alert('Não foi possível excluir a recorrência.');
