@@ -185,7 +185,9 @@ function ensureMonthSelectLabels(){
   async function loadAll() {
   const selPag = qs('#mPagamento');
     // Transações
-    const { data: tx, error: txError } = await supabaseClient.from("transactions").select("*");
+    const { data: tx, error: txError 
+  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+} = await supabaseClient.from("transactions").select("*");
     
     
     if (txError) { console.error("Erro ao carregar transações:", txError); S.tx = []; }
@@ -2967,3 +2969,11 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   } catch(_){}
 })();
+
+// Hook: re-render heatmap when switching to Heatmap tab in Relatórios
+try {
+  document.addEventListener('click', function(ev){
+    var btn = ev.target.closest('.rtab[data-rtab="heatmap"]');
+    if (btn) { try { window.renderHeatmapMesAtual(); } catch(_) {} }
+  });
+} catch(_){}
