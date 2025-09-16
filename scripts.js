@@ -24,20 +24,6 @@ function humanFormaPagamento(v){
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
-
-/* ===== Privacy helper: toggle blur based on S.hide ===== */
-function applyPrivacy(){
-  try {
-    var hide = !!(window.S && window.S.hide);
-    document.body.classList.toggle('hide-values', hide);
-    // Target specific IDs as fallback
-    ['kpiReceitas','kpiDespesas','kpiSaldo','kpiReceitasDelta','kpiDespesasPct','kpiSaldoDelta','metaTotalLabel','metaGastoMes'].forEach(function(id){
-      var el = document.getElementById(id);
-      if (el) el.classList.toggle('blurred', hide);
-    });
-  } catch(_) {}
-}
-
   try {
     if (typeof window !== 'undefined') {
       window.S = window.S || {};
@@ -1074,6 +1060,8 @@ h3.textContent = 'Lançamentos — ' + label;
     const kpiReceitas = qs("#kpiReceitas");
     const kpiDespesas = qs("#kpiDespesas");
     const kpiSaldo = qs("#kpiSaldo");
+    const kpiSplit = qs("#kpiSplit");
+    const kpiSplitHint = qs("#kpiSplitHint");
 
     // Atualiza números
     if (kpiReceitas) kpiReceitas.textContent = fmtMoney(receitas);
@@ -1081,6 +1069,8 @@ h3.textContent = 'Lançamentos — ' + label;
     if (kpiSaldo) kpiSaldo.textContent = fmtMoney(saldo);
     const casaAgg = sumInOutByWallet("Casa");
     const saidasCasa = (casaAgg && typeof casaAgg.saidas === "number") ? casaAgg.saidas : 0;
+    if (kpiSplit) kpiSplit.textContent = fmtMoney(saidasCasa / 2);
+    if (kpiSplitHint) kpiSplitHint.textContent = "50% Casa";
 
     // --- Variação vs mês anterior (em %) ---
     const ymPrev = prevYM(S.month);
@@ -1115,6 +1105,10 @@ h3.textContent = 'Lançamentos — ' + label;
     setChip("#kpiDespesasDelta", formatDeltaPct(despesas, despesasPrev));
     setChip("#kpiSaldoDelta", formatDeltaPct(saldo, saldoPrev));
 
+    // Aplica "blurred" só nos valores principais
+    [kpiReceitas, kpiDespesas, kpiSaldo, kpiSplit].forEach(el => {
+      if (el) el.classList.toggle("blurred", S.hide);
+    });
 
     // Percentual de Despesas sobre Receitas
     const kpiDespesasPct = qs("#kpiDespesasPct");
@@ -1581,7 +1575,7 @@ var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSel
 
   }
 function render() {
-    document.body.classList.toggle("dark", S.dark);
+    try{ document.body.classList.toggle("hide-values", !!(window.S&&window.S.hide)); }catch(_){ } document.body.classList.toggle("dark", S.dark);
 
     // sincroniza estado dos toggles (suporta ids antigos e novos)
     const hideToggle = qs("#toggleHide") || qs("#cfgHide");
@@ -1890,6 +1884,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
     if (kTotal) kTotal.textContent = totalMeta ? fmtBRL(totalMeta) : '—';
     if (kGasto) kGasto.textContent = fmtBRL(gastosMes);
+    if (kTotal) kTotal.classList.toggle("blurred", !!(S&&S.hide));
+    if (kGasto) kGasto.classList.toggle("blurred", !!(S&&S.hide));
 
     if (!bar || !chip) return;
 
@@ -2799,176 +2795,4 @@ document.addEventListener("DOMContentLoaded", function(){
   } else {
     wire();
   }
-})();
-
-/* ===== Visual Enhancements: KPIs animation, deltas, toasts, gradients ===== */
-(function(){
-  function animateMoney(el, target, duration){
-    if (!el) return;
-    target = Number(target)||0;
-    duration = duration || 600;
-    var startTs = performance.now();
-    function step(now){
-      var p = Math.min(1, (now - startTs)/duration);
-      var val = target * p;
-      try {
-        el.textContent = val.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-      } catch(_) { el.textContent = 'R$ ' + (val.toFixed(2)).replace('.', ','); }
-      if (p < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-  function setDelta(el, valuePct){
-    if (!el) return;
-    if (valuePct == null || !isFinite(valuePct)) {
-      el.textContent = '—';
-      el.classList.remove('delta','up','down');
-      return;
-    }
-    var up = Number(valuePct) >= 0;
-    var icon = up ? 'ph-arrow-up' : 'ph-arrow-down';
-    el.classList.add('delta', up ? 'up' : 'down');
-    el.innerHTML = '<i class="ph ' + icon + '"></i> ' + Math.abs(Number(valuePct)).toFixed(1) + '%';
-  }
-  function toast(msg, kind){
-    var wrap = document.getElementById('toasts');
-    if (!wrap) return;
-    var t = document.createElement('div');
-    t.className = 'toast ' + (kind==='err'?'err':'ok');
-    t.textContent = msg;
-    wrap.appendChild(t);
-    setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .2s'; }, 2200);
-    setTimeout(function(){ try{ wrap.removeChild(t); }catch(_){ } }, 2500);
-  }
-  function makeGradient(ctx, from, to){
-    var g = ctx.createLinearGradient(0,0,0,240);
-    g.addColorStop(0, from);
-    g.addColorStop(1, to);
-    return g;
-  }
-  // Expose helpers (optional)
-  try { window.toast = window.toast || toast; } catch(_){}
-
-  function ymdPrefix(ym){
-    return String(ym||'').slice(0,7) + '-';
-  }
-  function sumByTypeInMonth(S, tipo, ym){
-    try {
-      var pref = ymdPrefix(ym);
-      return (S.tx||[]).reduce(function(acc, x){
-        if (!x || x.tipo !== tipo) return acc;
-        var d = String(x.data||'');
-        if (d.startsWith(pref)) acc += Number(x.valor)||0;
-        return acc;
-      }, 0);
-    } catch(_){ return 0; }
-  }
-  function enhanceKpis(){
-    try {
-      var S = window.S || {
-  try { applyPrivacy(); } catch(_) {}
-};
-      if (!S.month) return;
-      var rec = sumByTypeInMonth(S, 'Receita', S.month);
-      var des = sumByTypeInMonth(S, 'Despesa', S.month);
-      var sal = (rec||0) - (des||0);
-      var prevYM = (typeof window.prevYM==='function') ? window.prevYM(S.month) : (function(ym){
-        try { var y=+ym.slice(0,4), m=+ym.slice(5,7)-1; if(m<1){m=12;y--;} return y + '-' + String(m).padStart(2,'0'); } catch(_){ return ym; }
-      })(S.month);
-      var recPrev = sumByTypeInMonth(S, 'Receita', prevYM);
-      var desPrev = sumByTypeInMonth(S, 'Despesa', prevYM);
-      var salPrev = (recPrev||0) - (desPrev||0);
-      var recDelta = (recPrev>0) ? ((rec - recPrev)/recPrev*100) : null;
-      var salDelta = (Math.abs(salPrev)>0.0001) ? ((sal - salPrev)/Math.abs(salPrev)*100) : (sal!==0 ? 100 : null);
-
-      animateMoney(document.getElementById('kpiReceitas'), rec);
-      animateMoney(document.getElementById('kpiDespesas'), des);
-      animateMoney(document.getElementById('kpiSaldo'), sal);
-
-      setDelta(document.getElementById('kpiReceitasDelta'), recDelta);
-      setDelta(document.getElementById('kpiSaldoDelta'), salDelta);
-
-      var chip = document.getElementById('kpiDespesasPct');
-      if (chip) {
-        var pct = (rec>0) ? (100*des/rec) : null;
-        chip.textContent = (pct==null) ? '—' : (pct.toFixed(0) + '%');
-      }
-      // Apply privacy blur to KPI and metas values
-      try {
-        var hide = !!(window.S && window.S.hide);
-        ['kpiReceitas','kpiDespesas','kpiSaldo','metaTotalLabel','metaGastoMes'].forEach(function(id){
-          var el = document.getElementById(id);
-          if (el) el.classList.toggle('blurred', hide);
-        });
-      } catch(_) {}
-
-    } catch(e){ /* silent */ }
-  }
-
-  function wrapActions(){
-    // Wrap addOrUpdate
-    if (window.addOrUpdate && !window.addOrUpdate._wrappedToast) {
-      var _origAdd = window.addOrUpdate;
-      window.addOrUpdate = async function(){
-        try {
-          var r = await _origAdd.apply(this, arguments);
-          try { toast('Lançamento salvo!'); } catch(_){}
-          try { if (typeof enhanceKpis==='function') enhanceKpis(); } catch(_){}
-          return r;
-        } catch(err) {
-          try { toast('Não foi possível salvar.', 'err'); } catch(_){}
-          throw err;
-        }
-      };
-      window.addOrUpdate._wrappedToast = true;
-    }
-    // Wrap delTx
-    if (window.delTx && !window.delTx._wrappedToast) {
-      var _origDel = window.delTx;
-      window.delTx = async function(){
-        try {
-          var r = await _origDel.apply(this, arguments);
-          try { toast('Lançamento excluído!'); } catch(_){}
-          try { if (typeof enhanceKpis==='function') enhanceKpis(); } catch(_){}
-          return r;
-        } catch(err) {
-          try { toast('Falha ao excluir.', 'err'); } catch(_){}
-          throw err;
-        }
-      };
-      window.delTx._wrappedToast = true;
-    }
-  }
-
-  // Monkey-patch render to enhance after original render
-  (function(){
-    var bound = false;
-    function bind(){
-      if (bound) return;
-      bound = true;
-      var oldRender = window.render;
-      if (typeof oldRender === 'function') {
-        window.render = function(){
-          var r = oldRender.apply(this, arguments);
-          try { enhanceKpis(); } catch(_){}
-          try { wrapActions(); } catch(_){}
-          return r;
-        };
-      } else {
-        // If no global render, still attempt to enhance
-        try { enhanceKpis(); } catch(_){}
-        try { wrapActions(); } catch(_){}
-      }
-    }
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(bind, 0);
-      try { applyPrivacy(); } catch(_){ }
-    } else {
-      document.addEventListener('DOMContentLoaded', bind);
-    }
-    window.addEventListener('load', function(){
-      try { enhanceKpis(); } catch(_){}
-      try { wrapActions(); } catch(_){}
-    });
-  })();
 })();
