@@ -24,17 +24,17 @@ function humanFormaPagamento(v){
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
-  if (typeof window !== 'undefined') {
-    window.S = window.S || {};
-    // If a Supabase client exists on window, alias it to a global var name used by the app
-    if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
-      window.supabaseClient = window.supabase;
+  try {
+    if (typeof window !== 'undefined') {
+      window.S = window.S || {};
+      // If a Supabase client exists on window, alias it to a global var name used by the app
+      if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
+        window.supabaseClient = window.supabase;
+      }
+      // Also expose a global identifier (var) to avoid ReferenceError when the code uses bare supabaseClient
+      try { window.supabaseClient = window.supabaseClient || null; } catch(_){}
     }
-    // Also expose a global identifier (var) to avoid ReferenceError when the code uses bare supabaseClient
-    try { 
-      window.supabaseClient = window.supabaseClient || null; 
-    } catch(_) {}
-  }
+  } catch(_) {}
 })();
 
 window.onload = function () {
@@ -123,9 +123,11 @@ function money(v){
 
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
-    const [y, m] = ym.split("-").map(Number);
+    try {
+      const [y, m] = ym.split("-").map(Number);
       const d = new Date(y, (m - 1) - 1, 1);
-      return d.toISOString().slice(0, 7); /*fix: stray catch removed*/ { 
+      return d.toISOString().slice(0, 7);
+    } catch (e) {
       const d = new Date();
       d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
@@ -153,29 +155,31 @@ function money(v){
 
 // === Helpers de abreviação de mês/ano ===
 function abbrevLabelFromYM(ym){
-  
-    if (!/^\d{4-\d{2}$/.test(String(ym))) return String(ym);
+  try {
+    if (!/^\d{4}-\d{2}$/.test(String(ym))) return String(ym);
     var parts = ym.split('-');
     var y = Number(parts[0]);
     var m = Number(parts[1]);
     var abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
     var mes = (m>=1 && m<=12) ? abrev[m-1] : ym;
     return mes + '/' + String(y).slice(2);
-  } /*fix: stray catch removed*/ {  return String(ym); }
+  } catch(_) { return String(ym); }
 }
 
 function ensureMonthSelectLabels(){
-  
+  try {
     var sel = document.getElementById('monthSelect');
     if (!sel) return;
     Array.from(sel.options || []).forEach(function(opt){
       if (!opt) return;
       var v = opt.value || '';
-      if (/^\d{4-\d{2}$/.test(v)) {
+      if (/^\d{4}-\d{2}$/.test(v)) {
         opt.textContent = abbrevLabelFromYM(v);
       }
     });
-  } /*fix: stray catch removed*/ { }
+  } catch(_) {}
+}
+
 
   // ========= LOAD DATA =========
   async function loadAll() {
@@ -231,9 +235,8 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
-    try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch(e) { }
-   renderRecorrentes(); 
-try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
+    try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
+    try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
@@ -245,13 +248,14 @@ try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
-      try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch(e) { }
-   renderRecorrentes(); 
-});
+      try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
+    });
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
   try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+
+  try { renderRecorrentes(); } catch(e) {}
 }
 
   // ========= SAVE =========
@@ -363,9 +367,7 @@ try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
     S.tx = tx || [];
   }
 
-  
-    renderRecorrentes();
-// ========= UI BÁSICA =========
+  // ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
@@ -455,13 +457,13 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       var t = ev.target;
       if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
         ev.preventDefault();
-        
+        try {
           if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
             window.addOrUpdate && setTimeout(() => window.addOrUpdate(true), 0);
-           else {
+          } else {
             window.addOrUpdate && setTimeout(() => window.addOrUpdate(false), 0);
           }
-        } /*fix: stray catch removed*/ {  console.error(e); }
+        } catch(e) { console.error(e); }
       } else if (t.closest('#cancelar')) {
         ev.preventDefault();
         try { toggleModal(false); } catch(e) {}
@@ -513,23 +515,13 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     });
   }
 
-
-// Floating Action Button (FAB) for new entry
-var fabBtn = document.getElementById('btnNovoFab');
-if (fabBtn && !fabBtn._wired) {
-  fabBtn.addEventListener('click', function(){
-    try { toggleModal(true); } catch(e) { console.error(e); }
-  });
-  fabBtn._wired = true;
-}
-
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
 async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
-    
+    try {
 const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -541,7 +533,7 @@ const selPag = qs('#mPagamento');
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
-    ;
+    };
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -640,11 +632,13 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
   
   // ========= EXCLUIR LANÇAMENTO =========
   async function delTx(id) {
-    if (!id) return;
+    try {
+      if (!id) return;
       const ok = typeof confirm === 'function' ? confirm("Excluir lançamento?") : true;
       if (!ok) return;
       await deleteTx(id);
-      await loadAll(); /*fix: stray catch removed*/ { 
+      await loadAll();
+    } catch (err) {
       console.error("Falha ao excluir lançamento:", err);
       alert("Não foi possível excluir o lançamento.");
     }
@@ -683,46 +677,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     return li;
   }
 
-  
-
-// ========= RECORRENTES (UI) =========
-
-    } /*fix: stray catch removed*/ { 
-      console.error('Falha ao alternar recorrência:', e);
-      alert('Não foi possível atualizar o status da recorrência.');
-    }
-  });
-  if (btnD) btnD.addEventListener('click', async () => {
-    
-      const ok = typeof confirm === 'function' ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.') : true;
-      if (!ok) return;
-      await deleteRec(r.id);
-      await loadAll();
-      renderRecorrentes(); /* removed stray catch */ { console.error(e); 
-    } /* removed stray catch */ {
-      console.error('Falha ao excluir recorrência:', e);
-      alert('Não foi possível excluir a recorrência.');
-    }
-  });
-
-  return li;
-}
-
-  };
-  if (acoes[1]) acoes[1].onclick = () => {
-    try { openRecorrenteModal(r); } catch(e){ console.error(e); }
-  };
-  if (acoes[2]) acoes[2].onclick = async () => {
-    if (!confirm('Excluir recorrência?')) return;
-    try { await deleteRec(r.id); renderRecorrentes(); } catch(e){ console.error(e); }
-  };
-  return li;
-} catch (e) {
-    console.error('renderRecorrentes:', e);
-  }
-}
-
-function renderRecentes() {
+  function renderRecentes() {
     const ul = qs("#listaRecentes");
     if (!ul) return;
     const list = (S.tx || [])
@@ -752,10 +707,10 @@ function computeGastosPorCarteira(ym){
 function renderGastosCarteiras(){
   
   if (!S || !S.month) return;
-  
+  try {
     const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
     // Deltas do split (Dinheiro/Pix) para Marido/Esposa
-    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 ;
+    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
     // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
     const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
     const sign = (n) => (n>=0?'+':'');
@@ -794,7 +749,7 @@ function renderGastosCarteiras(){
         + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
         + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
     }
-  } /*fix: stray catch removed*/ {  console.error('renderGastosCarteiras:', e); }
+  } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
 
 
@@ -973,17 +928,17 @@ h3.textContent = 'Lançamentos — ' + label;
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
     
     // Garantir exibição da forma de pagamento ao editar
-    
+    try {
       const __selPag = qs('#mPagamento');
       if (x && __selPag) {
         if (x.tipo !== "Transferência") {
           __selPag.disabled = false;
           __selPag.value = normalizeFormaPagamento(x.forma_pagamento || "");
-         else {
+        } else {
           __selPag.disabled = true;
         }
       }
-    } /*fix: stray catch removed*/ { }
+    } catch(__e){}
 
     setTimeout(() => qs("#mValorBig")?.focus(), 0);
   }
@@ -1097,8 +1052,10 @@ h3.textContent = 'Lançamentos — ' + label;
     // ==== mês anterior para comparação ====
     function _ymPrev(ym){
       if (!ym || ym.length < 7) { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
-      const parts = ym.split('-'); const y = parseInt(parts[0],10); const m = parseInt(parts[1],10);
-        const d = new Date(y, m-2, 1); return d.toISOString().slice(0,7); /*fix: stray catch removed*/ {  const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
+      try {
+        const parts = ym.split('-'); const y = parseInt(parts[0],10); const m = parseInt(parts[1],10);
+        const d = new Date(y, m-2, 1); return d.toISOString().slice(0,7);
+      } catch(_) { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
     }
     const _ymSel = (S && S.month) ? S.month : (new Date()).toISOString().slice(0,7);
     const _ymPrevSel = _ymPrev(_ymSel);
@@ -1536,7 +1493,7 @@ h3.textContent = 'Lançamentos — ' + label;
 function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
-  
+  try {
     items.forEach(function(x){
       if (!x || x.tipo !== "Despesa") return;
       var car = x.carteira || "";
@@ -1554,8 +1511,8 @@ function computeSplitDeltas(items){
 
       // ✅ Novo: não dá reembolso ao pagador; só lança a cobrança no outro
       delta[other] -= metade;
-    );
-  } /*fix: stray catch removed*/ { 
+    });
+  } catch(e) {
     console.error("computeSplitDeltas:", e);
   }
   return delta;
@@ -1574,7 +1531,7 @@ function renderCarteiras(){
         el.appendChild(card);
       
   // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
-  
+  try {
     var section = document.getElementById('carteiras');
 if (section) {
   var grid = section.querySelector('.grid-carteiras');
@@ -1586,7 +1543,7 @@ if (section) {
     if (grid) {
       // Inserir AO FINAL do grid para ficar abaixo dos cards Marido/Esposa
       grid.appendChild(host);
-     else {
+    } else {
       section.appendChild(host);
     }
   }
@@ -1606,7 +1563,7 @@ var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSel
         + '</div>'
         + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Outros (sem alterar lançamentos).</div>';
     }
-  } /*fix: stray catch removed*/ {  console.error('split card render', err); }
+  } catch(err) { console.error('split card render', err); }
 });
     }
     // Somas P1/P2 e listas
@@ -1886,27 +1843,27 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
-    
-      const { data, error  = await supabaseClient
+    try{
+      const { data, error } = await supabaseClient
         .from('goals')
         .select('*')
         .eq('id', 1)
         .maybeSingle();
       if (error) { console.error('Erro ao carregar metas:', error); }
       S.metas = data ? { total: Number(data.total)||0, porCat: (data.por_cat||{}) } : { total: 0, porCat: {} };
-    } /*fix: stray catch removed*/ { 
+    } catch(e){
       console.error(e);
       S.metas = { total: 0, porCat: {} };
     }
   }
   async function persistMetas(m){
-    
-      const payload = { id: 1, total: Number(m.total)||0, por_cat: m.porCat||{, updated_at: new Date().toISOString() };
+    try{
+      const payload = { id: 1, total: Number(m.total)||0, por_cat: m.porCat||{}, updated_at: new Date().toISOString() };
       const { error } = await supabaseClient.from('goals').upsert([payload]);
       if (error) { console.error('Erro ao salvar metas:', error); return false; }
       S.metas = { total: payload.total, porCat: payload.por_cat };
       return true;
-    } /*fix: stray catch removed*/ { 
+    } catch(e){
       console.error(e);
       return false;
     }
@@ -2228,8 +2185,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
   function txBucketYM(x) {
   const selPag = qs('#mPagamento');
-    
-      const SS = (typeof S !== 'undefined' ? S : (typeof window !== 'undefined' ? window.S : null)) || {;
+    try {
+      const SS = (typeof S !== 'undefined' ? S : (typeof window !== 'undefined' ? window.S : null)) || {};
       const ymd = String((x && x.data) || '');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
         return ymd.slice(0, 7) || '';
@@ -2246,7 +2203,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         if (mm > 12) { mm = 1; yy += 1; }
         return String(yy) + '-' + String(mm).padStart(2, '0');
       }
-    } /*fix: stray catch removed*/ { 
+    } catch (e) {
       return (String((x && x.data) || '').slice(0, 7) || '');
     }
   }
@@ -2267,7 +2224,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
 // === UX: Nova Categoria (enter para enviar, valida duplicado, botão desabilita) ===
 (function enhanceNewCategory(){
-  
+  try {
     const inp = document.querySelector('#newCatName');
     const btn = document.querySelector('#addCat');
     if (!inp || !btn) return;
@@ -2281,7 +2238,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       btn.disabled = !v || dup;
       inp.classList.toggle('invalid', !!dup);
       btn.title = dup ? 'Categoria já existe' : 'Adicionar';
-    
+    }
 
     btn.addEventListener('click', async () => {
       const v = inp.value.trim();
@@ -2303,7 +2260,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     });
 
     updateState();
-  } /*fix: stray catch removed*/ {  console.warn('enhanceNewCategory error:', e); }
+  } catch(e){ console.warn('enhanceNewCategory error:', e); }
 })();
 
 
@@ -2344,13 +2301,13 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
   };
 }
 // === Exports for console/debug ===
-(function(){ 
+(function(){ try {
   if (typeof window !== 'undefined'){
     window.fmtMoney = window.fmtMoney || fmtMoney;
     window.parseMoneyMasked = window.parseMoneyMasked || parseMoneyMasked;
     window.money = window.money || money;
-  
-} /*fix: stray catch removed*/ { } })();
+  }
+} catch(_){} })();
 
 
 // ===== Pessoas (Marido/Esposa): mini-list, filtros e totais =====
@@ -2604,6 +2561,78 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 
 
 
+
+
+/* ========= RECORRÊNCIAS (UI) ========= */
+function itemRec(r) {
+  var li = document.createElement('li');
+  li.className = 'item';
+  var ativo = !!r.ativo;
+  var chip = '<span class="chip" style="margin-left:8px">' + (ativo ? 'Ativa' : 'Inativa') + '</span>';
+  var per = String(r.periodicidade || '-');
+  var prox = r.proxima_data ? String(r.proxima_data) : '—';
+  var fim  = r.fim_em ? String(r.fim_em) : '—';
+  var v = Number(r.valor) || 0;
+  li.innerHTML = ''
+    + '<div class="left">'
+    +   '<div class="tag">' + per + '</div>'
+    +   '<div>'
+    +     '<div class="titulo"><strong>' + (r.descricao || '-') + '</strong> ' + chip + '</div>'
+    +     '<div class="subinfo">' + (r.categoria || '-') + ' • Próxima: ' + prox + ' • Fim: ' + fim + '</div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="right" style="display:flex;gap:8px;align-items:center">'
+    +   '<div class="' + (S && S.hide ? 'blurred' : '') + '" style="font-weight:700">' + fmtMoney(v) + '</div>'
+    +   '<button class="btn-acao toggle" title="' + (ativo ? 'Desativar' : 'Ativar') + ' recorrência" aria-label="' + (ativo ? 'Desativar' : 'Ativar') + '">'
+    +     '<i class="ph ' + (ativo ? 'ph-pause-circle' : 'ph-play-circle') + '"></i>'
+    +   '</button>'
+    +   '<button class="btn-acao del" title="Excluir recorrência" aria-label="Excluir">'
+    +     '<i class="ph ph-trash"></i>'
+    +   '</button>'
+    + '</div>';
+
+  // Bind actions (se existirem no app)
+  var btnT = li.querySelector('.toggle');
+  var btnD = li.querySelector('.del');
+  if (btnT && typeof toggleRecAtivo === 'function') btnT.addEventListener('click', async function(){
+    try {
+      await toggleRecAtivo(r.id, !ativo);
+      if (typeof loadAll === 'function') await loadAll();
+      if (typeof renderRecorrentes === 'function') renderRecorrentes();
+    } catch(e) { console.error('Falha ao alternar recorrência:', e); }
+  });
+  if (btnD && typeof deleteRec === 'function') btnD.addEventListener('click', async function(){
+    try {
+      var ok = (typeof confirm === 'function') ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.') : true;
+      if (!ok) return;
+      await deleteRec(r.id);
+      if (typeof loadAll === 'function') await loadAll();
+      if (typeof renderRecorrentes === 'function') renderRecorrentes();
+    } catch(e) { console.error('Falha ao excluir recorrência:', e); }
+  });
+
+  return li;
+}
+
+function renderRecorrentes() {
+  try {
+    var ul = document.getElementById('listaRecorrentes');
+    if (!ul) return;
+    ul.innerHTML = '';
+    var list = Array.isArray(S && S.recs) ? S.recs.slice().sort(function(a,b){ return String(a.descricao||'').localeCompare(String(b.descricao||'')); }) : [];
+    if (!list.length) {
+      var li = document.createElement('li');
+      li.className = 'item';
+      li.innerHTML = '<div class="muted">Nenhuma recorrência cadastrada.</div>';
+      ul.appendChild(li);
+      return;
+    }
+    list.forEach(function(r){ ul.appendChild(itemRec(r)); });
+  } catch (e) {
+    console.error('renderRecorrentes:', e);
+  }
+}
+
 /* =========================================================================
    GASTO TOTAL — TILES (2 colunas): Esposa e Marido
    - Estilo compacto como o print: título pequeno + valor grande
@@ -2674,7 +2703,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 
   // --- Render dos tiles ---
   function renderGastoTotalTiles(){
-    
+    try{
       if (!(window.S && S.month)) return;
       var sec = document.getElementById('carteiras'); if (!sec) return;
       ensureTilesCSS();
@@ -2685,7 +2714,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
                || /Gasto\s+total\s+—\s+(Marido|Esposa)/i.test(h.textContent||''))) {
           cd.parentNode && cd.parentNode.removeChild(cd);
-        
+        }
       });
       var top = document.getElementById('resumoFamiliarTop');
       if (top && top.parentNode) top.parentNode.removeChild(top);
@@ -2726,7 +2755,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       }
       tiles.appendChild(makeTile('Total Divisão de Despesas — Marido', totMar));
       tiles.appendChild(makeTile('Total Divisão de Despesas — Esposa', totEsp));
-    } /*fix: stray catch removed*/ {  console.error('renderGastoTotalTiles:', e); }
+    } catch(e){ console.error('renderGastoTotalTiles:', e); }
   }
   window.renderGastoTotalTiles = renderGastoTotalTiles;
 
@@ -2802,11 +2831,11 @@ document.addEventListener("DOMContentLoaded", function(){
 // === Force "+ Lançamentos → Novo" to open as 'Nova Despesa' exactly like the screenshot ===
 (function ensureOpenNovoLanc(){
   function openNovoLanc(){
-    
+    try {
       if (typeof toggleModal === 'function') {
         // Use the internal opener which already resets fields, sets date, title, tabs, etc.
         toggleModal(true, "Nova Despesa");
-       else if (window.toggleModal) {
+      } else if (window.toggleModal) {
         window.toggleModal(true, "Nova Despesa");
       } else {
         // Fallback: minimal open if toggleModal isn't available
@@ -2823,7 +2852,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
         var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
       }
-    } /*fix: stray catch removed*/ {  console.error('openNovoLanc failed:', e); }
+    } catch(e){ console.error('openNovoLanc failed:', e); }
   }
 
   function wire(){
@@ -2851,8 +2880,8 @@ document.addEventListener("DOMContentLoaded", function(){
 */
 (function(){
   function fmtBRL(n){
-     return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'); }
-    /* removed stray catch */ { return 'R$\u00a00,00'; }
+    try { return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    catch(_){ return 'R$\u00a00,00'; }
   }
   function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); } // m: 1..12
   function ymdToDate(ymd){
@@ -2875,14 +2904,14 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function renderHeatmapMesAtual(){
-    
+    try{
       var cont = document.getElementById('heatmap2');
       if (!cont) return;
       // Limpa conteúdo anterior
       cont.innerHTML = '';
 
       // Garante dados globais
-      var Sg = (window.S || {);
+      var Sg = (window.S || {});
       var ym = String(Sg.month || '');
       if (!/^\d{4}-\d{2}$/.test(ym)) {
         var dnow = new Date();
@@ -2980,7 +3009,7 @@ document.addEventListener("DOMContentLoaded", function(){
         // Tooltip em vez de alert()
         cell.addEventListener('click', (function(ymdCopy, totCopy){
           return function(ev){
-            
+            try{
               // Cria/recupera tooltip única dentro do container
               var cont = document.getElementById('heatmap2');
               if (!cont) return;
@@ -2999,7 +3028,7 @@ document.addEventListener("DOMContentLoaded", function(){
                 tip.style.fontSize = '12px';
                 tip.style.pointerEvents = 'none';
                 cont.appendChild(tip);
-              
+              }
               tip.textContent = ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy);
               // Posiciona próximo ao clique
               var rCont = cont.getBoundingClientRect();
@@ -3013,7 +3042,7 @@ document.addEventListener("DOMContentLoaded", function(){
               // Oculta após 1.8s
               clearTimeout(window.__heatmapTipTO);
               window.__heatmapTipTO = setTimeout(function(){ if (tip) tip.style.opacity='0'; }, 1800);
-            } /*fix: stray catch removed*/ { }
+            } catch(_){}
           };
         })(ymd, tot));
 grid.appendChild(cell);
@@ -3029,7 +3058,7 @@ grid.appendChild(cell);
       foot.className = 'muted';
       foot.textContent = 'Total de despesas no mês: ' + fmtBRL(sum);
       cont.appendChild(foot);
-    } /*fix: stray catch removed*/ { 
+    } catch(e){
       console.error('renderHeatmapMesAtual:', e);
     }
   }
@@ -3079,7 +3108,7 @@ try {
 
 
 // Safety net: render when the heatmap panel becomes visible via mutations
-{
+try {
   var hmObsTarget = document.getElementById('relatorios');
   if (hmObsTarget && 'MutationObserver' in window) {
     var hmObserver = new MutationObserver(function(){
@@ -3090,65 +3119,16 @@ try {
     });
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
-} /*fix: stray catch removed*/ { }
+} catch(_) {}
 
 
-
-function itemRec(r) {
-  const li = document.createElement('li');
-  li.className = 'item';
-  const ativo = !!r.ativo;
-  const chip = `<span class="chip" style="margin-left:8px">${ativo ? 'Ativa' : 'Inativa'}</span>`;
-  const per = String(r.periodicidade || '-');
-  const prox = r.proxima_data ? String(r.proxima_data) : '—';
-  const fim  = r.fim_em ? String(r.fim_em) : '—';
-  const v = Number(r.valor) || 0;
-
-  li.innerHTML = `
-    <div class="left">
-      <div class="tag">${per}</div>
-      <div>
-        <div class="titulo"><strong>${r.descricao || '-'}</strong> ${chip}</div>
-        <div class="subinfo">${r.categoria || '-'} • Próxima: ${prox} • Fim: ${fim}</div>
-      </div>
-    </div>
-    <div class="right" style="display:flex;gap:8px;align-items:center">
-      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(v)}</div>
-      <button class="btn-acao toggle" title="${ativo ? 'Desativar' : 'Ativar'} recorrência" aria-label="${ativo ? 'Desativar' : 'Ativar'}">
-        <i class="ph ${ativo ? 'ph-pause-circle' : 'ph-play-circle'}"></i>
-      </button>
-      <button class="btn-acao del" title="Excluir recorrência" aria-label="Excluir">
-        <i class="ph ph-trash"></i>
-      </button>
-    </div>`;
-
-  // Bind actions
-  const btnT = li.querySelector('.toggle');
-  const btnD = li.querySelector('.del');
-  if (btnT) btnT.addEventListener('click', async () => {
-    
-      await toggleRecAtivo(r.id, !ativo);
-      await loadAll();
-      renderRecorrentes(); /* removed stray catch */ { console.error(e); 
-    } /* removed stray catch */ {
-      console.error('Falha ao alternar recorrência:', e);
-      alert('Não foi possível atualizar o status da recorrência.');
-    }
-  });
-  if (btnD) btnD.addEventListener('click', async () => {
-    
-      const ok = typeof confirm === 'function'
-        ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.')
-        : true;
-      if (!ok) return;
-      await deleteRec(r.id);
-      await loadAll();
-      renderRecorrentes(); /* removed stray catch */ { console.error(e); 
-    } /* removed stray catch */ {
-      console.error('Falha ao excluir recorrência:', e);
-      alert('Não foi possível excluir a recorrência.');
-    }
-  });
-
-  return li;   // ✅ dentro da função
-}
+/* ========= FAB (Novo Lançamento) ========= */
+document.addEventListener('DOMContentLoaded', function(){
+  var fabBtn = document.getElementById('btnNovoFab');
+  if (fabBtn && !fabBtn._wired) {
+    fabBtn.addEventListener('click', function(){
+      try { if (typeof toggleModal === 'function') toggleModal(true); } catch(e){ console.error(e); }
+    });
+    fabBtn._wired = true;
+  }
+});
