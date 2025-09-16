@@ -2796,3 +2796,174 @@ document.addEventListener("DOMContentLoaded", function(){
     wire();
   }
 })();
+
+
+/* ==== Heatmap de despesas (mês atual) ====
+   Uso: window.renderHeatmapMesAtual()  // renderiza imediatamente se #heatmap2 existir
+   Não requer bibliotecas extras. Constrói um calendário do mês atual (S.month)
+   com intensidade por soma de despesas por dia.
+*/
+(function(){
+  function fmtBRL(n){
+    try { return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    catch(_){ return 'R$\u00a00,00'; }
+  }
+  function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); } // m: 1..12
+  function ymdToDate(ymd){
+    var parts = String(ymd||'').split('-'); 
+    return parts.length===3 ? new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2])) : null;
+  }
+  function colorFor(v, vmax){
+    if (!vmax || vmax<=0) return 'rgba(124,58,237,.08)';
+    var t = Math.max(0, Math.min(1, v / vmax)); // 0..1
+    // Interpolar de azul claro (h=210) para vermelho (h=0)
+    var h = (1 - t) * 210; // 210 -> 0
+    var s = 85;
+    var l = 52 - (t*22);   // 52 -> 30
+    return 'hsl(' + h.toFixed(0) + ' ' + s + '% ' + l.toFixed(0) + '%)';
+  }
+  function weekdayShort(d){
+    // 0..6 (Domingo..Sábado) -> labels curtinhas
+    var arr = ['D','S','T','Q','Q','S','S'];
+    return arr[d] || '';
+  }
+
+  function renderHeatmapMesAtual(){
+    try{
+      var cont = document.getElementById('heatmap2');
+      if (!cont) return;
+      // Limpa conteúdo anterior
+      cont.innerHTML = '';
+
+      // Garante dados globais
+      var Sg = (window.S || {});
+      var ym = String(Sg.month || '');
+      if (!/^\d{4}-\d{2}$/.test(ym)) {
+        var dnow = new Date();
+        ym = dnow.getFullYear() + '-' + String(dnow.getMonth()+1).padStart(2,'0');
+      }
+
+      // Total de despesas por dia do mês
+      var map = Object.create(null);
+      var tx = Array.isArray(Sg.tx) ? Sg.tx : [];
+      for (var i=0;i<tx.length;i++){
+        var t = tx[i] || {};
+        if (t.tipo !== 'Despesa') continue;
+        var ds = String(t.data || '');
+        if (!ds.startsWith(ym)) continue;
+        var v = Number(t.valor)||0;
+        map[ds] = (map[ds]||0) + v;
+      }
+
+      var y = Number(ym.slice(0,4));
+      var m = Number(ym.slice(5,7));
+      var ndays = daysInMonth(y, m);
+      var first = new Date(y, m-1, 1);
+      var startWeekday = first.getDay(); // 0..6 (0=Dom)
+      // Encontrar máximo para escala
+      var vmax = 0;
+      for (var d=1; d<=ndays; d++){
+        var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        if ((map[ymd]||0) > vmax) vmax = map[ymd];
+      }
+
+      // Cabeçalho: label mês/ano + legenda
+      var head = document.createElement('div');
+      head.style.display = 'flex';
+      head.style.justifyContent = 'space-between';
+      head.style.alignItems = 'center';
+      head.style.marginBottom = '8px';
+      var abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+      var title = document.createElement('div');
+      title.innerHTML = '<strong>' + (abrev[m-1]||String(m)) + '/' + String(y).slice(2) + '</strong>';
+      var legend = document.createElement('div');
+      legend.className = 'muted';
+      legend.style.fontSize = '12px';
+      legend.textContent = 'Intensidade = maior gasto diário';
+      head.appendChild(title); head.appendChild(legend);
+      cont.appendChild(head);
+
+      // Grid: 7 colunas (dom..sáb). Usar CSS inline para não depender de styles.css
+      var grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+      grid.style.gap = '6px';
+
+      // Linha de cabeçalhos (D S T Q Q S S)
+      for (var w=0; w<7; w++){
+        var lab = document.createElement('div');
+        lab.textContent = weekdayShort(w);
+        lab.style.textAlign = 'center';
+        lab.style.fontSize = '12px';
+        lab.style.opacity = '.7';
+        grid.appendChild(lab);
+      }
+
+      // Preenche "blanks" antes do dia 1
+      for (var k=0; k<startWeekday; k++){
+        var blank = document.createElement('div');
+        blank.style.height = '38px';
+        grid.appendChild(blank);
+      }
+
+      // Criar células do mês
+      for (var day=1; day<=ndays; day++){
+        var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+        var tot = Number(map[ymd]||0);
+        var cell = document.createElement('div');
+        cell.style.height = '38px';
+        cell.style.borderRadius = '8px';
+        cell.style.border = '1px solid var(--border, #e5e7eb)';
+        cell.style.background = colorFor(tot, vmax);
+        cell.style.display = 'flex';
+        cell.style.alignItems = 'center';
+        cell.style.justifyContent = 'center';
+        cell.style.position = 'relative';
+        cell.style.cursor = tot>0 ? 'pointer' : 'default';
+        cell.setAttribute('title', (day + '/' + String(m).padStart(2,'0') + ' — ' + fmtBRL(tot)));
+
+        var num = document.createElement('span');
+        num.textContent = String(day);
+        num.style.fontSize = '12px';
+        num.style.fontWeight = '700';
+        num.style.textShadow = '0 1px 0 rgba(255,255,255,.35)';
+        cell.appendChild(num);
+
+        // Tooltip simples ao clicar (mobile friendly)
+        cell.addEventListener('click', (function(ymdCopy, totCopy){
+          return function(){
+            if (totCopy>0) alert(ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy));
+          };
+        })(ymd, tot));
+
+        grid.appendChild(cell);
+      }
+
+      cont.appendChild(grid);
+
+      // KPI de resumo abaixo (total do mês)
+      var sum = 0; Object.keys(map).forEach(function(k){ sum += Number(map[k]||0); });
+      var foot = document.createElement('div');
+      foot.style.marginTop = '10px';
+      foot.style.fontSize = '12px';
+      foot.className = 'muted';
+      foot.textContent = 'Total de despesas no mês: ' + fmtBRL(sum);
+      cont.appendChild(foot);
+    } catch(e){
+      console.error('renderHeatmapMesAtual:', e);
+    }
+  }
+
+  // expõe global
+  try { window.renderHeatmapMesAtual = renderHeatmapMesAtual; } catch(_){}
+
+  // tenta renderizar imediatamente se a div existir e houver dados
+  try {
+    if (document.getElementById('heatmap2')) {
+      // aguarda possível load dos dados
+      setTimeout(function(){ 
+        try { window.renderHeatmapMesAtual(); } catch(_) {}
+      }, 50);
+    }
+  } catch(_){}
+})();
