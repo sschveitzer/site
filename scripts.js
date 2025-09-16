@@ -253,6 +253,7 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
+    try { renderRecorrentes(); } catch (e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -263,6 +264,7 @@ function ensureMonthSelectLabels(){
       S.month = e.target.value;
       try { savePrefs(); } catch (e) {}
       try { render(); } catch (e) {}
+      try { renderRecorrentes(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
@@ -714,6 +716,46 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     list.forEach(x => ul.append(itemTx(x, true)));
   }
 
+
+function renderRecorrentes() {
+  const ul = document.getElementById("listaRecorrentes");
+  if (!ul) return;
+
+  ul.innerHTML = "";
+  // Caso não haja recorrências
+  if (!Array.isArray(S.recs) || !S.recs.length) {
+    const li = document.createElement("li");
+    li.className = "muted";
+    li.textContent = "Nenhuma recorrência cadastrada.";
+    ul.appendChild(li);
+    return;
+  }
+
+  // Ordena por próxima data crescente e mostra até 12
+  const list = [...S.recs]
+    .filter(r => r && r.ativo !== false)
+    .sort((a,b) => String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')))
+    .slice(0, 12);
+
+  list.forEach(r => {
+    const li = document.createElement("li");
+    li.className = "item";
+    const valor = Number(r.valor) || 0;
+    li.innerHTML = `
+      <div class="left">
+        <div class="tag">${r.tipo || '-'}</div>
+        <div>
+          <div class="titulo"><strong>${r.descricao || '-'}</strong></div>
+          <div class="muted subinfo" style="font-size:12px">
+            ${r.categoria || '-'} • Próx: ${r.proxima_data || '-'}
+          </div>
+        </div>
+      </div>
+      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(valor)}</div>
+    `;
+    ul.appendChild(li);
+  });
+}
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
 function computeGastosPorCarteira(ym){
