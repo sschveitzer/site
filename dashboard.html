@@ -54,34 +54,7 @@
     <!-- Dashboard -->
     <section id="dashboard" class="active">
       <div class="grid cards">
-        <div class="card">
-          <div class="kpi earn">
-            <i class="ph ph-trend-up icon"></i>
-            <div><div class="muted">Receitas (mês)</div><div id="kpiReceitas" class="value">R$ 0,00</div></div>
-            <span class="chip" id="kpiReceitasDelta" title="Variação vs mês anterior">—</span>
-          </div>
-        </div>
-        <div class="card">
-          <div class="kpi exp">
-            <i class="ph ph-trend-down icon"></i>
-            <div><div class="muted">Despesas (mês)</div><div id="kpiDespesas" class="value">R$ 0,00</div></div>
-            <span class="chip" id="kpiDespesasPct" title="Despesas / Receitas">—</span>
-          </div>
-        </div>
-        <div class="card">
-          <div class="kpi balance">
-            <i class="ph ph-wallet icon"></i>
-            <div><div class="muted">Saldo (mês)</div><div id="kpiSaldo" class="value">R$ 0,00</div></div>
-            <span class="chip" id="kpiSaldoDelta" title="Variação vs mês anterior">—</span>
-          </div>
-        </div>
-        <div class="card">
-          <div class="kpi balance">
-            <i class="ph ph-users-three icon"></i>
-            <div><div class="muted">Divisão de Despesas</div><div id="kpiSplit" class="value">R$ 0,00</div></div>
-            <span class="chip" id="kpiSplitHint">50%</span>
-          </div>
-        </div>
+
       </div>
 
       <!-- METAS: card abaixo dos 4 KPIs -->
@@ -337,8 +310,6 @@
         </div>
       </div></section>
 
-
-
     <!-- Config -->
     <section id="config">
       <!-- Preferências de aparência movidas para dentro de Config -->
@@ -410,7 +381,6 @@
           <button class="btn" id="saveCardPrefs"><i class="ph ph-check"></i> Salvar fatura</button>
         </div>
       </div>
-
 
       </div>
 
@@ -657,7 +627,6 @@ document.addEventListener('change', function(e){
   }
 });
 </script>
-
 
   <div id="toasts" class="toast-wrap" aria-live="polite"></div>
 </body>
