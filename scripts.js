@@ -24,9 +24,9 @@ function humanFormaPagamento(v){
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
-  try {
+  
     if (typeof window !== 'undefined') {
-      window.S = window.S || {};
+      window.S = window.S || {;
       // If a Supabase client exists on window, alias it to a global var name used by the app
       if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
         window.supabaseClient = window.supabase;
@@ -153,8 +153,8 @@ function money(v){
 
 // === Helpers de abreviação de mês/ano ===
 function abbrevLabelFromYM(ym){
-  try {
-    if (!/^\d{4}-\d{2}$/.test(String(ym))) return String(ym);
+  
+    if (!/^\d{4-\d{2}$/.test(String(ym))) return String(ym);
     var parts = ym.split('-');
     var y = Number(parts[0]);
     var m = Number(parts[1]);
@@ -165,13 +165,13 @@ function abbrevLabelFromYM(ym){
 }
 
 function ensureMonthSelectLabels(){
-  try {
+  
     var sel = document.getElementById('monthSelect');
     if (!sel) return;
     Array.from(sel.options || []).forEach(function(opt){
       if (!opt) return;
       var v = opt.value || '';
-      if (/^\d{4}-\d{2}$/.test(v)) {
+      if (/^\d{4-\d{2}$/.test(v)) {
         opt.textContent = abbrevLabelFromYM(v);
       }
     });
@@ -457,10 +457,10 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       var t = ev.target;
       if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
         ev.preventDefault();
-        try {
+        
           if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
             window.addOrUpdate && setTimeout(() => window.addOrUpdate(true), 0);
-          } else {
+           else {
             window.addOrUpdate && setTimeout(() => window.addOrUpdate(false), 0);
           }
         } /*fix: stray catch removed*/ {  console.error(e); }
@@ -531,7 +531,7 @@ async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
-    try {
+    
 const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -543,7 +543,7 @@ const selPag = qs('#mPagamento');
       descricao: (qs("#mDesc")?.value || "").trim(),
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
-    };
+    ;
     if (!t.categoria) return alert("Selecione categoria");
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
@@ -695,13 +695,13 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     }
   });
   if (btnD) btnD.addEventListener('click', async () => {
-    try {
+    
       const ok = typeof confirm === 'function' ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.') : true;
       if (!ok) return;
       await deleteRec(r.id);
       await loadAll();
-      renderRecorrentes(); catch (e) { console.error(e); }
-    } catch (e) {
+      renderRecorrentes(); /* removed stray catch */ { console.error(e); 
+    } /* removed stray catch */ {
       console.error('Falha ao excluir recorrência:', e);
       alert('Não foi possível excluir a recorrência.');
     }
@@ -754,10 +754,10 @@ function computeGastosPorCarteira(ym){
 function renderGastosCarteiras(){
   
   if (!S || !S.month) return;
-  try {
+  
     const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
     // Deltas do split (Dinheiro/Pix) para Marido/Esposa
-    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 ;
     // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
     const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
     const sign = (n) => (n>=0?'+':'');
@@ -975,13 +975,13 @@ h3.textContent = 'Lançamentos — ' + label;
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
     
     // Garantir exibição da forma de pagamento ao editar
-    try {
+    
       const __selPag = qs('#mPagamento');
       if (x && __selPag) {
         if (x.tipo !== "Transferência") {
           __selPag.disabled = false;
           __selPag.value = normalizeFormaPagamento(x.forma_pagamento || "");
-        } else {
+         else {
           __selPag.disabled = true;
         }
       }
@@ -1538,7 +1538,7 @@ h3.textContent = 'Lançamentos — ' + label;
 function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
-  try {
+  
     items.forEach(function(x){
       if (!x || x.tipo !== "Despesa") return;
       var car = x.carteira || "";
@@ -1556,7 +1556,7 @@ function computeSplitDeltas(items){
 
       // ✅ Novo: não dá reembolso ao pagador; só lança a cobrança no outro
       delta[other] -= metade;
-    });
+    );
   } /*fix: stray catch removed*/ { 
     console.error("computeSplitDeltas:", e);
   }
@@ -1576,7 +1576,7 @@ function renderCarteiras(){
         el.appendChild(card);
       
   // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
-  try {
+  
     var section = document.getElementById('carteiras');
 if (section) {
   var grid = section.querySelector('.grid-carteiras');
@@ -1588,7 +1588,7 @@ if (section) {
     if (grid) {
       // Inserir AO FINAL do grid para ficar abaixo dos cards Marido/Esposa
       grid.appendChild(host);
-    } else {
+     else {
       section.appendChild(host);
     }
   }
@@ -1888,8 +1888,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
-    try{
-      const { data, error } = await supabaseClient
+    
+      const { data, error  = await supabaseClient
         .from('goals')
         .select('*')
         .eq('id', 1)
@@ -1902,8 +1902,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     }
   }
   async function persistMetas(m){
-    try{
-      const payload = { id: 1, total: Number(m.total)||0, por_cat: m.porCat||{}, updated_at: new Date().toISOString() };
+    
+      const payload = { id: 1, total: Number(m.total)||0, por_cat: m.porCat||{, updated_at: new Date().toISOString() };
       const { error } = await supabaseClient.from('goals').upsert([payload]);
       if (error) { console.error('Erro ao salvar metas:', error); return false; }
       S.metas = { total: payload.total, porCat: payload.por_cat };
@@ -2230,8 +2230,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
   function txBucketYM(x) {
   const selPag = qs('#mPagamento');
-    try {
-      const SS = (typeof S !== 'undefined' ? S : (typeof window !== 'undefined' ? window.S : null)) || {};
+    
+      const SS = (typeof S !== 'undefined' ? S : (typeof window !== 'undefined' ? window.S : null)) || {;
       const ymd = String((x && x.data) || '');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
         return ymd.slice(0, 7) || '';
@@ -2269,7 +2269,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
 // === UX: Nova Categoria (enter para enviar, valida duplicado, botão desabilita) ===
 (function enhanceNewCategory(){
-  try {
+  
     const inp = document.querySelector('#newCatName');
     const btn = document.querySelector('#addCat');
     if (!inp || !btn) return;
@@ -2283,7 +2283,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       btn.disabled = !v || dup;
       inp.classList.toggle('invalid', !!dup);
       btn.title = dup ? 'Categoria já existe' : 'Adicionar';
-    }
+    
 
     btn.addEventListener('click', async () => {
       const v = inp.value.trim();
@@ -2346,12 +2346,12 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
   };
 }
 // === Exports for console/debug ===
-(function(){ try {
+(function(){ 
   if (typeof window !== 'undefined'){
     window.fmtMoney = window.fmtMoney || fmtMoney;
     window.parseMoneyMasked = window.parseMoneyMasked || parseMoneyMasked;
     window.money = window.money || money;
-  }
+  
 } /*fix: stray catch removed*/ { } })();
 
 
@@ -2676,7 +2676,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 
   // --- Render dos tiles ---
   function renderGastoTotalTiles(){
-    try{
+    
       if (!(window.S && S.month)) return;
       var sec = document.getElementById('carteiras'); if (!sec) return;
       ensureTilesCSS();
@@ -2687,7 +2687,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         if (h && (/Gastos?\s+por\s+carteira/i.test(h.textContent||'')
                || /Gasto\s+total\s+—\s+(Marido|Esposa)/i.test(h.textContent||''))) {
           cd.parentNode && cd.parentNode.removeChild(cd);
-        }
+        
       });
       var top = document.getElementById('resumoFamiliarTop');
       if (top && top.parentNode) top.parentNode.removeChild(top);
@@ -2804,11 +2804,11 @@ document.addEventListener("DOMContentLoaded", function(){
 // === Force "+ Lançamentos → Novo" to open as 'Nova Despesa' exactly like the screenshot ===
 (function ensureOpenNovoLanc(){
   function openNovoLanc(){
-    try {
+    
       if (typeof toggleModal === 'function') {
         // Use the internal opener which already resets fields, sets date, title, tabs, etc.
         toggleModal(true, "Nova Despesa");
-      } else if (window.toggleModal) {
+       else if (window.toggleModal) {
         window.toggleModal(true, "Nova Despesa");
       } else {
         // Fallback: minimal open if toggleModal isn't available
@@ -2853,8 +2853,8 @@ document.addEventListener("DOMContentLoaded", function(){
 */
 (function(){
   function fmtBRL(n){
-    try { return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-    catch(_){ return 'R$\u00a00,00'; }
+     return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'); }
+    /* removed stray catch */ { return 'R$\u00a00,00'; }
   }
   function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); } // m: 1..12
   function ymdToDate(ymd){
@@ -2877,14 +2877,14 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function renderHeatmapMesAtual(){
-    try{
+    
       var cont = document.getElementById('heatmap2');
       if (!cont) return;
       // Limpa conteúdo anterior
       cont.innerHTML = '';
 
       // Garante dados globais
-      var Sg = (window.S || {});
+      var Sg = (window.S || {);
       var ym = String(Sg.month || '');
       if (!/^\d{4}-\d{2}$/.test(ym)) {
         var dnow = new Date();
@@ -2982,7 +2982,7 @@ document.addEventListener("DOMContentLoaded", function(){
         // Tooltip em vez de alert()
         cell.addEventListener('click', (function(ymdCopy, totCopy){
           return function(ev){
-            try{
+            
               // Cria/recupera tooltip única dentro do container
               var cont = document.getElementById('heatmap2');
               if (!cont) return;
@@ -3001,7 +3001,7 @@ document.addEventListener("DOMContentLoaded", function(){
                 tip.style.fontSize = '12px';
                 tip.style.pointerEvents = 'none';
                 cont.appendChild(tip);
-              }
+              
               tip.textContent = ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy);
               // Posiciona próximo ao clique
               var rCont = cont.getBoundingClientRect();
@@ -3081,7 +3081,7 @@ try {
 
 
 // Safety net: render when the heatmap panel becomes visible via mutations
-try {
+{
   var hmObsTarget = document.getElementById('relatorios');
   if (hmObsTarget && 'MutationObserver' in window) {
     var hmObserver = new MutationObserver(function(){
@@ -3128,25 +3128,25 @@ function itemRec(r) {
   const btnT = li.querySelector('.toggle');
   const btnD = li.querySelector('.del');
   if (btnT) btnT.addEventListener('click', async () => {
-    try {
+    
       await toggleRecAtivo(r.id, !ativo);
       await loadAll();
-      renderRecorrentes(); catch (e) { console.error(e); }
-    } catch (e) {
+      renderRecorrentes(); /* removed stray catch */ { console.error(e); 
+    } /* removed stray catch */ {
       console.error('Falha ao alternar recorrência:', e);
       alert('Não foi possível atualizar o status da recorrência.');
     }
   });
   if (btnD) btnD.addEventListener('click', async () => {
-    try {
+    
       const ok = typeof confirm === 'function'
         ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.')
         : true;
       if (!ok) return;
       await deleteRec(r.id);
       await loadAll();
-      renderRecorrentes(); catch (e) { console.error(e); }
-    } catch (e) {
+      renderRecorrentes(); /* removed stray catch */ { console.error(e); 
+    } /* removed stray catch */ {
       console.error('Falha ao excluir recorrência:', e);
       alert('Não foi possível excluir a recorrência.');
     }
