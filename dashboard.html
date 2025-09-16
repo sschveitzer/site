@@ -658,46 +658,5 @@ document.addEventListener('change', function(e){
 });
 </script>
 
-<!-- Configurações -->
-  <div id="configModal" class="modal" aria-hidden="true">
-    <div class="content">
-      <div class="title">
-        <h3><i class="ph ph-gear"></i> Configurações</h3>
-        <button class="icon" id="cfgClose" title="Fechar"><i class="ph ph-x"></i></button>
-      </div>
-      <div class="segmented" role="tablist" aria-label="Config sections">
-        <button class="active" data-cfgtab="recs"><i class="ph ph-arrows-clockwise"></i> Transações recorrentes</button>
-      </div>
-
-      <!-- Recorrências -->
-      <div class="cfg-panel" data-cfgtab="recs">
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0 12px">
-          <div class="helper">Cadastre novas recorrências pelo botão <strong>Novo</strong> → marcar <strong>Repetir</strong>. Aqui você gerencia as já criadas.</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn secondary" id="cfgApplyRecs"><i class="ph ph-play"></i> Aplicar agora</button>
-            <button class="btn" id="cfgNewRec"><i class="ph ph-plus"></i> Nova recorrência</button>
-          </div>
-        </div>
-        <div class="card" style="padding:0">
-          <table id="tblRecs" aria-label="Transações recorrentes">
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>Tipo</th>
-                <th>Categoria</th>
-                <th>Valor</th>
-                <th>Periodicidade</th>
-                <th>Próxima</th>
-                <th>Fim</th>
-                <th>Ativo</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
