@@ -54,8 +54,28 @@
     <!-- Dashboard -->
     <section id="dashboard" class="active">
       <div class="grid cards">
-
-      </div>
+        <div class="card">
+          <div class="kpi earn">
+            <i class="ph ph-trend-up icon"></i>
+            <div><div class="muted">Receitas (mês)</div><div id="kpiReceitas" class="value">R$ 0,00</div></div>
+            <span class="chip" id="kpiReceitasDelta" title="Variação vs mês anterior">—</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="kpi exp">
+            <i class="ph ph-trend-down icon"></i>
+            <div><div class="muted">Despesas (mês)</div><div id="kpiDespesas" class="value">R$ 0,00</div></div>
+            <span class="chip" id="kpiDespesasPct" title="Despesas / Receitas">—</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="kpi balance">
+            <i class="ph ph-wallet icon"></i>
+            <div><div class="muted">Saldo (mês)</div><div id="kpiSaldo" class="value">R$ 0,00</div></div>
+            <span class="chip" id="kpiSaldoDelta" title="Variação vs mês anterior">—</span>
+          </div>
+        </div>
+</div>
 
       <!-- METAS: card abaixo dos 4 KPIs -->
       <div class="card metas-card" style="margin-top:16px">
