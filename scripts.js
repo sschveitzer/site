@@ -2931,13 +2931,47 @@ document.addEventListener("DOMContentLoaded", function(){
         cell.appendChild(num);
 
         // Tooltip simples ao clicar (mobile friendly)
+        
+        // Tooltip em vez de alert()
         cell.addEventListener('click', (function(ymdCopy, totCopy){
-          return function(){
-            if (totCopy>0) alert(ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy));
+          return function(ev){
+            try{
+              // Cria/recupera tooltip única dentro do container
+              var cont = document.getElementById('heatmap2');
+              if (!cont) return;
+              cont.style.position = cont.style.position || 'relative';
+              var tip = cont.querySelector('.heatmap-tip');
+              if (!tip){
+                tip = document.createElement('div');
+                tip.className = 'heatmap-tip';
+                tip.style.position = 'absolute';
+                tip.style.zIndex = '10';
+                tip.style.padding = '8px 10px';
+                tip.style.borderRadius = '10px';
+                tip.style.border = '1px solid var(--border, #e5e7eb)';
+                tip.style.background = 'var(--card, #fff)';
+                tip.style.boxShadow = '0 10px 24px rgba(2,6,23,.20)';
+                tip.style.fontSize = '12px';
+                tip.style.pointerEvents = 'none';
+                cont.appendChild(tip);
+              }
+              tip.textContent = ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy);
+              // Posiciona próximo ao clique
+              var rCont = cont.getBoundingClientRect();
+              var rCell = ev.currentTarget.getBoundingClientRect();
+              var top = (rCell.top - rCont.top) + window.scrollY - 8;
+              var left = (rCell.left - rCont.left) + window.scrollX + (rCell.width/2);
+              tip.style.top = (top - tip.offsetHeight - 6) + 'px';
+              tip.style.left = (left - tip.offsetWidth/2) + 'px';
+              tip.style.opacity = '1';
+              tip.style.transition = 'opacity .15s ease';
+              // Oculta após 1.8s
+              clearTimeout(window.__heatmapTipTO);
+              window.__heatmapTipTO = setTimeout(function(){ if (tip) tip.style.opacity='0'; }, 1800);
+            } catch(_){}
           };
         })(ymd, tot));
-
-        grid.appendChild(cell);
+grid.appendChild(cell);
       }
 
       cont.appendChild(grid);
