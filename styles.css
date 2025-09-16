@@ -1682,3 +1682,6 @@ body.dark #modalLanc .actions {
 .grid.cards { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 1024px){ .grid.cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px){ .grid.cards { grid-template-columns: 1fr; } }
+
+/* Hide only the KPI card "Divisão de Despesas" by targeting its value element id */
+.card:has(#kpiSplit) { display: none !important; }
