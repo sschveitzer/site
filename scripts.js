@@ -26,7 +26,8 @@ function humanFormaPagamento(v){
 (function(){
   try {
     if (typeof window !== 'undefined') {
-      window.S = window.S || {};
+      window.S = window.S || {}
+
       // If a Supabase client exists on window, alias it to a global var name used by the app
       if (!('supabaseClient' in window) && window.supabase && typeof window.supabase.from === 'function') {
         window.supabaseClient = window.supabase;
@@ -36,6 +37,173 @@ function humanFormaPagamento(v){
     }
   } catch(_) {}
 })();
+
+// ==== Namespaces de modularização (compatível com o código atual) ====
+// Helpers / utilidades
+// ==== Namespaces de modularização (compatível com o código atual) ====
+(function(){
+  // Helpers / utilidades
+  if (typeof window.Utils === "undefined") {
+    window.Utils = {
+      gid(){
+        return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+      },
+      nowYMD(){
+        const d = new Date();
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      },
+      toYMD(d){
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      },
+      isIsoDate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s); },
+      fmtMoney(v){
+        const n = Number(v);
+        return isFinite(n) ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$\u00a00,00";
+      },
+      parseMoneyMasked(str){
+        if (!str) return 0;
+        return Number(str.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+      },
+      money(v){ return (typeof v === 'number') ? v : (String(v||'').length? Number(String(v).replace(/\./g,"").replace(",","."))||0 : 0); },
+      addDays(ymd, days){
+        const [y, m, d] = ymd.split("-").map(Number);
+        const dt = new Date(y, m - 1, d);
+        dt.setDate(dt.getDate() + days);
+        return this.toYMD(dt);
+      },
+      lastDayOfMonth(y, m){ return new Date(y, m, 0).getDate(); },
+      prevYM(ym){
+        try {
+          const [y, m] = ym.split("-").map(Number);
+          const d = new Date(y, (m - 1) - 1, 1);
+          return d.toISOString().slice(0, 7);
+        } catch {
+          const d = new Date();
+          d.setMonth(d.getMonth() - 1);
+          return d.toISOString().slice(0, 7);
+        }
+      },
+      incMonthly(ymd, diaMes, ajusteFimMes = true){
+        const [y, m] = ymd.split("-").map(Number);
+        let yy = y, mm = m + 1; if (mm > 12) { mm = 1; yy += 1; }
+        const ld = this.lastDayOfMonth(yy, mm);
+        const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
+        return this.toYMD(new Date(yy, mm - 1, day));
+      },
+      incWeekly(ymd){ return this.addDays(ymd, 7); },
+      incYearly(ymd, diaMes, mes, ajusteFimMes = true){
+        const [y] = ymd.split("-").map(Number);
+        const yy = y + 1;
+        const ld = this.lastDayOfMonth(yy, mes);
+        const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
+        return this.toYMD(new Date(yy, mes - 1, day));
+      },
+      abbrevLabelFromYM(ym){
+        try {
+          if (!/^\d{4}-\d{2}$/.test(String(ym))) return String(ym);
+          const [y,m] = ym.split('-').map(Number);
+          const abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+          return ((m>=1 && m<=12) ? abrev[m-1] : ym) + '/' + String(y).slice(2);
+        } catch { return String(ym); }
+      },
+      ensureMonthSelectLabels(){
+        try {
+          const sel = document.getElementById('monthSelect');
+          if (!sel) return;
+          Array.from(sel.options || []).forEach(opt=>{
+            const v = opt.value || '';
+            if (/^\d{4}-\d{2}$/.test(v)) opt.textContent = Utils.abbrevLabelFromYM(v);
+          });
+        } catch {}
+      },
+      normalizeFormaPagamento(v){
+        v = String(v || '').trim().toLowerCase();
+        if (v === 'cartão') v = 'cartao';
+        if (v === 'crédito') v = 'credito';
+        if (v === 'débito') v = 'debito';
+        if (v === 'credito' || v === 'debito') return 'cartao';
+        if (v === 'boleto' || v === 'transferência' || v === 'transferencia') return 'outros';
+        if (v === 'dinheiro' || v === 'pix' || v === 'cartao' || v === 'outros') return v;
+        return 'outros';
+      },
+      humanFormaPagamento(v){
+        switch(String(v||'').toLowerCase()){
+          case 'dinheiro': return 'Dinheiro';
+          case 'pix': return 'Pix';
+          case 'cartao': return 'Cartão';
+          case 'outros': return 'Outros';
+          default: return v || '-';
+        }
+      }
+    };
+  }
+
+  // Bind globais compatíveis
+  try {
+    window.gid = Utils.gid;
+    window.nowYMD = Utils.nowYMD;
+    window.toYMD = Utils.toYMD;
+    window.isIsoDate = Utils.isIsoDate;
+    window.fmtMoney = Utils.fmtMoney;
+    window.parseMoneyMasked = Utils.parseMoneyMasked;
+    window.money = Utils.money;
+    window.addDays = Utils.addDays;
+    window.lastDayOfMonth = Utils.lastDayOfMonth;
+    window.prevYM = Utils.prevYM;
+    window.incMonthly = Utils.incMonthly;
+    window.incWeekly = Utils.incWeekly;
+    window.incYearly = Utils.incYearly;
+    window.abbrevLabelFromYM = Utils.abbrevLabelFromYM;
+    window.ensureMonthSelectLabels = Utils.ensureMonthSelectLabels;
+    window.normalizeFormaPagamento = Utils.normalizeFormaPagamento;
+    window.humanFormaPagamento = Utils.humanFormaPagamento;
+  } catch(_) {}
+
+  // Data layer
+  if (typeof window.Data === "undefined") {
+    window.Data = {
+      client(){ return window.supabaseClient || window.supabase; },
+      async saveTx(t){ return await Data.client().from("transactions").upsert([t]); },
+      async deleteTx(id){ return await Data.client().from("transactions").delete().eq("id", id); }
+    };
+  }
+
+  // UI helpers
+  if (typeof window.UI === "undefined") {
+    window.UI = {
+      showFormError(msg){
+        const box = document.querySelector('#modalLanc .error') || (()=>{
+          const c = document.querySelector('#modalLanc .content');
+          if (!c) return null;
+          const div = document.createElement('div');
+          div.className = 'error';
+          c.insertBefore(div, c.querySelector('.form-grid, .row3, .amount-wrap, .typetabs'));
+          return div;
+        })();
+        if (box) box.textContent = String(msg || 'Verifique os campos e tente novamente.');
+      },
+      clearFormError(){
+        const el = document.querySelector('#modalLanc .error');
+        if (el) el.remove();
+      },
+      upsertTxInMemory(t){
+        try {
+          const idx = (window.S && Array.isArray(window.S.tx)) ? window.S.tx.findIndex(x=>x.id===t.id) : -1;
+          if (idx>=0) window.S.tx[idx] = t; else if (window.S) window.S.tx.push(t);
+        } catch {}
+      },
+      removeTxInMemory(id){
+        try { if (window.S) window.S.tx = (window.S.tx||[]).filter(x=>x.id!==id); } catch {}
+      },
+      rerender(){
+        try { window.renderLancamentos && window.renderLancamentos(); } catch {}
+        try { window.renderRecentes && window.renderRecentes(); } catch {}
+        try { window.renderGastosCarteiras && window.renderGastosCarteiras(); } catch {}
+        try { window.renderGastoTotalTiles && window.renderGastoTotalTiles(); } catch {}
+      }
+    };
+  }
+})(); // fim namespaces
 
 window.onload = function () {
   // Usa o supabase já criado no dashboard.html
@@ -72,6 +240,7 @@ try {
     try { renderPessoas(); } catch(_) {} } catch(e) {}
     };
   }
+}
 } catch (e) {}
 
 
@@ -522,6 +691,7 @@ async function addOrUpdate(keepOpen=false) {
 const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
+    UI.clearFormError();
     const t = {
       id: S.editingId || gid(),
       tipo: modalTipo,
@@ -531,9 +701,9 @@ const selPag = qs('#mPagamento');
       valor: isFinite(valor) ? valor : 0,
       obs: (qs("#mObs")?.value || "").trim()
     };
-    if (!t.categoria) return alert("Selecione categoria");
-    if (!t.descricao) return alert("Descrição obrigatória");
-    if (!(t.valor > 0)) return alert("Informe o valor");
+    if (!t.categoria) UI.showFormError("Selecione uma categoria."); return;
+    if (!t.descricao) UI.showFormError("Descrição obrigatória."); return;
+    if (!(t.valor > 0)) UI.showFormError("Informe um valor maior que zero."); return;
 
     
     // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
@@ -554,7 +724,8 @@ const selPag = qs('#mPagamento');
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
       await saveTx(t);
-      await loadAll();
+      UI.upsertTxInMemory(t);
+      UI.rerender();
     if (window.resetValorInput) window.resetValorInput();
     if (!keepOpen) { toggleModal(false); }
     return;
@@ -618,7 +789,7 @@ const chkRepetir = qs("#mRepetir");
       await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
     }
 
-    await loadAll();
+    UI.rerender();
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
@@ -634,7 +805,8 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       const ok = typeof confirm === 'function' ? confirm("Excluir lançamento?") : true;
       if (!ok) return;
       await deleteTx(id);
-      await loadAll();
+      UI.removeTxInMemory(id);
+      UI.rerender();
     } catch (err) {
       console.error("Falha ao excluir lançamento:", err);
       alert("Não foi possível excluir o lançamento.");
@@ -2284,8 +2456,9 @@ if (!window.resetValorInput) {
       const el = document.getElementById('mValorBig');
       if (el) el.value = '';
     } catch(_) {}
-  };
+  }
 }
+
 
 // Garante setUseCycleForReports (se a versão do script não exportar)
 if (typeof window.setUseCycleForReports !== 'function' && window.S) {
@@ -2293,7 +2466,8 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     try { window.S.useCycleForReports = !!v; } catch(_) {}
     try { if (typeof savePrefs === 'function') savePrefs(); } catch(_) {}
     try { if (typeof render === 'function') render(); } catch(_) {}
-  };
+  }
+
 }
 // === Exports for console/debug ===
 (function(){ try {
