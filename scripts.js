@@ -694,6 +694,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
   
 
 // ========= RECORRENTES (UI) =========
+
 function itemRec(r) {
   const li = document.createElement('li');
   li.className = 'item';
@@ -711,27 +712,55 @@ function itemRec(r) {
         <div class="subinfo">${r.categoria || '-'} • Próxima: ${prox} • Fim: ${fim}</div>
       </div>
     </div>
-    <div class="right">
+    <div class="right" style="display:flex;gap:8px;align-items:center">
       <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(v)}</div>
+      <button class="btn-acao toggle" title="${ativo ? 'Desativar' : 'Ativar'} recorrência" aria-label="${ativo ? 'Desativar' : 'Ativar'}">
+        <i class="ph ${ativo ? 'ph-pause-circle' : 'ph-play-circle'}"></i>
+      </button>
+      <button class="btn-acao del" title="Excluir recorrência" aria-label="Excluir">
+        <i class="ph ph-trash"></i>
+      </button>
     </div>`;
+
+  // Bind actions
+  const btnT = li.querySelector('.toggle');
+  const btnD = li.querySelector('.del');
+  if (btnT) btnT.addEventListener('click', async () => {
+    try {
+      await toggleRecAtivo(r.id, !ativo);
+      await loadAll();
+      try { renderRecorrentes(); } catch(_) {}
+    } catch (e) {
+      console.error('Falha ao alternar recorrência:', e);
+      alert('Não foi possível atualizar o status da recorrência.');
+    }
+  });
+  if (btnD) btnD.addEventListener('click', async () => {
+    try {
+      const ok = typeof confirm === 'function' ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.') : true;
+      if (!ok) return;
+      await deleteRec(r.id);
+      await loadAll();
+      try { renderRecorrentes(); } catch(_) {}
+    } catch (e) {
+      console.error('Falha ao excluir recorrência:', e);
+      alert('Não foi possível excluir a recorrência.');
+    }
+  });
+
   return li;
 }
 
-function renderRecorrentes() {
-  try {
-    const ul = document.getElementById('listaRecorrentes');
-    if (!ul) return;
-    ul.innerHTML = '';
-    const list = Array.isArray(S.recs) ? S.recs.slice().sort((a,b)=>String(a.descricao||'').localeCompare(String(b.descricao||''))) : [];
-    if (!list.length) {
-      const li = document.createElement('li');
-      li.className = 'item';
-      li.innerHTML = '<div class="muted">Nenhuma recorrência cadastrada.</div>';
-      ul.appendChild(li);
-      return;
-    }
-    list.forEach(r => ul.appendChild(itemRec(r)));
-  } catch (e) {
+  };
+  if (acoes[1]) acoes[1].onclick = () => {
+    try { openRecorrenteModal(r); } catch(e){ console.error(e); }
+  };
+  if (acoes[2]) acoes[2].onclick = async () => {
+    if (!confirm('Excluir recorrência?')) return;
+    try { await deleteRec(r.id); renderRecorrentes(); } catch(e){ console.error(e); }
+  };
+  return li;
+} catch (e) {
     console.error('renderRecorrentes:', e);
   }
 }
