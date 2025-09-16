@@ -185,8 +185,7 @@ function ensureMonthSelectLabels(){
   async function loadAll() {
   const selPag = qs('#mPagamento');
     // Transações
-    const { data: tx, error: txError
-} = await supabaseClient.from("transactions").select("*");
+    const { data: tx, error: txError } = await supabaseClient.from("transactions").select("*");
     
     
     if (txError) { console.error("Erro ao carregar transações:", txError); S.tx = []; }
@@ -253,8 +252,8 @@ function ensureMonthSelectLabels(){
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
-  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
-}
+
+  }
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
@@ -2799,250 +2798,265 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
-/* ==== Heatmap de despesas (mês atual) ====
-   Uso: window.renderHeatmapMesAtual()  // renderiza imediatamente se #heatmap2 existir
-   Não requer bibliotecas extras. Constrói um calendário do mês atual (S.month)
-   com intensidade por soma de despesas por dia.
-*/
+/* =============================
+   Reports Filters & Render Glue
+   - Faz os filtros (rPeriodo, rTipo, rCategoria) terem efeito real
+   - Não quebra renderizadores existentes (só define se estiver faltando)
+============================= */
 (function(){
-  function fmtBRL(n){
-    try { return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-    catch(_){ return 'R$\u00a00,00'; }
+  // Util: YMD helpers (reusa se já existem)
+  function ymdInRange(ymd, start, end){
+    if (!ymd) return false;
+    if (start && String(ymd) < String(start)) return false;
+    if (end   && String(ymd) > String(end))   return false;
+    return true;
   }
-  function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); } // m: 1..12
-  function ymdToDate(ymd){
-    var parts = String(ymd||'').split('-'); 
-    return parts.length===3 ? new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2])) : null;
+  function startOfMonth(ym){ return ym + '-01'; }
+  function endOfMonth(ym){
+    var y = Number(ym.slice(0,4)), m = Number(ym.slice(5,7));
+    var last = new Date(y, m, 0).getDate();
+    return y + '-' + String(m).padStart(2,'0') + '-' + String(last).padStart(2,'0');
   }
-  function colorFor(v, vmax){
-    if (!vmax || vmax<=0) return 'rgba(124,58,237,.08)';
-    var t = Math.max(0, Math.min(1, v / vmax)); // 0..1
-    // Interpolar de azul claro (h=210) para vermelho (h=0)
-    var h = (1 - t) * 210; // 210 -> 0
-    var s = 85;
-    var l = 52 - (t*22);   // 52 -> 30
-    return 'hsl(' + h.toFixed(0) + ' ' + s + '% ' + l.toFixed(0) + '%)';
+  function decYM(ym, n){
+    var y = Number(ym.slice(0,4)), m = Number(ym.slice(5,7));
+    m -= (n||0);
+    while (m<=0){ m += 12; y -= 1; }
+    return y + '-' + String(m).padStart(2,'0');
   }
-  function weekdayShort(d){
-    // 0..6 (Domingo..Sábado) -> labels curtinhas
-    var arr = ['D','S','T','Q','Q','S','S'];
-    return arr[d] || '';
-  }
+  // Lê filtros atuais de Relatórios
+  function getReportFilter(){
+    var periodo = (document.getElementById('rPeriodo')||{}).value || '6m';
+    var tipo    = (document.getElementById('rTipo')||{}).value || 'todos';
+    var cat     = (document.getElementById('rCategoria')||{}).value || 'todas';
+    var ymBase  = (window.S && window.S.month) ? String(window.S.month) : (new Date().toISOString().slice(0,7));
 
-  function renderHeatmapMesAtual(){
-    try{
-      var cont = document.getElementById('heatmap2');
-      if (!cont) return;
-      // Limpa conteúdo anterior
-      cont.innerHTML = '';
-
-      // Garante dados globais
-      var Sg = (window.S || {});
-      var ym = String(Sg.month || '');
-      if (!/^\d{4}-\d{2}$/.test(ym)) {
-        var dnow = new Date();
-        ym = dnow.getFullYear() + '-' + String(dnow.getMonth()+1).padStart(2,'0');
-      }
-
-      // Total de despesas por dia do mês
-      var map = Object.create(null);
-      var tx = Array.isArray(Sg.tx) ? Sg.tx : [];
-      for (var i=0;i<tx.length;i++){
-        var t = tx[i] || {};
-        if (t.tipo !== 'Despesa') continue;
-        var ds = String(t.data || '');
-        if (!ds.startsWith(ym)) continue;
-        var v = Number(t.valor)||0;
-        map[ds] = (map[ds]||0) + v;
-      }
-
-      var y = Number(ym.slice(0,4));
-      var m = Number(ym.slice(5,7));
-      var ndays = daysInMonth(y, m);
-      var first = new Date(y, m-1, 1);
-      var startWeekday = first.getDay(); // 0..6 (0=Dom)
-      // Encontrar máximo para escala
-      var vmax = 0;
-      for (var d=1; d<=ndays; d++){
-        var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-        if ((map[ymd]||0) > vmax) vmax = map[ymd];
-      }
-
-      // Cabeçalho: label mês/ano + legenda
-      var head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.justifyContent = 'space-between';
-      head.style.alignItems = 'center';
-      head.style.marginBottom = '8px';
-      var abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-      var title = document.createElement('div');
-      title.innerHTML = '<strong>' + (abrev[m-1]||String(m)) + '/' + String(y).slice(2) + '</strong>';
-      var legend = document.createElement('div');
-      legend.className = 'muted';
-      legend.style.fontSize = '12px';
-      legend.textContent = 'Intensidade = maior gasto diário';
-      head.appendChild(title); head.appendChild(legend);
-      cont.appendChild(head);
-
-      // Grid: 7 colunas (dom..sáb). Usar CSS inline para não depender de styles.css
-      var grid = document.createElement('div');
-      grid.style.display = 'grid';
-      grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-      grid.style.gap = '6px';
-
-      // Linha de cabeçalhos (D S T Q Q S S)
-      for (var w=0; w<7; w++){
-        var lab = document.createElement('div');
-        lab.textContent = weekdayShort(w);
-        lab.style.textAlign = 'center';
-        lab.style.fontSize = '12px';
-        lab.style.opacity = '.7';
-        grid.appendChild(lab);
-      }
-
-      // Preenche "blanks" antes do dia 1
-      for (var k=0; k<startWeekday; k++){
-        var blank = document.createElement('div');
-        blank.style.height = '38px';
-        grid.appendChild(blank);
-      }
-
-      // Criar células do mês
-      for (var day=1; day<=ndays; day++){
-        var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-        var tot = Number(map[ymd]||0);
-        var cell = document.createElement('div');
-        cell.style.height = '38px';
-        cell.style.borderRadius = '8px';
-        cell.style.border = '1px solid var(--border, #e5e7eb)';
-        cell.style.background = colorFor(tot, vmax);
-        cell.style.display = 'flex';
-        cell.style.alignItems = 'center';
-        cell.style.justifyContent = 'center';
-        cell.style.position = 'relative';
-        cell.style.cursor = tot>0 ? 'pointer' : 'default';
-        cell.setAttribute('title', (day + '/' + String(m).padStart(2,'0') + ' — ' + fmtBRL(tot)));
-
-        var num = document.createElement('span');
-        num.textContent = String(day);
-        num.style.fontSize = '12px';
-        num.style.fontWeight = '700';
-        num.style.textShadow = '0 1px 0 rgba(255,255,255,.35)';
-        cell.appendChild(num);
-
-        // Tooltip simples ao clicar (mobile friendly)
-        
-        // Tooltip em vez de alert()
-        cell.addEventListener('click', (function(ymdCopy, totCopy){
-          return function(ev){
-            try{
-              // Cria/recupera tooltip única dentro do container
-              var cont = document.getElementById('heatmap2');
-              if (!cont) return;
-              cont.style.position = cont.style.position || 'relative';
-              var tip = cont.querySelector('.heatmap-tip');
-              if (!tip){
-                tip = document.createElement('div');
-                tip.className = 'heatmap-tip';
-                tip.style.position = 'absolute';
-                tip.style.zIndex = '10';
-                tip.style.padding = '8px 10px';
-                tip.style.borderRadius = '10px';
-                tip.style.border = '1px solid var(--border, #e5e7eb)';
-                tip.style.background = 'var(--card, #fff)';
-                tip.style.boxShadow = '0 10px 24px rgba(2,6,23,.20)';
-                tip.style.fontSize = '12px';
-                tip.style.pointerEvents = 'none';
-                cont.appendChild(tip);
-              }
-              tip.textContent = ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy);
-              // Posiciona próximo ao clique
-              var rCont = cont.getBoundingClientRect();
-              var rCell = ev.currentTarget.getBoundingClientRect();
-              var top = (rCell.top - rCont.top) + window.scrollY - 8;
-              var left = (rCell.left - rCont.left) + window.scrollX + (rCell.width/2);
-              tip.style.top = (top - tip.offsetHeight - 6) + 'px';
-              tip.style.left = (left - tip.offsetWidth/2) + 'px';
-              tip.style.opacity = '1';
-              tip.style.transition = 'opacity .15s ease';
-              // Oculta após 1.8s
-              clearTimeout(window.__heatmapTipTO);
-              window.__heatmapTipTO = setTimeout(function(){ if (tip) tip.style.opacity='0'; }, 1800);
-            } catch(_){}
-          };
-        })(ymd, tot));
-grid.appendChild(cell);
-      }
-
-      cont.appendChild(grid);
-
-      // KPI de resumo abaixo (total do mês)
-      var sum = 0; Object.keys(map).forEach(function(k){ sum += Number(map[k]||0); });
-      var foot = document.createElement('div');
-      foot.style.marginTop = '10px';
-      foot.style.fontSize = '12px';
-      foot.className = 'muted';
-      foot.textContent = 'Total de despesas no mês: ' + fmtBRL(sum);
-      cont.appendChild(foot);
-    } catch(e){
-      console.error('renderHeatmapMesAtual:', e);
+    var start, end;
+    if (periodo === '3m' || periodo === '6m' || periodo === '12m'){
+      var n = periodo==='3m'?3 : periodo==='6m'?6 : 12;
+      end = endOfMonth(ymBase);
+      var ymStart = decYM(ymBase, n-1); // inclui mês base
+      start = startOfMonth(ymStart);
+    } else if (periodo === 'ytd'){
+      var y = ymBase.slice(0,4);
+      start = y + '-01-01';
+      end   = endOfMonth(ymBase);
+    } else { // 'all'
+      start = null; end = null;
     }
+    return { periodo, tipo, categoria: cat, start, end };
+  }
+  window.getReportFilter = window.getReportFilter || getReportFilter;
+
+  function filterTxForReports(tx, f){
+    var list = Array.isArray(tx) ? tx.slice() : [];
+    if (f.start || f.end){
+      list = list.filter(function(t){ return ymdInRange(String(t.data||''), f.start, f.end); });
+    }
+    if (f.tipo && f.tipo !== 'todos'){
+      list = list.filter(function(t){ return String(t.tipo||'') === f.tipo; });
+    }
+    if (f.categoria && f.categoria !== 'todas'){
+      list = list.filter(function(t){ return String(t.categoria||'') === f.categoria; });
+    }
+    return list;
+  }
+  window.filterTxForReports = window.filterTxForReports || filterTxForReports;
+
+  // ===== Render wrappers (só criamos se não existirem) =====
+  // Fluxo por mês (barras de Receita/Despesa e saldo)
+  if (typeof window.renderFluxo2 !== 'function'){
+    window.renderFluxo2 = function(){
+      try{
+        var ctx = document.getElementById('chartFluxo2');
+        if (!ctx || !window.Chart) return;
+        var f = getReportFilter();
+        var tx = filterTxForReports((window.S||{}).tx||[], f);
+        // Agrega por YYYY-MM
+        var map = {};
+        tx.forEach(function(t){
+          var ym = String(t.data||'').slice(0,7);
+          if (!ym) return;
+          var v = Number(t.valor)||0;
+          map[ym] = map[ym] || { rec:0, desp:0 };
+          if (t.tipo === 'Receita') map[ym].rec += v;
+          else if (t.tipo === 'Despesa') map[ym].desp += v;
+        });
+        var yms = Object.keys(map).sort();
+        var recs = yms.map(function(k){ return +(map[k].rec.toFixed(2)); });
+        var desps= yms.map(function(k){ return +(map[k].desp.toFixed(2)); });
+        // limpa chart anterior se existir
+        if (ctx.__chart) { ctx.__chart.destroy(); }
+        ctx.__chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: yms,
+            datasets: [
+              { label: 'Receitas', data: recs },
+              { label: 'Despesas', data: desps }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked:false }, y: { beginAtZero:true } }
+          }
+        });
+      } catch(e){ console.error('renderFluxo2:', e); }
+    };
   }
 
-  // expõe global
-  try { window.renderHeatmapMesAtual = renderHeatmapMesAtual; } catch(_){}
+  // Pie de Despesas por categoria
+  if (typeof window.renderPie2 !== 'function'){
+    window.renderPie2 = function(){
+      try{
+        var ctx = document.getElementById('chartPie2');
+        if (!ctx || !window.Chart) return;
+        var f = getReportFilter();
+        var tx = filterTxForReports((window.S||{}).tx||[], Object.assign({}, f, { tipo:'Despesa' }));
+        var map = {};
+        tx.forEach(function(t){
+          var cat = String(t.categoria||'Sem categoria');
+          map[cat] = (map[cat]||0) + (Number(t.valor)||0);
+        });
+        var labels = Object.keys(map);
+        var values = labels.map(function(k){ return +(map[k].toFixed(2)); });
+        if (ctx.__chart) ctx.__chart.destroy();
+        ctx.__chart = new Chart(ctx, {
+          type: 'pie',
+          data: { labels: labels, datasets: [{ data: values }] },
+          options: { responsive:true, maintainAspectRatio:false }
+        });
+        // tabela Top categorias, se existir
+        var tbody = document.querySelector('#tblTop2 tbody');
+        if (tbody){
+          tbody.innerHTML = '';
+          labels.map(function(k,i){ return { cat:k, v:values[i] }; })
+                .sort(function(a,b){ return b.v-a.v; })
+                .forEach(function(row){
+                  var tr = document.createElement('tr');
+                  var td1 = document.createElement('td'); td1.textContent = row.cat;
+                  var td2 = document.createElement('td'); td2.textContent = (Number(row.v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                  tr.appendChild(td1); tr.appendChild(td2);
+                  tbody.appendChild(tr);
+                });
+        }
+      } catch(e){ console.error('renderPie2:', e); }
+    };
+  }
 
-  // tenta renderizar imediatamente se a div existir e houver dados
+  // Forecast simples: média móvel e projeção linear
+  if (typeof window.renderForecast2 !== 'function'){
+    window.renderForecast2 = function(){
+      try{
+        var ctx = document.getElementById('chartForecast2');
+        if (!ctx || !window.Chart) return;
+        var f = getReportFilter();
+        var tx = filterTxForReports((window.S||{}).tx||[], f);
+        // saldo por mês: receitas - despesas
+        var map = {};
+        tx.forEach(function(t){
+          var ym = String(t.data||'').slice(0,7);
+          if (!ym) return;
+          var v = Number(t.valor)||0;
+          map[ym] = map[ym] || { rec:0, desp:0 };
+          if (t.tipo === 'Receita') map[ym].rec += v; else if (t.tipo === 'Despesa') map[ym].desp += v;
+        });
+        var yms = Object.keys(map).sort();
+        var saldo = yms.map(function(k){ return +(map[k].rec - map[k].desp).toFixed(2); });
+        // Projeção: média dos últimos 3 pontos
+        var m3 = saldo.slice(-3);
+        var proj = m3.length ? m3.reduce((a,b)=>a+b,0)/m3.length : 0;
+        var kpi = document.getElementById('kpiForecastFinal2'); if (kpi) kpi.textContent = (proj||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        if (ctx.__chart) ctx.__chart.destroy();
+        ctx.__chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels: yms, datasets: [{ label:'Saldo', data: saldo }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:true} } }
+        });
+      } catch(e){ console.error('renderForecast2:', e); }
+    };
+  }
+
+  // YoY simples: soma por mês em todos os anos (despesas)
+  if (typeof window.renderYoY !== 'function'){
+    window.renderYoY = function(){
+      try{
+        var ctx = document.getElementById('chartYoY');
+        if (!ctx || !window.Chart) return;
+        var f = getReportFilter();
+        // Para YoY, ignoramos rPeriodo '3m/6m' e usamos 'all' do filtro + tipo Despesa
+        var txAll = ((window.S||{}).tx||[]).filter(function(t){ return String(t.tipo||'')==='Despesa'; });
+        var by = {}; // {ANO: [12]}
+        txAll.forEach(function(t){
+          var y = String(t.data||'').slice(0,4), m = Number(String(t.data||'').slice(5,7));
+          if (!y || !m) return;
+          by[y] = by[y] || new Array(12).fill(0);
+          by[y][m-1] += Number(t.valor)||0;
+        });
+        var years = Object.keys(by).sort();
+        var labels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+        var datasets = years.map(function(y){ return { label: y, data: by[y].map(v=>+v.toFixed(2)) }; });
+        if (ctx.__chart) ctx.__chart.destroy();
+        ctx.__chart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options:{ responsive:true, maintainAspectRatio:false } });
+      } catch(e){ console.error('renderYoY:', e); }
+    };
+  }
+
+  // Receitas x Despesas stacked
+  if (typeof window.renderRxV !== 'function'){
+    window.renderRxV = function(){
+      try{
+        var ctx = document.getElementById('chartRxV');
+        if (!ctx || !window.Chart) return;
+        var f = getReportFilter();
+        var tx = filterTxForReports((window.S||{}).tx||[], f);
+        var map = {};
+        tx.forEach(function(t){
+          var ym = String(t.data||'').slice(0,7);
+          if (!ym) return;
+          var v = Number(t.valor)||0;
+          map[ym] = map[ym] || { rec:0, desp:0 };
+          if (t.tipo === 'Receita') map[ym].rec += v;
+          else if (t.tipo === 'Despesa') map[ym].desp += v;
+        });
+        var yms = Object.keys(map).sort();
+        var recs = yms.map(k => +map[k].rec.toFixed(2));
+        var desps = yms.map(k => +map[k].desp.toFixed(2));
+        if (ctx.__chart) ctx.__chart.destroy();
+        ctx.__chart = new Chart(ctx, {
+          type:'bar',
+          data:{ labels:yms, datasets:[ {label:'Receitas', data:recs, stack:'a'}, {label:'Despesas', data:desps, stack:'a'} ] },
+          options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true}, y:{stacked:true, beginAtZero:true} } }
+        });
+      } catch(e){ console.error('renderRxV:', e); }
+    };
+  }
+
+  // Atualiza tudo quando filtros mudam
+  function refreshReports(){
+    try {
+      if (typeof window.renderFluxo2 === 'function') window.renderFluxo2();
+      if (typeof window.renderPie2 === 'function') window.renderPie2();
+      if (typeof window.renderForecast2 === 'function') window.renderForecast2();
+      if (typeof window.renderYoY === 'function') window.renderYoY();
+      if (typeof window.renderRxV === 'function') window.renderRxV();
+    } catch(e){ console.error('refreshReports:', e); }
+  }
+  window.refreshReports = window.refreshReports || refreshReports;
+
+  // Ganchos de mudança nos filtros
   try {
-    if (document.getElementById('heatmap2')) {
-      // aguarda possível load dos dados
-      setTimeout(function(){ 
-        try { window.renderHeatmapMesAtual(); } catch(_) {}
-      }, 50);
-    }
-  } catch(_){}
-})();
-
-
-// Hook: re-render heatmap when switching to Heatmap tab in Relatórios
-try {
-  document.addEventListener('click', function(ev){
-    var btn = ev.target.closest('.rtab[data-rtab="heatmap"]');
-    if (btn) { try { window.renderHeatmapMesAtual(); } catch(_) {} }
-  });
-} catch(_){}
-
-
-// Re-render heatmap when report/dashboard filters change
-try {
-  document.addEventListener('change', function(ev){
-    var id = ev.target && ev.target.id;
-    if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
-      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
-    }
-  });
-} catch(_) {}
-
-
-// Ensure heatmap renders when entering the Relatórios top tab
-try {
-  document.addEventListener('click', function(ev){
-    var btn = ev.target.closest('.tab[data-tab="relatorios"]');
-    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
-  });
-} catch(_) {}
-
-
-// Safety net: render when the heatmap panel becomes visible via mutations
-try {
-  var hmObsTarget = document.getElementById('relatorios');
-  if (hmObsTarget && 'MutationObserver' in window) {
-    var hmObserver = new MutationObserver(function(){
-      var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
-      if (panel && panel.classList.contains('active')) {
-        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+    document.addEventListener('change', function(ev){
+      var id = ev.target && ev.target.id;
+      if (id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
+        refreshReports();
       }
     });
-    hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
-  }
-} catch(_) {}
+  } catch(_){}
+
+  // Render inicial depois do loadAll
+  try {
+    setTimeout(function(){ refreshReports(); }, 60);
+  } catch(_){}
+})();
