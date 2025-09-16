@@ -1626,3 +1626,59 @@ body.dark #modalLanc .actions {
     transform: translateZ(0);
   }
 }
+
+/* ===== Enhancements: KPIs, hover, badges, toasts, skeletons, responsive ===== */
+.kpi { align-items: center; gap: 12px; }
+.kpi .icon {
+  width: 48px; height: 48px; border-radius: 999px;
+  display: grid; place-items: center; color: #fff; font-size: 20px; box-shadow: var(--shadow);
+}
+.kpi.earn .icon { background: var(--ok); }
+.kpi.exp .icon { background: var(--warn); }
+.kpi.balance .icon { background: var(--brand); }
+.kpi .delta { display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:12px; }
+.kpi .delta.up { color: var(--ok); }
+.kpi .delta.down { color: var(--warn); }
+
+#listaLanc.lanc-grid > li.item,
+#listaRecentes.lanc-grid > li.item {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+#listaLanc.lanc-grid > li.item:hover,
+#listaRecentes.lanc-grid > li.item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(2,6,23,.08);
+}
+
+#listaLanc li[data-tipo="Despesa"] .chip,
+#listaRecentes li[data-tipo="Despesa"] .chip { background: rgba(220,38,38,.12); color:#dc2626; }
+#listaLanc li[data-tipo="Receita"] .chip,
+#listaRecentes li[data-tipo="Receita"] .chip { background: rgba(34,197,94,.12); color:#16a34a; }
+#listaLanc li[data-tipo="Transferência"] .chip,
+#listaRecentes li[data-tipo="Transferência"] .chip { background: rgba(124,58,237,.12); color:#7c3aed; }
+
+.tab { transition: transform .12s ease, box-shadow .12s ease; }
+.tab:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+.toast-wrap {
+  position: fixed; right: 20px; bottom: 20px;
+  display: grid; gap: 10px; z-index: 1100;
+}
+.toast {
+  background: var(--card); border: 1px solid var(--border);
+  box-shadow: var(--shadow); border-radius: 12px;
+  padding: 10px 12px; font-weight: 600;
+}
+.toast.ok { border-color: rgba(22,163,74,.3); }
+.toast.err{ border-color: rgba(220,38,38,.3); }
+
+.skel {
+  display:block; width:100%; height:12px; border-radius:6px;
+  background: linear-gradient(90deg, var(--bg-soft), #e9ecf5, var(--bg-soft));
+  background-size:200% 100%; animation: skel 1.2s infinite linear;
+}
+@keyframes skel { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.grid.cards { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1024px){ .grid.cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px){ .grid.cards { grid-template-columns: 1fr; } }
