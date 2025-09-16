@@ -695,41 +695,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 // ========= RECORRENTES (UI) =========
 
-function itemRec(r) {
-  const li = document.createElement('li');
-  li.className = 'item';
-  const ativo = !!r.ativo;
-  const chip = `<span class="chip" style="margin-left:8px">${ativo ? 'Ativa' : 'Inativa'}</span>`;
-  const per = String(r.periodicidade || '-');
-  const prox = r.proxima_data ? String(r.proxima_data) : '—';
-  const fim  = r.fim_em ? String(r.fim_em) : '—';
-  const v = Number(r.valor) || 0;
-  li.innerHTML = `
-    <div class="left">
-      <div class="tag">${per}</div>
-      <div>
-        <div class="titulo"><strong>${r.descricao || '-'}</strong> ${chip}</div>
-        <div class="subinfo">${r.categoria || '-'} • Próxima: ${prox} • Fim: ${fim}</div>
-      </div>
-    </div>
-    <div class="right" style="display:flex;gap:8px;align-items:center">
-      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(v)}</div>
-      <button class="btn-acao toggle" title="${ativo ? 'Desativar' : 'Ativar'} recorrência" aria-label="${ativo ? 'Desativar' : 'Ativar'}">
-        <i class="ph ${ativo ? 'ph-pause-circle' : 'ph-play-circle'}"></i>
-      </button>
-      <button class="btn-acao del" title="Excluir recorrência" aria-label="Excluir">
-        <i class="ph ph-trash"></i>
-      </button>
-    </div>`;
-
-  // Bind actions
-  const btnT = li.querySelector('.toggle');
-  const btnD = li.querySelector('.del');
-  if (btnT) btnT.addEventListener('click', async () => {
-    try {
-      await toggleRecAtivo(r.id, !ativo);
-      await loadAll();
-      try { renderRecorrentes(); } catch(_) {}
     } catch (e) {
       console.error('Falha ao alternar recorrência:', e);
       alert('Não foi possível atualizar o status da recorrência.');
@@ -3136,3 +3101,64 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
+
+
+
+function itemRec(r) {
+  const li = document.createElement('li');
+  li.className = 'item';
+  const ativo = !!r.ativo;
+  const chip = `<span class="chip" style="margin-left:8px">${ativo ? 'Ativa' : 'Inativa'}</span>`;
+  const per = String(r.periodicidade || '-');
+  const prox = r.proxima_data ? String(r.proxima_data) : '—';
+  const fim  = r.fim_em ? String(r.fim_em) : '—';
+  const v = Number(r.valor) || 0;
+
+  li.innerHTML = `
+    <div class="left">
+      <div class="tag">${per}</div>
+      <div>
+        <div class="titulo"><strong>${r.descricao || '-'}</strong> ${chip}</div>
+        <div class="subinfo">${r.categoria || '-'} • Próxima: ${prox} • Fim: ${fim}</div>
+      </div>
+    </div>
+    <div class="right" style="display:flex;gap:8px;align-items:center">
+      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(v)}</div>
+      <button class="btn-acao toggle" title="${ativo ? 'Desativar' : 'Ativar'} recorrência" aria-label="${ativo ? 'Desativar' : 'Ativar'}">
+        <i class="ph ${ativo ? 'ph-pause-circle' : 'ph-play-circle'}"></i>
+      </button>
+      <button class="btn-acao del" title="Excluir recorrência" aria-label="Excluir">
+        <i class="ph ph-trash"></i>
+      </button>
+    </div>`;
+
+  // Bind actions
+  const btnT = li.querySelector('.toggle');
+  const btnD = li.querySelector('.del');
+  if (btnT) btnT.addEventListener('click', async () => {
+    try {
+      await toggleRecAtivo(r.id, !ativo);
+      await loadAll();
+      try { renderRecorrentes(); } catch(_) {}
+    } catch (e) {
+      console.error('Falha ao alternar recorrência:', e);
+      alert('Não foi possível atualizar o status da recorrência.');
+    }
+  });
+  if (btnD) btnD.addEventListener('click', async () => {
+    try {
+      const ok = typeof confirm === 'function'
+        ? confirm('Excluir esta recorrência? Isso não apaga os lançamentos já gerados.')
+        : true;
+      if (!ok) return;
+      await deleteRec(r.id);
+      await loadAll();
+      try { renderRecorrentes(); } catch(_) {}
+    } catch (e) {
+      console.error('Falha ao excluir recorrência:', e);
+      alert('Não foi possível excluir a recorrência.');
+    }
+  });
+
+  return li;   // ✅ dentro da função
+}
