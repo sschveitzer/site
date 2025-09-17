@@ -544,7 +544,7 @@ if (fabBtn && !fabBtn._wired) {
 
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
-async async function addOrUpdate(keepOpen=false) {
+async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
