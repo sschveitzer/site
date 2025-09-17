@@ -1,19 +1,14 @@
-
 // === Bootstrap opener for FAB (+Lançamento) ===
 (function(){
-  
-    if (typeof window !== 'undefined' && typeof window.openNovoLanc !== 'function') {
-      window.openNovoLanc = function(){
-        
-          if (typeof toggleModal === 'function') { toggleModal(true); return; }
-          if (typeof window.toggleModal === 'function') { window.toggleModal(true); return; }
-          setTimeout(function(){
-            try { if (typeof window.toggleModal === 'function') window.toggleModal(true); }
-          }, 0);
-        
-      };
-    }
-  
+  if (typeof window !== 'undefined' && typeof window.openNovoLanc !== 'function') {
+    window.openNovoLanc = function(){
+      if (typeof toggleModal === 'function') { toggleModal(true); return; }
+      if (typeof window.toggleModal === 'function') { window.toggleModal(true); return; }
+      setTimeout(function(){
+        if (typeof window.toggleModal === 'function') window.toggleModal(true);
+      }, 0);
+    };
+  }
 })();
 
 // === Bootstrap shim for toggleModal (so inline onclick won't break) ===
