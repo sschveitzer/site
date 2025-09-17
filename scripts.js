@@ -273,7 +273,7 @@ function ensureMonthSelectLabels(){
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
-  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
 
 // Delegação de cliques para ações nas recorrências
 document.addEventListener('click', function(ev){
@@ -3151,7 +3151,7 @@ try {
   document.addEventListener('change', function(ev){
     var id = ev.target && ev.target.id;
     if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
-      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
 
 // Delegação de cliques para ações nas recorrências
 document.addEventListener('click', function(ev){
@@ -3172,7 +3172,7 @@ document.addEventListener('click', function(ev){
 try {
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.tab[data-tab="relatorios"]');
-    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
 
 // Delegação de cliques para ações nas recorrências
 document.addEventListener('click', function(ev){
@@ -3195,7 +3195,7 @@ try {
     var hmObserver = new MutationObserver(function(){
       var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
       if (panel && panel.classList.contains('active')) {
-        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
 
 // Delegação de cliques para ações nas recorrências
 document.addEventListener('click', function(ev){
