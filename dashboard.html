@@ -35,10 +35,10 @@
       <div class="right">
         <select id="monthSelect" title="Mês"></select>
         <!-- Ícone de Config substitui os controles rápidos na topbar -->
-        <button class="icon" id="btnConfig" title="Configurações" aria-label="Abrir configurações"><i class="ph ph-gear"></i></button>
-        <button class="icon" id="logoutBtn" title="Sair" aria-label="Sair"><i class="ph ph-sign-out"></i></button>
+        <button class="icon" id="btnConfig" title="Configurações"><i class="ph ph-gear"></i></button>
+        <button class="icon" id="logoutBtn" title="Sair"><i class="ph ph-sign-out"></i></button>
       
-        <button class="icon hamburger" id="menuBtn" title="Menu" aria-label="Abrir menu"><i class="ph ph-list"></i></button>
+        <button class="icon hamburger" id="menuBtn" title="Menu"><i class="ph ph-list"></i></button>
 </div>
     
   <div id="mobileMenu" class="mobile-menu">
@@ -75,7 +75,14 @@
             <span class="chip" id="kpiSaldoDelta" title="Variação vs mês anterior">—</span>
           </div>
         </div>
-</div>
+        <div class="card">
+          <div class="kpi balance">
+            <i class="ph ph-users-three icon"></i>
+            <div><div class="muted">Divisão de Despesas</div><div id="kpiSplit" class="value">R$ 0,00</div></div>
+            <span class="chip" id="kpiSplitHint">50%</span>
+          </div>
+        </div>
+      </div>
 
       <!-- METAS: card abaixo dos 4 KPIs -->
       <div class="card metas-card" style="margin-top:16px">
@@ -110,7 +117,7 @@
       <div class="card">
         <div class="lanc-header">
           <h3>Lançamentos</h3>
-          <div class="lanc-actions"><button class="btn" id="btnNovo" style="display:none" <i class="ph ph-plus"></i> Novo</button></div>
+          <div class="lanc-actions"><button class="btn" id="btnNovo" ><i class="ph ph-plus"></i> Novo</button></div>
         </div>
         <div class="lanc-toolbar" role="region" aria-label="Filtros de lançamentos">
           <select id="lancTipo" title="Tipo">
@@ -176,8 +183,8 @@
               <div class="head">
                 <h3><i class="ph ph-chart-bar"></i> Fluxo por mês</h3>
                 <div class="actions">
-                  <button class="icon" data-fs="fluxo" title="Tela cheia" aria-label="Exibir gráfico em tela cheia"><i class="ph ph-corners-out"></i></button>
-                  <button class="icon" data-export="fluxo" title="Exportar PNG" aria-label="Exportar gráfico como PNG"><i class="ph ph-download-simple"></i></button>
+                  <button class="icon" data-fs="fluxo" title="Tela cheia"><i class="ph ph-corners-out"></i></button>
+                  <button class="icon" data-export="fluxo" title="Exportar PNG"><i class="ph ph-download-simple"></i></button>
                 </div>
               </div>
               <canvas id="chartFluxo2"></canvas>
@@ -273,7 +280,7 @@
       <!-- Contêiner para tela cheia de gráficos -->
       <div class="chart-fs" id="chartFs" hidden>
         <div class="inner">
-          <button class="icon close" id="fsClose" aria-label="Fechar tela cheia"><i class="ph ph-x"></i></button>
+          <button class="icon close" id="fsClose" aria-label="Fechar"><i class="ph ph-x"></i></button>
           <canvas id="chartFsCanvas"></canvas>
         </div>
       </div>
@@ -329,6 +336,8 @@
           <ul id="p2List" class="lanc-mini"></ul>
         </div>
       </div></section>
+
+
 
     <!-- Config -->
     <section id="config">
@@ -402,9 +411,18 @@
         </div>
       </div>
 
+
       </div>
 
-   <!-- Modal Lançamento (atualizado para recorrência) -->
+      <!-- Lista de transações recorrentes -->
+      <div class="card" style="margin-top:16px">
+        <h3>Transações recorrentes</h3>
+        <ul id="listaRecorrentes" class="list"></ul>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal Lançamento (atualizado para recorrência) -->
   <div class="modal" id="modalLanc" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="content" tabindex="-1">
       <div class="title">
@@ -478,7 +496,75 @@
           <textarea id="mObs" rows="3" placeholder="Anotações opcionais"></textarea>
         </div>
       </div>
-	  
+
+      <!-- Recorrência -->
+      <div class="field span-2" style="margin-top:8px"><label class="switch"><input type="checkbox" id="mRepetir">Tornar recorrente</label>
+
+        <div id="recurrenceFields" class="rec-card" style="display:none">
+          <div class="form-grid" style="margin-top:8px">
+            <div class="field">
+              <label for="mPeriodicidade">Periodicidade</label>
+              <select id="mPeriodicidade">
+                <option value="Mensal">Mensal</option>
+                <option value="Semanal">Semanal</option>
+                <option value="Anual">Anual</option>
+              </select>
+              <div class="helper">Defina a frequência de repetição</div>
+            </div>
+
+            <div class="field" id="fieldDiaMes">
+              <label for="mDiaMes">Dia do mês</label>
+              <input type="number" id="mDiaMes" min="1" max="31" placeholder="Ex.: 5 para dia 5">
+              <div class="helper">Para Mensal/Anual (1–31)</div>
+            </div>
+
+            <div class="field" id="fieldDiaSemana" style="display:none">
+              <label for="mDiaSemana">Dia da semana</label>
+              <select id="mDiaSemana">
+                <option value="1">Segunda</option>
+                <option value="2">Terça</option>
+                <option value="3">Quarta</option>
+                <option value="4">Quinta</option>
+                <option value="5">Sexta</option>
+                <option value="6">Sábado</option>
+                <option value="0">Domingo</option>
+              </select>
+              <div class="helper">Para Semanal</div>
+            </div>
+
+            <div class="field" id="fieldMes" style="display:none">
+              <label for="mMes">Mês</label>
+              <select id="mMes">
+                <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
+                <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
+                <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
+                <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+              </select>
+              <div class="helper">Para Anual</div>
+            </div>
+
+            <div class="field">
+              <label for="mInicio">Início</label>
+              <input type="date" id="mInicio">
+              <div class="helper">Primeira ocorrência</div>
+            </div>
+
+            <div class="field">
+              <label for="mFim">Fim (opcional)</label>
+              <input type="date" id="mFim">
+              <div class="helper">Deixe em branco para não expirar</div>
+            </div>
+
+            <div class="field">
+              <label><input type="checkbox" id="mAjusteFimMes" checked> Ajustar p/ último dia do mês</label>
+              <div class="helper">Para meses com menos dias (31 → 30/28)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="formError" class="error" role="alert" hidden></div>
+
       <div class="actions">
         <div class="right">
           <button class="btn secondary" id="cancelar" type="button"><i class="ph ph-x"></i> Cancelar</button>
@@ -489,11 +575,9 @@
     </div>
   </div>
 
-<!-- Botão flutuante de Novo Lançamento -->
-    <button class="fab" id="btnNovoFab" title="Novo lançamento" onclick="try{toggleModal(true)}catch(e){console.error(e)}" onclick="try{openNovoLanc()}catch(e){console.error(e)}">
-      <i class="ph ph-plus"></i>
-    </button>
-  
+  <!-- Botão flutuante -->
+  <button class="fab" id="fab" title="Nova despesa"><i class="ph ph-plus"></i></button>
+
   <!-- JS: checagem de sessão -->
   <script>
     const supabase = window.supabase.createClient(
@@ -556,7 +640,7 @@
     window.addEventListener('load', updatePct);
   })();
   </script>
-
+<script src="scripts.js"></script>
 
 <script>
 document.addEventListener('click', function(e){
@@ -573,8 +657,6 @@ document.addEventListener('change', function(e){
   }
 });
 </script>
-
-  <div id="toasts" class="toast-wrap" aria-live="polite"></div>
 
 </body>
 </html>
