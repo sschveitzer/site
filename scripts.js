@@ -263,7 +263,7 @@ function ensureMonthSelectLabels(){
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
       S.month = `${y}-${m}`;
-    }
+}
     // Carrega metas do Supabase
     await fetchMetas();
 
@@ -513,21 +513,11 @@ const selPag = qs('#mPagamento');
       t.carteira_origem = null;
       t.carteira_destino = null;
     // forma de pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+    t.forma_pagamento = (modalTipo === 'Transferência') ? 'outros' : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
 }
 
-    // Criar recorrência
-    const perEl = qs("#mPeriodicidade");
-    const per = perEl ? perEl.value : "Mensal";
-    const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
-    const dow    = Number(qs("#mDiaSemana")?.value || 1);
-    const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
-    let inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
-    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
-    const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
-    const ajuste = !!qs("#mAjusteFimMes")?.checked;
 
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
