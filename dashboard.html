@@ -404,38 +404,7 @@
 
       </div>
 
-      <!-- Lista de transações recorrentes -->
-      <div class="card" style="margin-top:16px">
-        <h3>Transações recorrentes</h3>
-        <ul id="listaRecorrentes" class="list"></ul>
-      </div>
-    
-      <!-- Recorrências: Gerenciador -->
-      <div class="card" style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h3>Recorrências</h3>
-          <button class="btn" id="btnNovaRec"><i class="ph ph-plus"></i> Nova recorrência</button>
-        </div>
-        <table id="tblRecorrencias" style="margin-top:8px">
-          <thead>
-            <tr>
-              <th>Descrição</th>
-              <th>Categoria</th>
-              <th>Tipo</th>
-              <th>Valor</th>
-              <th>Periodicidade</th>
-              <th>Próxima</th>
-              <th>Ativo</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-</section>
-  </div>
-
-  <!-- Modal Lançamento (atualizado para recorrência) -->
+   <!-- Modal Lançamento (atualizado para recorrência) -->
   <div class="modal" id="modalLanc" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="content" tabindex="-1">
       <div class="title">
@@ -509,75 +478,7 @@
           <textarea id="mObs" rows="3" placeholder="Anotações opcionais"></textarea>
         </div>
       </div>
-
-      <!-- Recorrência -->
-      <div class="field span-2" style="margin-top:8px"><label class="switch"><input type="checkbox" id="mRepetir">Tornar recorrente</label>
-
-        <div id="recurrenceFields" class="rec-card" style="display:none">
-          <div class="form-grid" style="margin-top:8px">
-            <div class="field">
-              <label for="mPeriodicidade">Periodicidade</label>
-              <select id="mPeriodicidade">
-                <option value="Mensal">Mensal</option>
-                <option value="Semanal">Semanal</option>
-                <option value="Anual">Anual</option>
-              </select>
-              <div class="helper">Defina a frequência de repetição</div>
-            </div>
-
-            <div class="field" id="fieldDiaMes">
-              <label for="mDiaMes">Dia do mês</label>
-              <input type="number" id="mDiaMes" min="1" max="31" placeholder="Ex.: 5 para dia 5">
-              <div class="helper">Para Mensal/Anual (1–31)</div>
-            </div>
-
-            <div class="field" id="fieldDiaSemana" style="display:none">
-              <label for="mDiaSemana">Dia da semana</label>
-              <select id="mDiaSemana">
-                <option value="1">Segunda</option>
-                <option value="2">Terça</option>
-                <option value="3">Quarta</option>
-                <option value="4">Quinta</option>
-                <option value="5">Sexta</option>
-                <option value="6">Sábado</option>
-                <option value="0">Domingo</option>
-              </select>
-              <div class="helper">Para Semanal</div>
-            </div>
-
-            <div class="field" id="fieldMes" style="display:none">
-              <label for="mMes">Mês</label>
-              <select id="mMes">
-                <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
-                <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
-                <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
-                <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
-              </select>
-              <div class="helper">Para Anual</div>
-            </div>
-
-            <div class="field">
-              <label for="mInicio">Início</label>
-              <input type="date" id="mInicio">
-              <div class="helper">Primeira ocorrência</div>
-            </div>
-
-            <div class="field">
-              <label for="mFim">Fim (opcional)</label>
-              <input type="date" id="mFim">
-              <div class="helper">Deixe em branco para não expirar</div>
-            </div>
-
-            <div class="field">
-              <label><input type="checkbox" id="mAjusteFimMes" checked> Ajustar p/ último dia do mês</label>
-              <div class="helper">Para meses com menos dias (31 → 30/28)</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="formError" class="error" role="alert" hidden></div>
-
+	  
       <div class="actions">
         <div class="right">
           <button class="btn secondary" id="cancelar" type="button"><i class="ph ph-x"></i> Cancelar</button>
@@ -588,9 +489,11 @@
     </div>
   </div>
 
-  <!-- Botão flutuante -->
-  <button class="fab" id="fab" title="Nova despesa"><i class="ph ph-plus"></i></button>
-
+<!-- Botão flutuante de Novo Lançamento -->
+    <button class="fab" id="btnNovoFab" title="Novo lançamento" onclick="try{toggleModal(true)}catch(e){console.error(e)}" onclick="try{openNovoLanc()}catch(e){console.error(e)}">
+      <i class="ph ph-plus"></i>
+    </button>
+  
   <!-- JS: checagem de sessão -->
   <script>
     const supabase = window.supabase.createClient(
@@ -673,10 +576,5 @@ document.addEventListener('change', function(e){
 
   <div id="toasts" class="toast-wrap" aria-live="polite"></div>
 
-
-<!-- Botão flutuante de Novo Lançamento -->
-    <button class="fab" id="btnNovoFab" title="Novo lançamento" onclick="try{toggleModal(true)}catch(e){console.error(e)}" onclick="try{openNovoLanc()}catch(e){console.error(e)}">
-      <i class="ph ph-plus"></i>
-    </button>
 </body>
 </html>
