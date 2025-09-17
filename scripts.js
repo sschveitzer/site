@@ -263,6 +263,7 @@ function ensureMonthSelectLabels(){
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
       S.month = `${y}-${m}`;
+    }
     // Carrega metas do Supabase
     await fetchMetas();
 
