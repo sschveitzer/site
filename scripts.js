@@ -13,20 +13,22 @@
 
 // === Bootstrap shim for toggleModal (so inline onclick won't break) ===
 (function(){
-  
-    if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
-      window.toggleModal = function(show, title){
-        
-          // If the real toggleModal is defined later, delegate on next tick
-          setTimeout(function(){
-            try { if (typeof window.toggleModal === 'function' && window.toggleModal !== arguments.callee) window.toggleModal(show, title); }
-          }, 0);
-          // Fallback: try openNovoLanc for show=true
-          if (show === true && typeof window.openNovoLanc === 'function') { window.openNovoLanc(); }
-        
-      };
-    }
-  
+  if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
+    window.toggleModal = function(show, title) {
+      // Se a real toggleModal for definida depois, delega no próximo tick
+      setTimeout(function delegateToggle(){
+        var fn = window.toggleModal;
+        if (typeof fn === 'function' && fn !== delegateToggle) {
+          fn(show, title);
+        }
+      }, 0);
+
+      // Fallback: tentar abrir o modal via openNovoLanc para show=true
+      if (show === true && typeof window.openNovoLanc === 'function') {
+        window.openNovoLanc();
+      }
+    };
+  }
 })();
 
 // Normaliza forma_pagamento para os valores aceitos pelo banco
