@@ -1,39 +1,4 @@
 
-// === Bootstrap opener for FAB (+Lançamento) ===
-(function(){
-  try {
-    if (typeof window !== 'undefined' && typeof window.openNovoLanc !== 'function') {
-      window.openNovoLanc = function(){
-        try {
-          if (typeof toggleModal === 'function') { toggleModal(true); return; }
-          if (typeof window.toggleModal === 'function') { window.toggleModal(true); return; }
-          setTimeout(function(){
-            try { if (typeof window.toggleModal === 'function') window.toggleModal(true); } catch(e){ console.error(e); }
-          }, 0);
-        } catch(e){ console.error(e); }
-      };
-    }
-  } catch(e){}
-})();
-
-// === Bootstrap shim for toggleModal (so inline onclick won't break) ===
-(function(){
-  try {
-    if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
-      window.toggleModal = function(show, title){
-        try {
-          // If the real toggleModal is defined later, delegate on next tick
-          setTimeout(function(){
-            try { if (typeof window.toggleModal === 'function' && window.toggleModal !== arguments.callee) window.toggleModal(show, title); } catch(_){}
-          }, 0);
-          // Fallback: try openNovoLanc for show=true
-          if (show === true && typeof window.openNovoLanc === 'function') { window.openNovoLanc(); }
-        } catch(e){ console.error(e); }
-      };
-    }
-  } catch(e){}
-})();
-
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -55,6 +20,7 @@ function humanFormaPagamento(v){
     case 'outros': return 'Outros';
     default: return v || '-';
   }
+}
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
@@ -79,6 +45,7 @@ window.onload = function () {
   let S = {
     tx: [],
     cats: [],
+    recs: [], // recorrências
     metas: { total: 0, porCat: {} },
     month: null,
     hide: false,
@@ -107,6 +74,8 @@ try {
   }
 } catch (e) {}
 
+
+
   // ========= HELPERS GERAIS =========
   function gid() {
     return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
@@ -118,13 +87,9 @@ try {
       .slice(0, 10);
   }
   function toYMD(d) {
-    try {
-      const dt = (d instanceof Date) ? d : new Date(d);
-      if (!(dt instanceof Date) || isNaN(dt.getTime())) return '';
-      return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 10);
-    } catch(e){ console.error('toYMD invalid date:', d, e); return ''; }
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
   }
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -138,9 +103,13 @@ try {
   function parseMoneyMasked(str) {
     if (!str) return 0;
     return Number(str.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+  
+
+  }
 
 function money(v){
   return (typeof v === 'number') ? v : parseMoneyMasked(String(v||''));
+}
 
   function addDays(ymd, days) {
     const [y, m, d] = ymd.split("-").map(Number);
@@ -150,6 +119,7 @@ function money(v){
   }
   function lastDayOfMonth(y, m) {
     return new Date(y, m, 0).getDate(); // m = 1..12
+  }
 
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
@@ -162,6 +132,23 @@ function money(v){
       d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
     }
+  }
+  function incMonthly(ymd, diaMes, ajusteFimMes = true) {
+    const [y, m] = ymd.split("-").map(Number);
+    let yy = y, mm = m + 1;
+    if (mm > 12) { mm = 1; yy += 1; }
+    const ld = lastDayOfMonth(yy, mm);
+    const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
+    return toYMD(new Date(yy, mm - 1, day));
+  }
+  function incWeekly(ymd) { return addDays(ymd, 7); }
+  function incYearly(ymd, diaMes, mes, ajusteFimMes = true) {
+    const [y] = ymd.split("-").map(Number);
+    const yy = y + 1;
+    const ld = lastDayOfMonth(yy, mes);
+    const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
+    return toYMD(new Date(yy, mes - 1, day));
+  }
 
   const qs  = (s) => document.querySelector(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
@@ -177,6 +164,7 @@ function abbrevLabelFromYM(ym){
     var mes = (m>=1 && m<=12) ? abrev[m-1] : ym;
     return mes + '/' + String(y).slice(2);
   } catch(_) { return String(ym); }
+}
 
 function ensureMonthSelectLabels(){
   try {
@@ -190,13 +178,14 @@ function ensureMonthSelectLabels(){
       }
     });
   } catch(_) {}
+}
+
 
   // ========= LOAD DATA =========
   async function loadAll() {
   const selPag = qs('#mPagamento');
     // Transações
-    const { data: tx, error: txError
-} = await supabaseClient.from("transactions").select("*");
+    const { data: tx, error: txError } = await supabaseClient.from("transactions").select("*");
     
     
     if (txError) { console.error("Erro ao carregar transações:", txError); S.tx = []; }
@@ -224,6 +213,7 @@ function ensureMonthSelectLabels(){
       if (selPag) selPag.disabled = false;
         S.useCycleForReports = true;
       }
+    }
 
     // Garante mês atual se não houver salvo
     if (!S.month) {
@@ -231,7 +221,15 @@ function ensureMonthSelectLabels(){
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
       S.month = `${y}-${m}`;
+    }
 
+    // Recorrências
+    const { data: recs, error: recErr } = await supabaseClient.from("recurrences").select("*");
+    if (recErr) { console.error("Erro ao carregar recorrências:", recErr); S.recs = []; }
+    else { S.recs = recs || []; }
+
+    // Materializa recorrências vencidas
+    await (window.applyRecurrences ? window.applyRecurrences() : applyRecurrences());
     // Carrega metas do Supabase
     await fetchMetas();
 
@@ -254,7 +252,8 @@ function ensureMonthSelectLabels(){
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
-  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+
+  }
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
@@ -278,24 +277,98 @@ function ensureMonthSelectLabels(){
     console.error("Erro ao salvar preferências:", error);
     alert("Não foi possível salvar as preferências: " + (error.message || "Erro desconhecido"));
   }
+}
 
   // Atualiza categoria nas transações (rename)
   async function updateTxCategory(oldName, newName) {
     if (!oldName || !newName || oldName === newName) return;
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
+  }
 
-  async 
-  async 
-  async 
+  // ========= RECORRÊNCIAS =========
+  async function saveRec(r) {
+    return await supabaseClient.from("recurrences").upsert([r]).select().single();
+  }
+  async function deleteRec(id) {
+    return await supabaseClient.from("recurrences").delete().eq("id", id);
+  }
+  async function toggleRecAtivo(id, ativo) {
+    return await supabaseClient.from("recurrences").update({ ativo }).eq("id", id);
+  }
 
-  async 
+  async function materializeOne(rec, occDate) {
+  const selPag = qs('#mPagamento');
+    const t = {
+      id: gid(),
+      tipo: rec.tipo,
+      categoria: rec.categoria,
+      data: occDate,
+      descricao: rec.descricao,
+      valor: Number(rec.valor) || 0,
+      obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
+      recurrence_id: rec.id,
+      occurrence_date: occDate
+    };
+    // Carteira/Transferência
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+    }
+    /* removed stray save */
+}
 
-  async 
+  async function applyRecurrences() {
+  const selPag = qs('#mPagamento');
+    try { window.applyRecurrences = applyRecurrences; } catch(_) {}
+    if (!Array.isArray(S.recs) || !S.recs.length) return;
+    const today = nowYMD();
+
+    for (const r of S.recs) {
+      if (!r.ativo) continue;
+      if (r.fim_em && r.fim_em < today) continue;
+
+      let next = r.proxima_data || today;
+      let changed = false;
+
+      while (next <= today) {
+        if (r.fim_em && next > r.fim_em) break;
+        await materializeOne(r, next);
+        changed = true;
+
+        if (r.periodicidade === "Mensal") {
+          next = incMonthly(next, r.dia_mes || 1, r.ajuste_fim_mes ?? true);
+        } else if (r.periodicidade === "Semanal") {
+          next = incWeekly(next);
+        } else if (r.periodicidade === "Anual") {
+          next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
+        } else {
+      if (selPag) selPag.disabled = false;
+          break;
+        }
+      }
+
+      if (changed) {
+        await supabaseClient.from("recurrences").update({ proxima_data: next }).eq("id", r.id);
+      }
+    }
+
+    // Recarrega transações após gerar
+    const { data: tx } = await supabaseClient.from("transactions").select("*");
+    S.tx = tx || [];
+  }
 
   // ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
+  }
 
   function clearModalFields(){
   try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
@@ -305,8 +378,6 @@ function ensureMonthSelectLabels(){
   const c=document.getElementById('mCategoria'); if(c) c.selectedIndex=0;
 }
 function toggleModal(show, titleOverride) {
-  try { window.toggleModal = toggleModal; } catch(_) {}
-
   const selPag = qs('#mPagamento');
 
     const m = qs("#modalLanc");
@@ -328,10 +399,20 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
 
+      // Reset de recorrência
+      const chk = qs("#mRepetir");
+      const box = qs("#recurrenceFields");
       if (chk && box) {
         chk.checked = false;
         box.style.display = "none";
       }
+      const inpIni = qs("#mInicio");
+      const inpFim = qs("#mFim");
+      const inpDM  = qs("#mDiaMes");
+      const selDW  = qs("#mDiaSemana");
+      const selM   = qs("#mMes");
+      const selPer = qs("#mPeriodicidade");
+      const chkAdj = qs("#mAjusteFimMes");
       if (inpIni) inpIni.value = nowYMD();
       if (inpFim) inpFim.value = "";
       if (inpDM)  inpDM.value  = new Date().getDate();
@@ -416,6 +497,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     if (!S.editingId) {
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = "Nova " + modalTipo;
     }
+  }
 
   function rebuildCatSelect(selected) {
     const sel = qs("#mCategoria");
@@ -428,14 +510,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       if (c.nome === selected) o.selected = true;
       sel.append(o);
     });
-
-// Floating Action Button (FAB) for new entry
-var fabBtn = document.getElementById('btnNovoFab');
-if (fabBtn && !fabBtn._wired) {
-  fabBtn.addEventListener('click', function(){
-    try { toggleModal(true); } catch(e) { console.error(e); }
-  });
-  fabBtn._wired = true;
+  }
 
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
@@ -443,7 +518,7 @@ async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
-    {
+    try {
 const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -476,23 +551,80 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
+const chkRepetir = qs("#mRepetir");
+    if (S.editingId || !chkRepetir?.checked) {
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
     if (!keepOpen) { toggleModal(false); }
     return;
+    }
+
+    // Criar recorrência
+    const perEl = qs("#mPeriodicidade");
+    const per = perEl ? perEl.value : "Mensal";
+    const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
+    const dow    = Number(qs("#mDiaSemana")?.value || 1);
+    const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
+    const inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
+    const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
+    const ajuste = !!qs("#mAjusteFimMes")?.checked;
+
+    // define próxima data inicial baseada no "início"
+    let proxima = inicio;
+    if (per === "Mensal") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
+      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
+    } else if (per === "Semanal") {
+      proxima = incWeekly(inicio);
+    } else if (per === "Anual") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
+      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
+    }
+
+    const rec = {
+      id: undefined,
+      tipo: t.tipo,
+      categoria: t.categoria,
+      descricao: t.descricao,
+      valor: t.valor,
+      obs: t.obs,
+      periodicidade: per,
+      proxima_data: proxima,
+      fim_em: fim,
+      ativo: true,
+      ajuste_fim_mes: ajuste,
+      dia_mes: diaMes,
+      dia_semana: dow,
+      mes: mes
+    };
+
+    const { data: saved, error } = await saveRec(rec);
     if (error) {
       console.error(error);
+      return alert("Erro ao salvar recorrência.");
+    }
 
     // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
     if (t.data === saved.proxima_data) {
+      await materializeOne(saved, saved.proxima_data);
+      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
+      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
+      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
+    }
 
     await loadAll();
     if (!keepOpen) { toggleModal(false); }
     return;
-    } 
+    } finally { __savingAddOrUpdate = false; }
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
+
 
   
   // ========= EXCLUIR LANÇAMENTO =========
@@ -509,6 +641,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     }
   }
   try { window.delTx = delTx; } catch (e) {}
+
 
   
   // ========= TRANSAÇÕES =========
@@ -539,6 +672,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       if (btnDel)  btnDel.onclick = () => window.delTx && window.delTx(x.id);
     }
     return li;
+  }
 
   function renderRecentes() {
     const ul = qs("#listaRecentes");
@@ -549,29 +683,8 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     ul.innerHTML = "";
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
-
-document.addEventListener('click', async function(ev){
-  if (!btn) return;
-  if (btn.id === 'btnNovaRec'){
-    setTimeout(()=>{
-    }, 0);
-    return;
   }
-  const act = btn.getAttribute('data-act');
-  const id  = btn.getAttribute('data-id');
-  if (!id) return;
-  if (act==='edit-next'){
-  } else if (act==='gen-month'){
-  } else if (act==='del'){
-    await loadAll();
-  }
-});
 
-document.addEventListener('change', async function(ev){
-  if (!cb) return;
-  const id = cb.getAttribute('data-id');
-  await loadAll();
-});
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
 function computeGastosPorCarteira(ym){
@@ -586,6 +699,7 @@ function computeGastosPorCarteira(ym){
     if (car in sum) sum[car] += Number(x.valor) || 0;
   });
   return sum;
+}
 
 function renderGastosCarteiras(){
   
@@ -633,6 +747,8 @@ function renderGastosCarteiras(){
         + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
+}
+
 
   function renderLancamentos() {
 
@@ -664,6 +780,7 @@ h3.textContent = 'Lançamentos — ' + label;
       const compactPref = localStorage.getItem('lancCompact') === '1';
       if (chkCompact.checked !== compactPref) chkCompact.checked = compactPref;
       document.body.classList.toggle('compact', chkCompact.checked);
+    }
 
     const tipo  = (selTipo && selTipo.value) || 'todos';
     const cat   = (selCat && selCat.value) || 'todas';
@@ -676,6 +793,8 @@ h3.textContent = 'Lançamentos — ' + label;
     // Exibe apenas lançamentos cujo campo data (YYYY-MM-DD) começa com Sref.month (YYYY-MM).
     if (Sref && Sref.month && Sref.month !== 'all') {
       list = list.filter(x => x && x.data && String(x.data).startsWith(Sref.month));
+    }
+
 
     list = list.filter(x => {
       if (tipo !== 'todos' && x.tipo !== tipo) return false;
@@ -715,6 +834,7 @@ h3.textContent = 'Lançamentos — ' + label;
       frag.appendChild(makePill('Despesas: ' + fmt(totDesp), 'warn'));
       frag.appendChild(makePill('Saldo: ' + fmt(saldo)));
       sumEl.appendChild(frag);
+    }
 
     if (!ul) return;
     ul.innerHTML = '';
@@ -725,6 +845,7 @@ h3.textContent = 'Lançamentos — ' + label;
       li.innerHTML = '<div class="empty"><div class="title">Nenhum lançamento encontrado</div><div class="hint">Ajuste os filtros ou crie um novo lançamento.</div></div>';
       ul.append(li);
       return;
+    }
 
     list.forEach(x => {
       const li = document.createElement('li');
@@ -765,6 +886,7 @@ h3.textContent = 'Lançamentos — ' + label;
       }
       renderLancamentos._wired = true;
     }
+  }
 
   function openEdit(id) {
   const selPag = qs('#mPagamento');
@@ -793,7 +915,11 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
     const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
+    }
 
+    // Edição: esconde blocos de recorrência (edita só esta instância)
+    const chk = qs("#mRepetir");
+    const box = qs("#recurrenceFields");
     if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
@@ -838,6 +964,7 @@ h3.textContent = 'Lançamentos — ' + label;
       li.appendChild(left);
       ul.appendChild(li);
       return;
+    }
 
     list.forEach(c => {
       const li = document.createElement("li");
@@ -898,6 +1025,7 @@ h3.textContent = 'Lançamentos — ' + label;
       li.appendChild(right);
       ul.appendChild(li);
     });
+  }
 
   // ========= RELATÓRIOS / KPIs / GRÁFICOS EXISTENTES =========
   function updateKpis() {
@@ -958,6 +1086,7 @@ h3.textContent = 'Lançamentos — ' + label;
 
     const saldoPrev = receitasPrev - despesasPrev;
 
+
     function formatDeltaPct(cur, prev) {
       if (prev > 0) {
         const pct = ((cur - prev) / prev) * 100;
@@ -992,6 +1121,7 @@ h3.textContent = 'Lançamentos — ' + label;
       kpiDespesasPct.textContent = pctDespesas;
       kpiDespesasPct.classList.toggle("blurred", S.hide);
     }
+  }
 
   let chartSaldo, chartPie, chartFluxo;
   function renderCharts() {
@@ -1015,6 +1145,7 @@ h3.textContent = 'Lançamentos — ' + label;
         type: "line",
         data: { labels: months, datasets: [{ label: "Saldo", data: saldoData }] }
       });
+    }
 
     // Pizza por categoria (mês atual)
     if (chartPie) chartPie.destroy();
@@ -1033,6 +1164,7 @@ h3.textContent = 'Lançamentos — ' + label;
         type: "pie",
         data: { labels: Object.keys(porCat), datasets: [{ data: Object.values(porCat) }] }
       });
+    }
 
     // Fluxo por mês
     if (chartFluxo) chartFluxo.destroy();
@@ -1050,6 +1182,7 @@ h3.textContent = 'Lançamentos — ' + label;
         data: { labels, datasets: [{ label: "Fluxo", data: labels.map(l => porMes[l]) }] }
       });
     }
+  }
 
   // ========= SELECTOR DE MESES =========
   function buildMonthSelect() {
@@ -1083,6 +1216,7 @@ h3.textContent = 'Lançamentos — ' + label;
       savePrefs();
       render();
     };
+  }
 
   // ========= NOVOS INSIGHTS / ANÁLISES =========
   // Helpers de série temporal
@@ -1101,7 +1235,10 @@ h3.textContent = 'Lançamentos — ' + label;
   }
   function netByMonth(ym) {
     const txs = (S.tx || []).filter(x => x.data && String(x.data).startsWith(ym));
+    const rec = txs.filter(x=>x.tipo==="Receita").reduce((a,b)=>a+Number(b.valor),0);
     const des = txs.filter(x=>x.tipo==="Despesa").reduce((a,b)=>a+Number(b.valor),0);
+    return rec - des;
+  }
 
   // Top 5 categorias (12 meses) — preenche #tblTop
   function renderTopCategorias12m(limit=5){
@@ -1126,6 +1263,7 @@ h3.textContent = 'Lançamentos — ' + label;
         tbody.appendChild(tr);
       });
     }
+  }
 
   // Média de gastos por categoria (6 meses) — preenche #tblMediaCats
   function renderMediaPorCategoria(windowMonths=6){
@@ -1153,6 +1291,7 @@ h3.textContent = 'Lançamentos — ' + label;
         tbody.appendChild(tr);
       });
     }
+  }
 
   // Tendência do saldo (projeção até o fim do mês) — mostra em #kpiForecastFinal
   function renderTendenciaSaldo(){
@@ -1178,6 +1317,7 @@ h3.textContent = 'Lançamentos — ' + label;
       el.textContent = fmtMoney(proj);
       el.style.color = proj >= 0 ? "var(--ok)" : "var(--warn)";
     }
+  }
 
   // Previsão simples com média móvel de 3 meses (gráfico)
   let chartForecast;
@@ -1207,6 +1347,7 @@ h3.textContent = 'Lançamentos — ' + label;
         ]
       }
     });
+  }
 
   // Heatmap de gastos por dia do mês
   function renderHeatmap(){
@@ -1249,6 +1390,7 @@ h3.textContent = 'Lançamentos — ' + label;
         cell.title = `Despesas em ${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoney(v)}`;
       }
       wrap.appendChild(cell);
+    }
 
     // Legenda
     const legend = document.createElement('div');
@@ -1258,6 +1400,7 @@ h3.textContent = 'Lançamentos — ' + label;
     const sw3 = document.createElement('span'); sw3.className='swatch'; sw3.style.background='hsl(0,85%,40%)';
     legend.append('Menor', sw1, sw2, sw3, 'Maior');
     wrap.appendChild(legend);
+  }
 
   // ========= RENDER PRINCIPAL =========
   function buildLancCatFilter(){
@@ -1275,6 +1418,7 @@ h3.textContent = 'Lançamentos — ' + label;
       sel.append(o);
     });
     sel.value = current;
+  }
 
   
   // ===== Carteiras helpers =====
@@ -1290,13 +1434,14 @@ h3.textContent = 'Lançamentos — ' + label;
       }
     });
     return map;
-
+  }
   
   // ===== Carteiras — cálculos auxiliares =====
   // Usa o mês selecionado (ou ciclo de fatura se ativado)
   function txSelected(){
     const all = Array.isArray(S.tx) ? S.tx : [];
     return all.filter(x => x && x.data && inSelectedMonth(x));
+  }
 
   function sumInOutByWallet(wallet){
     const tx = txSelected().filter(x => (x.carteira === wallet && (x.tipo==="Receita" || x.tipo==="Despesa")));
@@ -1336,6 +1481,8 @@ h3.textContent = 'Lançamentos — ' + label;
                      '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
       ul.appendChild(li);
     });
+  }
+
 
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
@@ -1428,7 +1575,7 @@ var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSel
 
   }
 function render() {
-    try{ document.body.classList.toggle("hide-values", !!(window.S&&window.S.hide)); }catch(_){ } document.body.classList.toggle("dark", S.dark);
+    document.body.classList.toggle("dark", S.dark);
 
     // sincroniza estado dos toggles (suporta ids antigos e novos)
     const hideToggle = qs("#toggleHide") || qs("#cfgHide");
@@ -1457,6 +1604,7 @@ function render() {
     // Metas
     renderMetaCard();
     renderMetasConfig();
+  }
 
   // ========= EVENTOS =========
 
@@ -1539,6 +1687,7 @@ function render() {
         await savePrefs();
       }
     });
+  }
 
   // Suporta #toggleHide (novo) e #cfgHide (antigo)
   const toggleHide = qs("#toggleHide") || qs("#cfgHide");
@@ -1557,6 +1706,7 @@ function render() {
       console.error('Falha ao alternar ciclo:', err);
     }
   };
+
 
   // Ícone de Config na topbar (abre a aba Config)
   function wireBtnConfig(){
@@ -1578,13 +1728,25 @@ function render() {
     }
   });
 
+  // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
+  const chkRepetir = qs("#mRepetir");
+  const recurrenceBox = qs("#recurrenceFields");
+  const selPer = qs("#mPeriodicidade");
   const fldDM = qs("#fieldDiaMes");
   const fldDW = qs("#fieldDiaSemana");
   const fldM = qs("#fieldMes");
+  function syncRecurrenceFields() {
+    if (!chkRepetir || !recurrenceBox) return;
+    const on = chkRepetir.checked;
+    recurrenceBox.style.display = on ? "block" : "none";
     if (!on) return;
+    const per = selPer?.value || "Mensal";
     if (fldDM) fldDM.style.display = (per === "Mensal" || per === "Anual") ? "block" : "none";
     if (fldDW) fldDW.style.display = (per === "Semanal") ? "block" : "none";
     if (fldM)  fldM.style.display  = (per === "Anual") ? "block" : "none";
+  }
+  if (chkRepetir) chkRepetir.addEventListener("change", syncRecurrenceFields);
+  if (selPer) selPer.addEventListener("change", syncRecurrenceFields);
 
   // ====== UX additions: currency mask, keyboard and focus handling ======
   (function enhanceModalUX(){
@@ -1634,6 +1796,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
           valorInput.setSelectionRange(len,len);
         });
       });
+    }
 
     function validateModal(){
       if (!formError) return true;
@@ -1648,6 +1811,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         return false;
       }
       return true;
+    }
 
     if (dialog){
       dialog.addEventListener('keydown', (e) => {
@@ -1672,6 +1836,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
       });
     }
+  })();
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
@@ -1719,8 +1884,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
     if (kTotal) kTotal.textContent = totalMeta ? fmtBRL(totalMeta) : '—';
     if (kGasto) kGasto.textContent = fmtBRL(gastosMes);
-    if (kTotal) kTotal.classList.toggle("blurred", !!(S&&S.hide));
-    if (kGasto) kGasto.classList.toggle("blurred", !!(S&&S.hide));
 
     if (!bar || !chip) return;
 
@@ -1740,6 +1903,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       chip.textContent = '—';
       chip.classList.remove('ok','warn');
       if (obs) obs.textContent = 'Defina uma meta para acompanhar o progresso.';
+    }
 
     const btnGo = document.getElementById('btnGoMetas');
     if (btnGo){
@@ -1778,6 +1942,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         alert(ok ? 'Metas salvas!' : 'Não foi possível salvar as metas.');
       };
     }
+  }
 
   // ========= RELATÓRIOS: estado, filtros e subtabs =========
   let R = { tab: 'fluxo', charts: {} };
@@ -1805,12 +1970,14 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (selCat){
       selCat.innerHTML = '<option value="todas" selected>Todas</option>' +
         (Array.isArray(S.cats)? S.cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('') : '');
+    }
 
     // ações de export e fullscreen
     document.querySelectorAll('[data-fs]').forEach(b=> b.onclick = ()=> openChartFullscreen(b.dataset.fs));
     document.querySelectorAll('[data-export]').forEach(b=> b.onclick = ()=> exportChartPNG(b.dataset.export));
     const fsClose = document.getElementById('fsClose');
     if (fsClose) fsClose.onclick = ()=> closeChartFullscreen();
+  }
 
   function getReportFilters(){
     const period = (document.getElementById('rPeriodo')||{}).value || '6m';
@@ -1826,6 +1993,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     } else if (period==='ytd') {
       const d = new Date(today.getFullYear(),0,1);
       startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    }
 
     // filtra transações
     let list = Array.isArray(S.tx)? S.tx.slice(): [];
@@ -1834,16 +2002,19 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
 
     return { period, tipo, cat, list };
+  }
 
   function chartTheme(){
     const dark = !!document.body.classList.contains('dark');
     return { color: dark? '#e5e7eb':'#0f172a', grid: dark? 'rgba(255,255,255,.08)':'rgba(2,6,23,.08)' };
+  }
 
   function ensureChart(id, cfg){
     if (R.charts[id]){ R.charts[id].destroy(); }
     const ctx = document.getElementById(id);
     if (!ctx || !window.Chart) return;
     R.charts[id] = new Chart(ctx, cfg);
+  }
 
   function renderReports(){
     const { list } = getReportFilters();
@@ -1851,6 +2022,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (window.Chart){
       Chart.defaults.color = theme.color;
       Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+    }
 
     // ==== Fluxo por mês (bar)
     {
@@ -1862,6 +2034,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         data:{ labels, datasets:[{ label:'Fluxo', data: labels.map(l=>byYM[l]) }] },
         options:{ scales:{ x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } }
       });
+    }
 
     // ==== Pie categorias (despesas)
     {
@@ -1874,6 +2047,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       const tb = document.querySelector('#tblTop2 tbody'); if (tb){
         tb.innerHTML = labels.map((l,i)=>`<tr><td>${l||'-'}</td><td>${(Number(data[i])||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
       }
+    }
 
     // ==== Previsão simples (média móvel) & média por categoria
     {
@@ -1887,6 +2061,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       ] }, options:{ scales:{ x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
       const kpi = document.getElementById('kpiForecastFinal2'); if (kpi){
         const last = vals.at(-1)||0; kpi.textContent = last.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      }
 
       // média por categoria (despesa)
       const byCat = {};
@@ -1900,6 +2075,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         }).join('');
         tb.innerHTML = lines;
       }
+    }
 
     // ==== YoY (barras lado a lado)
     {
@@ -1910,18 +2086,23 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       const labels = months.map(m=>m);
       const ds = years.map(y=>({ label:y, data: months.map(m=> byYearMonth[`${y}-${m}`]||0) }));
       ensureChart('chartYoY', { type:'bar', data:{ labels, datasets: ds }, options:{ scales:{ x:{ stacked:false, grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
+    }
 
     // ==== Receitas x Despesas (stacked)
     {
       const byYM = {};
       list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
       const labels = Object.keys(byYM).sort();
+      const rec = labels.map(l=> byYM[l].R);
       const des = labels.map(l=> -byYM[l].D);
+      ensureChart('chartRxV', { type:'bar', data:{ labels, datasets:[ {label:'Receitas', data:rec}, {label:'Despesas', data:des} ] }, options:{ scales:{ x:{ stacked:true, grid:{ color: theme.grid } }, y:{ stacked:true, grid:{ color: theme.grid } } } } });
+    }
 
     // ==== Heatmap reaproveitado
     const hm = document.getElementById('heatmap2');
     const hmOld = document.getElementById('heatmap');
     if (hm){ hm.innerHTML = hmOld ? hmOld.innerHTML : '<div class="muted">Sem dados</div>'; }
+  }
 
   // ===== Exportar gráfico para PNG =====
   function exportChartPNG(id){
@@ -1932,6 +2113,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     link.download = `${id}.png`;
     link.href = c.toDataURL('image/png');
     link.click();
+  }
 
   // ===== Tela cheia =====
   function openChartFullscreen(id){
@@ -1949,6 +2131,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const fs = document.getElementById('chartFs');
     fs.hidden = true;
     if (R.charts._fs){ R.charts._fs.destroy(); R.charts._fs = null; }
+  }
 
   // ===== Hook no render existente =====
   const _origRender = typeof render === 'function' ? render : null;
@@ -1990,6 +2173,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
+}
 
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
@@ -2017,6 +2201,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     } catch (e) {
       return (String((x && x.data) || '').slice(0, 7) || '');
     }
+  }
 
   // inSelectedMonth: calendário por padrão; se S.useCycleForReports=true, usa ciclo (txBucketYM)
   function inSelectedMonth(x) {
@@ -2026,9 +2211,11 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       return txBucketYM(x) === SS.month;
     }
     return ymCal === SS.month;
+  }
 
   // Expor helpers no console
   try { window.txBucketYM = txBucketYM; window.inSelectedMonth = inSelectedMonth; } catch (e) {}
+
 
 // === UX: Nova Categoria (enter para enviar, valida duplicado, botão desabilita) ===
 (function enhanceNewCategory(){
@@ -2038,9 +2225,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (!inp || !btn) return;
 
     const norm = s => (s||'').trim().toLowerCase();
-    const isDup = (name) =>
-      Array.isArray(window.S?.cats) &&
-      window.S.cats.some(c => norm(c?.nome) === norm(name));
+    const isDup = (name) => Array.isArray(window.S?.cats) && window.S.cats.some(c => norm(c?.nome) === norm(name));
 
     function updateState(){
       const v = inp.value.trim();
@@ -2070,10 +2255,11 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     });
 
     updateState();
-  } catch(e){ 
-    console.warn('enhanceNewCategory error:', e); 
-  }
+  } catch(e){ console.warn('enhanceNewCategory error:', e); }
 })();
+
+
+
 
 // Prevent form submission inside modal (avoid page reload)
 (function(){
@@ -2083,6 +2269,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     modalForm._prevented = true;
   }
 })();
+
+
 
 // ===== Compat Shims (não invasivos) =====
 // Garante helpers globais se algum código externo esperar por eles
@@ -2097,6 +2285,7 @@ if (!window.resetValorInput) {
       if (el) el.value = '';
     } catch(_) {}
   };
+}
 
 // Garante setUseCycleForReports (se a versão do script não exportar)
 if (typeof window.setUseCycleForReports !== 'function' && window.S) {
@@ -2114,6 +2303,7 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     window.money = window.money || money;
   }
 } catch(_){} })();
+
 
 // ===== Pessoas (Marido/Esposa): mini-list, filtros e totais =====
 (function(){
@@ -2202,6 +2392,8 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
   try { window.renderPessoas = renderPessoas; } catch(_){}
 })();
 
+
+
 // === RENDERIZAÇÃO DAS LISTAS DE PESSOAS (Carteiras) ===
 function renderPessoas() {
   function renderPessoa(owner, ulId, toolbarSel, inSel, outSel) {
@@ -2234,6 +2426,7 @@ function renderPessoas() {
     var list = listAll.slice();
     if (tipo !== "todos") {
       list = list.filter(function(x){ return x.tipo === tipo; });
+    }
 
     // ordena por data desc
     list.sort(function(a,b){ return String(b.data||"").localeCompare(String(a.data||"")); });
@@ -2248,9 +2441,11 @@ function renderPessoas() {
     var outEl = document.getElementById(outSel);
     if (inEl)  inEl.textContent  = fmt(totInAll);
     if (outEl) outEl.textContent = fmt(totOutAll);
+  }
 
   renderPessoa("Marido", "p1List", ".mini-toolbar[data-owner='Marido']", "p1In", "p1Out");
   renderPessoa("Esposa", "p2List", ".mini-toolbar[data-owner='Esposa']", "p2In", "p2Out");
+}
 
 // === LIGAÇÃO DOS BOTÕES DE FILTRO (Carteiras) ===
 document.addEventListener("click", function(e) {
@@ -2281,7 +2476,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     const el = $('#mPagamento');
     const prev = !!(el && el.disabled);
     if (el) el.disabled = true;
-    try { return run(); } catch(e){} 
+    try { return run(); } finally { if (el && !prev) el.disabled = false; }
+  }
 
   // Render debounced — preserva window.render original se existir
   const renderNow = (typeof render === 'function') ? render : () => {};
@@ -2321,9 +2517,17 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     };
   })();
 
+  // materializeOne — override mantendo assinatura
+  window.materializeOne = async function materializeOne(rec, occDate){
     const t = {
       id: (typeof gid==='function'? gid(): String(Date.now())),
+      tipo: rec.tipo,
+      categoria: rec.categoria,
       data: occDate,
+      descricao: rec.descricao,
+      valor: Number(rec.valor)||0,
+      obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
+      recurrence_id: rec.id,
       occurrence_date: occDate
     };
     if (window.modalTipo === 'Transferência') {
@@ -2350,6 +2554,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 })();
 })();
 
+
+
 /* =========================================================================
    GASTO TOTAL — TILES (2 colunas): Esposa e Marido
    - Estilo compacto como o print: título pequeno + valor grande
@@ -2373,6 +2579,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
     ].join('\n');
     document.head.appendChild(css);
+  }
 
   // --- helpers locais (redeclara, mas isolado neste IIFE) ---
   function toISO10(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
@@ -2444,6 +2651,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         header.id = 'resumoFamiliarHeader';
         header.innerHTML = '<div class="title"></div>';
         sec.insertBefore(header, sec.firstChild);
+      }
 
       // Container dos tiles
       var tiles = document.getElementById('gastosTotalTiles');
@@ -2453,40 +2661,32 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         header.insertAdjacentElement('afterend', tiles);
       } else {
         tiles.innerHTML = '';
+      }
 
-// Cálculo
-var ym = S.month;
-var casaTot = computeCasaTotal(ym);
-var meiaCasa = casaTot / 2;
-var split = computeSplitPessoas(ym);
-var totMar = meiaCasa + (Number(split.Marido) || 0);
-var totEsp = meiaCasa + (Number(split.Esposa) || 0);
+      // Cálculo
+      var ym = S.month;
+      var casaTot = computeCasaTotal(ym);
+      var meiaCasa = casaTot/2;
+      var split = computeSplitPessoas(ym);
+      var totMar = meiaCasa + (Number(split.Marido)||0);
+      var totEsp = meiaCasa + (Number(split.Esposa)||0);
 
-function makeTile(titulo, valor) {
-  var b = document.createElement('div'); 
-  b.className = 'sum-box';
-  b.innerHTML = '<div class="muted">' + titulo + '</div><div class="sum-value">' + fmt(valor) + '</div>';
-  return b;
-}
-tiles.appendChild(makeTile('Total Divisão de Despesas — Marido', totMar));
-tiles.appendChild(makeTile('Total Divisão de Despesas — Esposa', totEsp));
-} catch (e) {
-  console.error('renderGastoTotalTiles:', e);
-}
-} // <-- fecha a função renderGastoTotalTiles
-window.renderGastoTotalTiles = renderGastoTotalTiles;
+      function makeTile(titulo, valor){
+        var b = document.createElement('div'); b.className = 'sum-box';
+        b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
+        return b;
+      }
+      tiles.appendChild(makeTile('Total Divisão de Despesas — Marido', totMar));
+      tiles.appendChild(makeTile('Total Divisão de Despesas — Esposa', totEsp));
+    } catch(e){ console.error('renderGastoTotalTiles:', e); }
+  }
+  window.renderGastoTotalTiles = renderGastoTotalTiles;
 
-// --- Integrar no pipeline existente ---
-(function () {
+  // --- Integrar no pipeline existente ---
   var _renderGasto = window.renderGastoTotalPessoas;
-  window.renderGastoTotalPessoas = function () {
-    try {
-      if (typeof _renderGasto === 'function') _renderGasto();
-      // chama os tiles novos
-      if (typeof renderGastoTotalTiles === 'function') renderGastoTotalTiles();
-    } catch (_) {}
+  window.renderGastoTotalPessoas = function(){
+    try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
   };
-})();
 
   // Render inicial + eventos
   function boot(){
@@ -2504,13 +2704,14 @@ window.renderGastoTotalTiles = renderGastoTotalTiles;
     });
   }
   if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
-} catch(e){})();
+})();
 
 /* === Compat alias to avoid ReferenceError === */
 if (typeof getActiveRangeForYM !== 'function') {
   function getActiveRangeForYM(ym) {
     return (typeof getRange === 'function') ? getRange(ym) : { start: '', end: '' };
   }
+}
 
 /* === Compat global for ymdInRange used by top-level functions === */
 if (typeof ymdInRange !== 'function') {
@@ -2518,6 +2719,8 @@ if (typeof ymdInRange !== 'function') {
     var s = String(ymd||''); 
     return s >= String(start||'') && s <= String(end||'');
   }
+}
+
 
 function openNovoLanc() {
   document.getElementById("modalLanc").style.display = "flex";
@@ -2527,6 +2730,8 @@ function openNovoLanc() {
   if (document.getElementById("mCategoria")) document.getElementById("mCategoria").selectedIndex = 0;
   if (document.getElementById("mPagamento")) document.getElementById("mPagamento").selectedIndex = 0;
   if (document.getElementById("mCarteira")) document.getElementById("mCarteira").selectedIndex = 0;
+  document.getElementById("mRepetir").checked = false;
+  if (document.getElementById("recurrenceFields")) document.getElementById("recurrenceFields").style.display = "none";
   document.getElementById("mData").valueAsDate = new Date();
   document.getElementById("modalTitle").textContent = "Nova Despesa";
   document.querySelectorAll("#tipoTabs button").forEach(btn => {
@@ -2543,6 +2748,8 @@ document.addEventListener("DOMContentLoaded", function(){
   var btnFecharModal = document.getElementById("btnFecharModal");
   if(btnFecharModal){ btnFecharModal.addEventListener("click", () => { document.getElementById("modalLanc").style.display = "none"; }); }
 });
+
+
 
 // === Force "+ Lançamentos → Novo" to open as 'Nova Despesa' exactly like the screenshot ===
 (function ensureOpenNovoLanc(){
@@ -2565,8 +2772,11 @@ document.addEventListener("DOMContentLoaded", function(){
         var v = document.getElementById('mValorBig'); if (v) v.value='';
         var d = document.getElementById('mDesc'); if (d) d.value='';
         var o = document.getElementById('mObs'); if (o) o.value='';
+        var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
+        var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
       }
     } catch(e){ console.error('openNovoLanc failed:', e); }
+  }
 
   function wire(){
     var btn = document.getElementById('btnNovo');
@@ -2576,6 +2786,7 @@ document.addEventListener("DOMContentLoaded", function(){
       openNovoLanc();
     });
     btn._wiredOpenNovoLanc = true;
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wire);
@@ -2583,239 +2794,3 @@ document.addEventListener("DOMContentLoaded", function(){
     wire();
   }
 })();
-
-/* ==== Heatmap de despesas (mês atual) ====
-   Uso: window.renderHeatmapMesAtual()  // renderiza imediatamente se #heatmap2 existir
-   Não requer bibliotecas extras. Constrói um calendário do mês atual (S.month)
-   com intensidade por soma de despesas por dia.
-*/
-(function(){
-  function fmtBRL(n){
-    try { return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-    catch(_){ return 'R$\u00a00,00'; }
-  }
-  function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); } // m: 1..12
-  function ymdToDate(ymd){
-    var parts = String(ymd||'').split('-'); 
-    return parts.length===3 ? new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2])) : null;
-  }
-  function colorFor(v, vmax){
-    if (!vmax || vmax<=0) return 'rgba(124,58,237,.08)';
-    var t = Math.max(0, Math.min(1, v / vmax)); // 0..1
-    // Interpolar de azul claro (h=210) para vermelho (h=0)
-    var h = (1 - t) * 210; // 210 -> 0
-    var s = 85;
-    var l = 52 - (t*22);   // 52 -> 30
-    return 'hsl(' + h.toFixed(0) + ' ' + s + '% ' + l.toFixed(0) + '%)';
-  }
-  function weekdayShort(d){
-    // 0..6 (Domingo..Sábado) -> labels curtinhas
-    var arr = ['D','S','T','Q','Q','S','S'];
-    return arr[d] || '';
-
-  function renderHeatmapMesAtual(){
-    
-      var cont = document.getElementById('heatmap2');
-      if (!cont) return;
-      // Limpa conteúdo anterior
-      cont.innerHTML = '';
-
-      // Garante dados globais
-      var Sg = (window.S || {});
-      var ym = String(Sg.month || '');
-      if (!/^\d{4}-\d{2}$/.test(ym)) {
-        var dnow = new Date();
-        ym = dnow.getFullYear() + '-' + String(dnow.getMonth()+1).padStart(2,'0');
-
-      // Total de despesas por dia do mês
-      var map = Object.create(null);
-      var tx = Array.isArray(Sg.tx) ? Sg.tx : [];
-      for (var i=0;i<tx.length;i++){
-        var t = tx[i] || {};
-        if (t.tipo !== 'Despesa') continue;
-        var ds = String(t.data || '');
-        if (!ds.startsWith(ym)) continue;
-        var v = Number(t.valor)||0;
-        map[ds] = (map[ds]||0) + v;
-
-      var y = Number(ym.slice(0,4));
-      var m = Number(ym.slice(5,7));
-      var ndays = daysInMonth(y, m);
-      var first = new Date(y, m-1, 1);
-      var startWeekday = first.getDay(); // 0..6 (0=Dom)
-      // Encontrar máximo para escala
-      var vmax = 0;
-      for (var d=1; d<=ndays; d++){
-        var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-        if ((map[ymd]||0) > vmax) vmax = map[ymd];
-
-      // Cabeçalho: label mês/ano + legenda
-      var head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.justifyContent = 'space-between';
-      head.style.alignItems = 'center';
-      head.style.marginBottom = '8px';
-      var abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-      var title = document.createElement('div');
-      title.innerHTML = '<strong>' + (abrev[m-1]||String(m)) + '/' + String(y).slice(2) + '</strong>';
-      var legend = document.createElement('div');
-      legend.className = 'muted';
-      legend.style.fontSize = '12px';
-      legend.textContent = 'Intensidade = maior gasto diário';
-      head.appendChild(title); head.appendChild(legend);
-      cont.appendChild(head);
-
-      // Grid: 7 colunas (dom..sáb). Usar CSS inline para não depender de styles.css
-      var grid = document.createElement('div');
-      grid.style.display = 'grid';
-      grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-      grid.style.gap = '6px';
-
-      // Linha de cabeçalhos (D S T Q Q S S)
-      for (var w=0; w<7; w++){
-        var lab = document.createElement('div');
-        lab.textContent = weekdayShort(w);
-        lab.style.textAlign = 'center';
-        lab.style.fontSize = '12px';
-        lab.style.opacity = '.7';
-        grid.appendChild(lab);
-
-      // Preenche "blanks" antes do dia 1
-      for (var k=0; k<startWeekday; k++){
-        var blank = document.createElement('div');
-        blank.style.height = '38px';
-        grid.appendChild(blank);
-
-      // Criar células do mês
-      for (var day=1; day<=ndays; day++){
-        var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-        var tot = Number(map[ymd]||0);
-        var cell = document.createElement('div');
-        cell.style.height = '38px';
-        cell.style.borderRadius = '8px';
-        cell.style.border = '1px solid var(--border, #e5e7eb)';
-        cell.style.background = colorFor(tot, vmax);
-        cell.style.display = 'flex';
-        cell.style.alignItems = 'center';
-        cell.style.justifyContent = 'center';
-        cell.style.position = 'relative';
-        cell.style.cursor = tot>0 ? 'pointer' : 'default';
-        cell.setAttribute('title', (day + '/' + String(m).padStart(2,'0') + ' — ' + fmtBRL(tot)));
-
-        var num = document.createElement('span');
-        num.textContent = String(day);
-        num.style.fontSize = '12px';
-        num.style.fontWeight = '700';
-        num.style.textShadow = '0 1px 0 rgba(255,255,255,.35)';
-        cell.appendChild(num);
-
-        // Tooltip simples ao clicar (mobile friendly)
-        
-        // Tooltip em vez de alert()
-        cell.addEventListener('click', (function(ymdCopy, totCopy){
-          return function(ev){
-            try{
-              // Cria/recupera tooltip única dentro do container
-              var cont = document.getElementById('heatmap2');
-              if (!cont) return;
-              cont.style.position = cont.style.position || 'relative';
-              var tip = cont.querySelector('.heatmap-tip');
-              if (!tip){
-                tip = document.createElement('div');
-                tip.className = 'heatmap-tip';
-                tip.style.position = 'absolute';
-                tip.style.zIndex = '10';
-                tip.style.padding = '8px 10px';
-                tip.style.borderRadius = '10px';
-                tip.style.border = '1px solid var(--border, #e5e7eb)';
-                tip.style.background = 'var(--card, #fff)';
-                tip.style.boxShadow = '0 10px 24px rgba(2,6,23,.20)';
-                tip.style.fontSize = '12px';
-                tip.style.pointerEvents = 'none';
-                cont.appendChild(tip);
-              }
-              tip.textContent = ymdCopy.split('-').reverse().join('/') + ': ' + fmtBRL(totCopy);
-              // Posiciona próximo ao clique
-              var rCont = cont.getBoundingClientRect();
-              var rCell = ev.currentTarget.getBoundingClientRect();
-              var top = (rCell.top - rCont.top) + window.scrollY - 8;
-              var left = (rCell.left - rCont.left) + window.scrollX + (rCell.width/2);
-              tip.style.top = (top - tip.offsetHeight - 6) + 'px';
-              tip.style.left = (left - tip.offsetWidth/2) + 'px';
-              tip.style.opacity = '1';
-              tip.style.transition = 'opacity .15s ease';
-              // Oculta após 1.8s
-              clearTimeout(window.__heatmapTipTO);
-              window.__heatmapTipTO = setTimeout(function(){ if (tip) tip.style.opacity='0'; }, 1800);
-            } catch(_){}
-          };
-        })(ymd, tot));
-grid.appendChild(cell);
-
-      cont.appendChild(grid);
-
-      // KPI de resumo abaixo (total do mês)
-      var sum = 0; Object.keys(map).forEach(function(k){ sum += Number(map[k]||0); });
-      var foot = document.createElement('div');
-      foot.style.marginTop = '10px';
-      foot.style.fontSize = '12px';
-      foot.className = 'muted';
-      foot.textContent = 'Total de despesas no mês: ' + fmtBRL(sum);
-      cont.appendChild(foot);
-    } catch(e){
-      console.error('renderHeatmapMesAtual:', e);
-    }
-
-  // expõe global
-  try { window.renderHeatmapMesAtual = renderHeatmapMesAtual; } catch(_){}
-
-  // tenta renderizar imediatamente se a div existir e houver dados
-  try {
-    if (document.getElementById('heatmap2')) {
-      // aguarda possível load dos dados
-      setTimeout(function(){ 
-        try { window.renderHeatmapMesAtual(); } catch(_) {}
-      }, 50);
-    }
-  } catch(_){}
-})();
-
-// Hook: re-render heatmap when switching to Heatmap tab in Relatórios
-try {
-  document.addEventListener('click', function(ev){
-    var btn = ev.target.closest('.rtab[data-rtab="heatmap"]');
-    if (btn) { try { window.renderHeatmapMesAtual(); } catch(_) {} }
-  });
-} catch(_){}
-
-// Re-render heatmap when report/dashboard filters change
-try {
-  document.addEventListener('change', function(ev){
-    var id = ev.target && ev.target.id;
-    if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
-      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
-    }
-  });
-} catch(_) {}
-
-// Ensure heatmap renders when entering the Relatórios top tab
-try {
-  document.addEventListener('click', function(ev){
-    var btn = ev.target.closest('.tab[data-tab="relatorios"]');
-    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
-  });
-} catch(_) {}
-
-// Safety net: render when the heatmap panel becomes visible via mutations
-try {
-  var hmObsTarget = document.getElementById('relatorios');
-  if (hmObsTarget && 'MutationObserver' in window) {
-    var hmObserver = new MutationObserver(function(){
-      var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
-      if (panel && panel.classList.contains('active')) {
-        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
-      }
-    });
-    hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
-  }
-} catch(_) {}
