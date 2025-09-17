@@ -63,192 +63,9 @@ window.onload = function () {
   let S = {
     tx: [],
     cats: [],
-    recs: [], // recorrências
-    metas: { total: 0, porCat: {} },
-    month: null,
-    hide: false,
-    dark: false,
-    useCycleForReports: true,
-    // Preferências de fatura
-    ccDueDay: null,
-    ccClosingDay: null,
-    editingId: null
-  };
-
-  // Carteiras
-  S.walletList = ["Casa","Marido","Esposa"];
-
-// Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
-try {
-  window.S = S;
-  if (typeof window.setUseCycleForReports !== 'function') {
-    window.setUseCycleForReports = function(v){
-      S.useCycleForReports = !!v;
-      try { savePrefs(); } catch(e) {}
-      try { render();
-    ensureMonthSelectLabels();
-    try { renderPessoas(); } catch(_) {} } catch(e) {}
-    };
-  }
-} catch (e) {}
-
-
-
-  // ========= HELPERS GERAIS =========
-  function gid() {
-    return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
-  }
-  function nowYMD() {
-    const d = new Date();
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 10);
-  }
-  function toYMD(d) {
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 10);
-  }
-  function isIsoDate(s) {
-    return /^\d{4}-\d{2}-\d{2}$/.test(s);
-  }
-  function fmtMoney(v) {
-    const n = Number(v);
-    return isFinite(n)
-      ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-      : "R$\u00a00,00";
-  }
-  function parseMoneyMasked(str) {
-    if (!str) return 0;
-    return Number(str.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
-  
-
-  }
-
-function money(v){
-  return (typeof v === 'number') ? v : parseMoneyMasked(String(v||''));
-}
-
-  function addDays(ymd, days) {
-    const [y, m, d] = ymd.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    dt.setDate(dt.getDate() + days);
-    return toYMD(dt);
-  }
-  function lastDayOfMonth(y, m) {
-    return new Date(y, m, 0).getDate(); // m = 1..12
-  }
-
-  // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
-  function prevYM(ym) {
-    try {
-      const [y, m] = ym.split("-").map(Number);
-      const d = new Date(y, (m - 1) - 1, 1);
-      return d.toISOString().slice(0, 7);
-    } catch (e) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      return d.toISOString().slice(0, 7);
-    }
-  }
-  function incMonthly(ymd, diaMes, ajusteFimMes = true) {
-    const [y, m] = ymd.split("-").map(Number);
-    let yy = y, mm = m + 1;
-    if (mm > 12) { mm = 1; yy += 1; }
-    const ld = lastDayOfMonth(yy, mm);
-    const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
-    return toYMD(new Date(yy, mm - 1, day));
-  }
-  function incWeekly(ymd) { return addDays(ymd, 7); }
-  function incYearly(ymd, diaMes, mes, ajusteFimMes = true) {
-    const [y] = ymd.split("-").map(Number);
-    const yy = y + 1;
-    const ld = lastDayOfMonth(yy, mes);
-    const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
-    return toYMD(new Date(yy, mes - 1, day));
-  }
-
-  const qs  = (s) => document.querySelector(s);
-  const qsa = (s) => Array.from(document.querySelectorAll(s));
-
-// === Helpers de abreviação de mês/ano ===
-function abbrevLabelFromYM(ym){
-  try {
-    if (!/^\d{4}-\d{2}$/.test(String(ym))) return String(ym);
-    var parts = ym.split('-');
-    var y = Number(parts[0]);
-    var m = Number(parts[1]);
-    var abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-    var mes = (m>=1 && m<=12) ? abrev[m-1] : ym;
-    return mes + '/' + String(y).slice(2);
-  } catch(_) { return String(ym); }
-}
-
-function ensureMonthSelectLabels(){
-  try {
-    var sel = document.getElementById('monthSelect');
-    if (!sel) return;
-    Array.from(sel.options || []).forEach(function(opt){
-      if (!opt) return;
-      var v = opt.value || '';
-      if (/^\d{4}-\d{2}$/.test(v)) {
-        opt.textContent = abbrevLabelFromYM(v);
-      }
-    });
-  } catch(_) {}
-}
-
-
-  // ========= LOAD DATA =========
-  async function loadAll() {
-  const selPag = qs('#mPagamento');
-    // Transações
-    const { data: tx, error: txError
-} = await supabaseClient.from("transactions").select("*");
-    
-    
-    if (txError) { console.error("Erro ao carregar transações:", txError); S.tx = []; }
-    else { S.tx = tx || []; }
-
-    // Categorias
-    const { data: cats, error: catsError } = await supabaseClient.from("categories").select("*");
-    if (catsError) { console.error("Erro ao carregar categorias:", catsError); S.cats = []; }
-    else { S.cats = cats || []; }
-
-    // Preferências (month, hide, dark)
-    const { data: prefs, error: prefsError } = await supabaseClient
-      .from("preferences").select("*").eq("id", 1).maybeSingle();
-    if (prefsError) { console.error("Erro ao carregar preferências:", prefsError); }
-    if (prefs) {
-      S.month = prefs.month ?? S.month;
-      S.hide  = !!prefs.hide;
-      S.dark  = !!prefs.dark;
-      // Lê valores em snake_case do banco
-      S.ccDueDay     = Number(prefs.cc_due_day)     || null;
-      S.ccClosingDay = Number(prefs.cc_closing_day) || null;
-      if (prefs.use_cycle_for_reports !== undefined && prefs.use_cycle_for_reports !== null) {
-        S.useCycleForReports = !!prefs.use_cycle_for_reports;
-      } else {
-      if (selPag) selPag.disabled = false;
-        S.useCycleForReports = true;
-      }
-    }
-
-    // Garante mês atual se não houver salvo
-    if (!S.month) {
-      const today = new Date();
-      const y = today.getFullYear();
-      const m = String(today.getMonth() + 1).padStart(2, "0");
-      S.month = `${y}-${m}`;
-    }
-
-    // Recorrências
-    const { data: recs, error: recErr } = await supabaseClient.from("recurrences").select("*");
-    if (recErr) { console.error("Erro ao carregar recorrências:", recErr); S.recs = []; }
-    else { S.recs = recs || []; }
+    recs: [], }
 
     // Materializa recorrências vencidas
-    await (window.applyRecurrences ? window.applyRecurrences() : applyRecurrences());
     // Carrega metas do Supabase
     await fetchMetas();
 
@@ -305,29 +122,14 @@ function ensureMonthSelectLabels(){
   }
 
   // ========= RECORRÊNCIAS =========
-  async function saveRec(r) {
-    return await supabaseClient.from("recurrences").upsert([r]).select().single();
-  }
-  async function deleteRec(id) {
-    return await supabaseClient.from("recurrences").delete().eq("id", id);
-  }
-  async function toggleRecAtivo(id, ativo) {
-    return await supabaseClient.from("recurrences").update({ ativo }).eq("id", id);
+  /* removed saveRec */
+/* removed deleteRec */
+/* removed toggleRecAtivo */
+).eq("id", id);
   }
 
-  async function materializeOne(rec, occDate) {
-  const selPag = qs('#mPagamento');
-    const t = {
-      id: gid(),
-      tipo: rec.tipo,
-      categoria: rec.categoria,
-      data: occDate,
-      descricao: rec.descricao,
-      valor: Number(rec.valor) || 0,
-      obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
-      recurrence_id: rec.id,
-      occurrence_date: occDate
-    };
+  /* removed materializeOne */
+;
     // Preenche campos a partir do template salvo na recorrência (se existirem)
     try {
       if (rec.carteira !== undefined) t.carteira = rec.carteira;
@@ -352,9 +154,8 @@ function ensureMonthSelectLabels(){
     /* removed stray save */
 }
 
-  async function applyRecurrences() {
-  const selPag = qs('#mPagamento');
-    try { window.applyRecurrences = applyRecurrences; } catch(_) {}
+  /* removed applyRecurrences */
+catch(_) {}
     if (!Array.isArray(S.recs) || !S.recs.length) return;
     const today = nowYMD();
 
@@ -383,7 +184,7 @@ function ensureMonthSelectLabels(){
       }
 
       if (changed) {
-        await supabaseClient.from("recurrences").update({ proxima_data: next }).eq("id", r.id);
+        await /* recurrences call removed */
       }
     }
 
@@ -392,7 +193,75 @@ function ensureMonthSelectLabels(){
     S.tx = tx || [];
   }
 
-  // ========= UI BÁSICA =========
+  
+// === Purge: remove todas as recorrências e ocorrências geradas ===
+async function purgeAllRecurrences(){
+  try{
+    if (!confirm('Tem certeza que deseja APAGAR TODAS as recorrências e ocorrências?')) return;
+    if (!confirm('Confirme novamente: esta ação é IRREVERSÍVEL.')) return;
+
+    // 1) Remove todas as transações que foram geradas por recorrência
+    //    (tem recurrence_id preenchido)
+    let delTxErr = null;
+    try {
+      const { error } = await supabaseClient
+        .from('transactions')
+        .delete()
+        .not('recurrence_id', 'is', null);
+      if (error) delTxErr = error;
+    } catch(e){ delTxErr = e; }
+    if (delTxErr) console.error('Erro ao apagar transactions recorrentes:', delTxErr);
+
+    // 2) Remove TODAS as recorrências
+    let delRecErr = null;
+    try {
+      const { error } = await supabaseClient
+        .from('recurrences')
+        .delete()
+        .neq('id', ''); // mata tudo
+      if (error) delRecErr = error;
+    } catch(e){ delRecErr = e; }
+    if (delRecErr) console.error('Erro ao apagar recurrences:', delRecErr);
+
+    // 3) Limpa estado local e re-render
+    S.recs = [];
+    try { await loadAll(); } catch(_) {}
+    try { renderRecorrentes && renderRecorrentes(); } catch(_) {}
+    try { renderRecManager && renderRecManager(); } catch(_) {}
+
+    alert('Pronto: Recorrências e transações recorrentes foram apagadas.');
+  }catch(e){
+    console.error('purgeAllRecurrences', e);
+    alert('Falha ao executar limpeza. Veja o console.');
+  }
+}
+
+// Wire button
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest('#btnPurgeRecs');
+  if (!btn) return;
+  ev.preventDefault();
+  purgeAllRecurrences();
+});
+
+
+// ==== Recurrence disabled: no-ops to avoid errors ====
+window.S = window.S || {};
+S.recs = [];
+
+function renderRecorrentes(){ /* desativado */ }
+function renderRecManager(){ /* desativado */ }
+/* removed applyRecurrences */
+/* removed materializeOne */
+/* removed saveRec */
+; }
+/* removed deleteRec */
+; }
+/* removed toggleRecAtivo */
+; }
+/* removed backfillRecurrenceToSelectedMonth */
+/* removed quickEditRecurrenceStart */
+// ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
@@ -589,75 +458,9 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-const chkRepetir = qs("#mRepetir");
-    if (S.editingId || !chkRepetir?.checked) {
-      await saveTx(t);
-      await loadAll();
-    if (window.resetValorInput) window.resetValorInput();
-    if (!keepOpen) { toggleModal(false); }
-    return;
-    }
-
-    // Criar recorrência
-    const perEl = qs("#mPeriodicidade");
-    const per = perEl ? perEl.value : "Mensal";
-    const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
-    const dow    = Number(qs("#mDiaSemana")?.value || 1);
-    const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
-    const inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
-    const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
-    const ajuste = !!qs("#mAjusteFimMes")?.checked;
-
-    // define próxima data inicial baseada no "início"
-    let proxima = inicio;
-    if (per === "Mensal") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
-      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
-      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
-    } else if (per === "Semanal") {
-      proxima = incWeekly(inicio);
-    } else if (per === "Anual") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
-      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
-      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
-    }
-
-    const rec = {
-      id: undefined,
-      tipo: t.tipo,
-      categoria: t.categoria,
-      descricao: t.descricao,
-      valor: t.valor,
-      obs: t.obs,
-      periodicidade: per,
-      proxima_data: proxima,
-      fim_em: fim,
-      ativo: true,
-      ajuste_fim_mes: ajuste,
-      dia_mes: diaMes,
-      dia_semana: dow,
-      mes: mes
-    };
-
-    const { data: saved, error } = await saveRec(rec);
-    if (error) {
-      console.error(error);
-      return alert("Erro ao salvar recorrência.");
-    }
-
-    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
-    if (t.data === saved.proxima_data) {
-      await materializeOne(saved, saved.proxima_data);
-      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
-      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
-      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
-      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
-    }
-
-    await loadAll();
-    if (!keepOpen) { toggleModal(false); }
+await saveTx(t);
+await loadAll();
+if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
   }
@@ -2558,18 +2361,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   })();
 
   // materializeOne — override mantendo assinatura
-  window.materializeOne = async function materializeOne(rec, occDate){
-    const t = {
-      id: (typeof gid==='function'? gid(): String(Date.now())),
-      tipo: rec.tipo,
-      categoria: rec.categoria,
-      data: occDate,
-      descricao: rec.descricao,
-      valor: Number(rec.valor)||0,
-      obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
-      recurrence_id: rec.id,
-      occurrence_date: occDate
-    };
+  window.materializeOne = /* removed materializeOne */
+;
     if (window.modalTipo === 'Transferência') {
       return (function(){
         return withPagamentoDisabled(() => {
@@ -3128,7 +2921,7 @@ if (typeof window.backfillRecurrenceToSelectedMonth === 'function') {
           if (rec.periodicidade === 'Mensal') next = incMonthly(occ, diaMes, ajuste);
           else if (rec.periodicidade === 'Semanal') next = incWeekly(occ);
           else if (rec.periodicidade === 'Anual') next = incYearly(occ, diaMes, mes, ajuste);
-          const { error: upErr } = await supabaseClient.from('recurrences').update({ proxima_data: next }).eq('id', rec.id);
+          const { error: upErr } = await /* recurrences call removed */
           if (upErr) { console.error('Erro ao avançar proxima_data', upErr); }
           rec.proxima_data = next;
         }
