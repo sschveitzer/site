@@ -472,19 +472,17 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-        try {
-      // Recorrência removida — sempre salva uma transação única
-      await saveTx(t);
-      await loadAll();
-      if (window.resetValorInput) window.resetValorInput();
-      if (!keepOpen) { toggleModal(false); }
-    } catch(e) {
-      console.error('Erro ao salvar transação', e);
-    } finally {
-      __savingAddOrUpdate = false;
-    }
-    return;
+    try {
+  // Recorrência removida — sempre salva uma transação única
+  await saveTx(t);
+  await loadAll();
+  if (window.resetValorInput) window.resetValorInput();
+  if (!keepOpen) { toggleModal(false); }
+} catch (e) {
+  console.error('Erro ao salvar transação', e);
 }
+finally { __savingAddOrUpdate = false; }
+  }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
