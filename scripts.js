@@ -82,7 +82,6 @@ window.onload = function () {
   let S = {
     tx: [],
     cats: [],
-    recs: [], // recorrências
     metas: { total: 0, porCat: {} },
     month: null,
     hide: false,
@@ -174,20 +173,16 @@ function money(v){
       return d.toISOString().slice(0, 7);
     }
   }
-  function incMonthly(ymd, diaMes, ajusteFimMes = true) {
     const [y, m] = ymd.split("-").map(Number);
     let yy = y, mm = m + 1;
     if (mm > 12) { mm = 1; yy += 1; }
     const ld = lastDayOfMonth(yy, mm);
-    const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
     return toYMD(new Date(yy, mm - 1, day));
   }
   function incWeekly(ymd) { return addDays(ymd, 7); }
-  function incYearly(ymd, diaMes, mes, ajusteFimMes = true) {
     const [y] = ymd.split("-").map(Number);
     const yy = y + 1;
     const ld = lastDayOfMonth(yy, mes);
-    const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
     return toYMD(new Date(yy, mes - 1, day));
   }
 
@@ -265,18 +260,9 @@ function ensureMonthSelectLabels(){
       S.month = `${y}-${m}`;
     }
 
-    // Recorrências
-    const { data: recs, error: recErr } = await supabaseClient.from("recurrences").select("*");
-    if (recErr) { console.error("Erro ao carregar recorrências:", recErr); S.recs = []; }
-    else { S.recs = recs || []; }
-
-    // Materializa recorrências vencidas
-    await (window.applyRecurrences ? window.applyRecurrences() : applyRecurrences());
-    // Carrega metas do Supabase
     await fetchMetas();
 
     render();
-    try { renderRecManager(); } catch(e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -328,133 +314,6 @@ function ensureMonthSelectLabels(){
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
   }
 
-  // ========= RECORRÊNCIAS =========
-  async function saveRec(r) {
-    try {
-      const src = Object.assign({}, r || {});
-      const allowed = ['id','tipo','categoria','descricao','valor','obs','periodicidade','proxima_data','fim_em','ativo','ajuste_fim_mes','dia_mes','dia_semana','mes'];
-      const rec = {};
-      allowed.forEach(k => { if (k in src) rec[k] = src[k]; });
-
-      if (rec.id === undefined || rec.id === null || rec.id === '') delete rec.id;
-      rec.tipo = String(rec.tipo || '').trim();
-      rec.categoria = String(rec.categoria || '').trim();
-      rec.descricao = String(rec.descricao || '').trim();
-      rec.obs = (rec.obs == null ? null : String(rec.obs));
-      rec.periodicidade = String(rec.periodicidade || '').trim();
-
-      rec.valor = Number(rec.valor) || 0;
-      rec.ativo = (rec.ativo !== false);
-      rec.ajuste_fim_mes = !!rec.ajuste_fim_mes;
-      if (rec.obs !== null && rec.obs !== undefined && String(rec.obs).trim() === '') rec.obs = null;
-      // Periodicidade: preserva apenas campos relevantes
-      if (rec.periodicidade === 'Mensal') {
-        rec.dia_semana = null; rec.mes = null;
-      } else if (rec.periodicidade === 'Semanal') {
-        rec.dia_mes = null; rec.mes = null;
-      } else if (rec.periodicidade === 'Anual') {
-        rec.dia_semana = null;
-      }
-
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(rec.proxima_data||''))) {
-        rec.proxima_data = nowYMD();
-      }
-      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(String(rec.fim_em))) {
-        rec.fim_em = null;
-      }
-
-      rec.dia_mes = (Number(rec.dia_mes) || null);
-      rec.dia_semana = (Number(rec.dia_semana) || null);
-      rec.mes = (Number(rec.mes) || null);
-
-      console.log('[saveRec] payload →', rec);
-      const { data, error } = await supabaseClient.from("recurrences").upsert([rec]).select().single();
-      if (error) {
-        console.error('[saveRec] supabase error →', error);
-        alert('Erro ao salvar recorrência: ' + (error.message || JSON.stringify(error)));
-      }
-      return { data, error };
-    } catch(e){
-      console.error('saveRec failed (catch):', e);
-      alert('Falha ao salvar recorrência: ' + (e && e.message ? e.message : e));
-      return { data: null, error: e };
-    }
-  }
-  async function deleteRec(id) {
-    return await supabaseClient.from("recurrences").delete().eq("id", id);
-  }
-  async function toggleRecAtivo(id, ativo) {
-    return await supabaseClient.from("recurrences").update({ ativo }).eq("id", id);
-  }
-
-  async function materializeOne(rec, occDate) {
-  const selPag = qs('#mPagamento');
-    const t = {
-      id: gid(),
-      tipo: rec.tipo,
-      categoria: rec.categoria,
-      data: occDate,
-      descricao: rec.descricao,
-      valor: Number(rec.valor) || 0,
-      obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
-      recurrence_id: rec.id,
-      occurrence_date: occDate
-    };
-    // Carteira/Transferência
-    if (modalTipo === "Transferência") {
-      if (selPag) selPag.disabled = true;
-      t.carteira = null;
-      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
-      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
-    } else {
-      if (selPag) selPag.disabled = false;
-      t.carteira = (qs("#mCarteira")?.value || "Casa");
-      t.carteira_origem = null;
-      t.carteira_destino = null;
-    }
-    /* removed stray save */
-}
-
-  async function applyRecurrences() {
-  const selPag = qs('#mPagamento');
-    try { window.applyRecurrences = applyRecurrences; } catch(_) {}
-    if (!Array.isArray(S.recs) || !S.recs.length) return;
-    const today = nowYMD();
-
-    for (const r of S.recs) {
-      if (!r.ativo) continue;
-      if (r.fim_em && r.fim_em < today) continue;
-
-      let next = r.proxima_data || today;
-      let changed = false;
-
-      while (next <= today) {
-        if (r.fim_em && next > r.fim_em) break;
-        await materializeOne(r, next);
-        changed = true;
-
-        if (r.periodicidade === "Mensal") {
-          next = incMonthly(next, r.dia_mes || 1, r.ajuste_fim_mes ?? true);
-        } else if (r.periodicidade === "Semanal") {
-          next = incWeekly(next);
-        } else if (r.periodicidade === "Anual") {
-          next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
-        } else {
-      if (selPag) selPag.disabled = false;
-          break;
-        }
-      }
-
-      if (changed) {
-        await supabaseClient.from("recurrences").update({ proxima_data: next }).eq("id", r.id);
-      }
-    }
-
-    // Recarrega transações após gerar
-    const { data: tx } = await supabaseClient.from("transactions").select("*");
-    S.tx = tx || [];
-  }
-
   // ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
@@ -492,20 +351,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
 
-      // Reset de recorrência
-      const chk = qs("#mRepetir");
-      const box = qs("#recurrenceFields");
-      if (chk && box) {
-        chk.checked = false;
-        box.style.display = "none";
-      }
-      const inpIni = qs("#mInicio");
-      const inpFim = qs("#mFim");
-      const inpDM  = qs("#mDiaMes");
-      const selDW  = qs("#mDiaSemana");
-      const selM   = qs("#mMes");
-      const selPer = qs("#mPeriodicidade");
-      const chkAdj = qs("#mAjusteFimMes");
       if (inpIni) inpIni.value = nowYMD();
       if (inpFim) inpFim.value = "";
       if (inpDM)  inpDM.value  = new Date().getDate();
@@ -654,75 +499,9 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-const chkRepetir = qs("#mRepetir");
-    if (S.editingId || !chkRepetir?.checked) {
-      await saveTx(t);
+await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
-    if (!keepOpen) { toggleModal(false); }
-    return;
-    }
-
-    // Criar recorrência
-    const perEl = qs("#mPeriodicidade");
-    const per = perEl ? perEl.value : "Mensal";
-    const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
-    const dow    = Number(qs("#mDiaSemana")?.value || 1);
-    const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
-    let inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
-    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
-    const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
-    const ajuste = !!qs("#mAjusteFimMes")?.checked;
-
-    // define próxima data inicial baseada no "início"
-    let proxima = inicio;
-    if (per === "Mensal") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
-      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
-      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
-    } else if (per === "Semanal") {
-      proxima = incWeekly(inicio);
-    } else if (per === "Anual") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
-      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
-      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
-    }
-
-    const rec = {
-      // id ausente para INSERT, será atribuído pelo banco
-      tipo: t.tipo,
-      categoria: t.categoria,
-      descricao: t.descricao,
-      valor: t.valor,
-      obs: t.obs,
-      periodicidade: per,
-      proxima_data: proxima,
-      fim_em: fim,
-      ativo: true,
-      ajuste_fim_mes: ajuste,
-      dia_mes: diaMes,
-      dia_semana: dow,
-      mes: mes
-    };
-
-    const { data: saved, error } = await saveRec(rec);
-    if (error) {
-      console.error(error);
-      return alert("Erro ao salvar recorrência.");
-    }
-
-    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
-    if (t.data === saved.proxima_data) {
-      await materializeOne(saved, saved.proxima_data);
-      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
-      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
-      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
-      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
-    }
-
-    await loadAll();
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
@@ -788,80 +567,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
   }
-
-
-// === Recorrências: manager (Config) ===
-function renderRecManager(){
-  const tb = document.querySelector('#tblRecorrencias tbody');
-  if (!tb) return;
-  tb.innerHTML = '';
-  const recs = Array.isArray(S.recs) ? [...S.recs] : [];
-  if (!recs.length){
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 8;
-    td.className = 'muted';
-    td.textContent = 'Nenhuma recorrência cadastrada.';
-    tr.appendChild(td);
-    tb.appendChild(tr);
-    return;
-  }
-  recs.sort((a,b)=>String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')));
-  recs.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.descricao||'-'}</td>
-      <td>${r.categoria||'-'}</td>
-      <td>${r.tipo||'-'}</td>
-      <td>${fmtMoney(Number(r.valor)||0)}</td>
-      <td>${r.periodicidade||'-'}</td>
-      <td>${r.proxima_data||'-'}</td>
-      <td><input type="checkbox" data-act="toggle" data-id="${r.id}" ${r.ativo!==false?'checked':''}></td>
-      <td>
-        <button class="btn-acao" data-act="edit-next" data-id="${r.id}" title="Editar próxima data"><i class="ph ph-calendar-check"></i></button>
-        <button class="btn-acao" data-act="gen-month" data-id="${r.id}" title="Gerar mês selecionado"><i class="ph ph-calendar-plus"></i></button>
-        <button class="btn-acao" data-act="del" data-id="${r.id}" title="Excluir"><i class="ph ph-trash"></i></button>
-      </td>
-    `;
-    tb.appendChild(tr);
-  });
-}
-
-document.addEventListener('click', async function(ev){
-  const btn = ev.target.closest('#tblRecorrencias [data-act], #btnNovaRec');
-  if (!btn) return;
-  if (btn.id === 'btnNovaRec'){
-    try { toggleModal(true, 'Nova recorrência'); } catch(_) {}
-    setTimeout(()=>{
-      const chk = document.getElementById('mRepetir');
-      if (chk) { chk.checked = true; const box=document.getElementById('recurrenceFields'); if (box) box.style.display=''; }
-    }, 0);
-    return;
-  }
-  const act = btn.getAttribute('data-act');
-  const id  = btn.getAttribute('data-id');
-  if (!id) return;
-  if (act==='edit-next'){
-    quickEditRecurrenceStart(id);
-  } else if (act==='gen-month'){
-    backfillRecurrenceToSelectedMonth(id);
-  } else if (act==='del'){
-    if (!confirm('Excluir esta recorrência?')) return;
-    await deleteRec(id);
-    await loadAll();
-  }
-});
-
-document.addEventListener('change', async function(ev){
-  const cb = ev.target.closest('#tblRecorrencias input[type="checkbox"][data-act="toggle"]');
-  if (!cb) return;
-  const id = cb.getAttribute('data-id');
-  await toggleRecAtivo(id, !!cb.checked);
-  await loadAll();
-});
-
-
-
 
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
@@ -1095,10 +800,7 @@ h3.textContent = 'Lançamentos — ' + label;
     const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
     }
 
-    // Edição: esconde blocos de recorrência (edita só esta instância)
-    const chk = qs("#mRepetir");
-    const box = qs("#recurrenceFields");
-    if (chk && box) { chk.checked = false; box.style.display = "none"; }
+        if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
     
@@ -1393,7 +1095,6 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
-    try { renderRecManager(); } catch(e) {}
     };
   }
 
@@ -1873,7 +1574,6 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
-    try { renderRecManager(); } catch(e) {}
     await savePrefs();
   };
 
@@ -1908,13 +1608,6 @@ function render() {
     }
   });
 
-  // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
-  const chkRepetir = qs("#mRepetir");
-  const recurrenceBox = qs("#recurrenceFields");
-  const selPer = qs("#mPeriodicidade");
-  const fldDM = qs("#fieldDiaMes");
-  const fldDW = qs("#fieldDiaSemana");
-  const fldM = qs("#fieldMes");
   function syncRecurrenceFields() {
     if (!chkRepetir || !recurrenceBox) return;
     const on = chkRepetir.checked;
@@ -2700,40 +2393,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   })();
 
   // materializeOne — override mantendo assinatura
-  window.materializeOne = async function materializeOne(rec, occDate){
-    const t = {
-      id: (typeof gid==='function'? gid(): String(Date.now())),
-      tipo: rec.tipo,
-      categoria: rec.categoria,
-      data: occDate,
-      descricao: rec.descricao,
-      valor: Number(rec.valor)||0,
-      obs: rec.obs ? (rec.obs + ' (recorrente)') : 'Recorrente',
-      recurrence_id: rec.id,
-      occurrence_date: occDate
-    };
-    if (window.modalTipo === 'Transferência') {
-      return (function(){
-        return withPagamentoDisabled(() => {
-          t.carteira = null;
-          t.carteira_origem  = ($('#mOrigem')?.value || 'Casa');
-          t.carteira_destino = ($('#mDestino')?.value || 'Marido');
-          return t;
-        });
-      })();
-    } else {
-      t.carteira = ($('#mCarteira')?.value || 'Casa');
-      t.carteira_origem = null;
-      t.carteira_destino = null;
-      return t;
-    }
-  };
-
-  // addOrUpdate — override mantendo assinatura
-  window.addOrUpdate = /* módulo removido: cartões duplicados 'Gasto total — Marido/Esposa' */
-(function(){
-  // intencionalmente vazio para não injetar cartões duplicados
-})();
+  window.materializeOne = )();
 })();
 
 
@@ -2912,8 +2572,6 @@ function openNovoLanc() {
   if (document.getElementById("mCategoria")) document.getElementById("mCategoria").selectedIndex = 0;
   if (document.getElementById("mPagamento")) document.getElementById("mPagamento").selectedIndex = 0;
   if (document.getElementById("mCarteira")) document.getElementById("mCarteira").selectedIndex = 0;
-  document.getElementById("mRepetir").checked = false;
-  if (document.getElementById("recurrenceFields")) document.getElementById("recurrenceFields").style.display = "none";
   document.getElementById("mData").valueAsDate = new Date();
   document.getElementById("modalTitle").textContent = "Nova Despesa";
   document.querySelectorAll("#tipoTabs button").forEach(btn => {
@@ -2954,8 +2612,6 @@ document.addEventListener("DOMContentLoaded", function(){
         var v = document.getElementById('mValorBig'); if (v) v.value='';
         var d = document.getElementById('mDesc'); if (d) d.value='';
         var o = document.getElementById('mObs'); if (o) o.value='';
-        var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
-        var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
       }
     } catch(e){ console.error('openNovoLanc failed:', e); }
   }
