@@ -443,7 +443,7 @@ async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
-    try {
+    {
 const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -490,7 +490,7 @@ const selPag = qs('#mPagamento');
     await loadAll();
     if (!keepOpen) { toggleModal(false); }
     return;
-    } finally { __savingAddOrUpdate = false; }
+    } 
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
@@ -563,7 +563,6 @@ document.addEventListener('click', async function(ev){
   if (act==='edit-next'){
   } else if (act==='gen-month'){
   } else if (act==='del'){
-    await deleteRec(id);
     await loadAll();
   }
 });
@@ -2278,7 +2277,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     const el = $('#mPagamento');
     const prev = !!(el && el.disabled);
     if (el) el.disabled = true;
-    try { return run(); } finally { if (el && !prev) el.disabled = false; }
+    try { return run(); } catch(e){} 
 
   // Render debounced — preserva window.render original se existir
   const renderNow = (typeof render === 'function') ? render : () => {};
@@ -2473,8 +2472,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
   // --- Integrar no pipeline existente ---
   var _renderGasto = window.renderGastoTotalPessoas;
   window.renderGastoTotalPessoas = function(){
-    try { if (_renderGasto) _renderGasto(); } finally { try { renderGastoTotalTiles(); } catch(_) {} }
-  };
+    try { if (_renderGasto) _renderGasto(); }  catch(_) {} }
+  } catch(e){};
 
   // Render inicial + eventos
   function boot(){
@@ -2602,7 +2601,7 @@ document.addEventListener("DOMContentLoaded", function(){
     return arr[d] || '';
 
   function renderHeatmapMesAtual(){
-    try{
+    
       var cont = document.getElementById('heatmap2');
       if (!cont) return;
       // Limpa conteúdo anterior
