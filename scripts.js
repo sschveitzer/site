@@ -253,7 +253,6 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
-    try { renderRecorrentes(); } catch (e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -264,7 +263,6 @@ function ensureMonthSelectLabels(){
       S.month = e.target.value;
       try { savePrefs(); } catch (e) {}
       try { render(); } catch (e) {}
-      try { renderRecorrentes(); } catch (e) {}
       try { renderPessoas(); } catch (e) {}
       try { renderLancamentos(); } catch (e) {}
       try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
@@ -273,18 +271,7 @@ function ensureMonthSelectLabels(){
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
-  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
-
-// Delegação de cliques para ações nas recorrências
-document.addEventListener('click', function(ev){
-  const btn = ev.target.closest('button[data-action]');
-  if (!btn) return;
-  const act = btn.getAttribute('data-action');
-  const id  = btn.getAttribute('data-id');
-  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
-  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
-});
- catch(_) {}
+  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
 }
 
   // ========= SAVE =========
@@ -353,8 +340,7 @@ document.addEventListener('click', function(ev){
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    /* save generated occurrence into transactions */
-    try { await saveTx(t); } catch(e){ console.error('save recurrence tx', e); }
+    /* removed stray save */
 }
 
   async function applyRecurrences() {
@@ -362,15 +348,6 @@ document.addEventListener('click', function(ev){
     try { window.applyRecurrences = applyRecurrences; } catch(_) {}
     if (!Array.isArray(S.recs) || !S.recs.length) return;
     const today = nowYMD();
-    // Materializa até o fim do mês selecionado (S.month) para que o mês corrente já veja as recorrências futuras
-    let horizon = today;
-    try {
-      if (S && S.month && /^\d{4}-\d{2}$/.test(S.month)) {
-        const [yy, mm] = S.month.split('-').map(Number);
-        const endOfSel = toYMD(new Date(yy, mm, 0)); // último dia do mês selecionado
-        horizon = (String(endOfSel) > String(today)) ? endOfSel : today;
-      }
-    } catch(_) {}
 
     for (const r of S.recs) {
       if (!r.ativo) continue;
@@ -379,7 +356,7 @@ document.addEventListener('click', function(ev){
       let next = r.proxima_data || today;
       let changed = false;
 
-      while (next <= horizon) {
+      while (next <= today) {
         if (r.fim_em && next > r.fim_em) break;
         await materializeOne(r, next);
         changed = true;
@@ -406,44 +383,7 @@ document.addEventListener('click', function(ev){
     S.tx = tx || [];
   }
 
-  
-// === Recorrências: ações rápidas ===
-async function backfillRecurrenceToSelectedMonth(recId){
-  try{
-    const rec = (S.recs||[]).find(r => String(r.id)===String(recId));
-    if (!rec) return alert('Recorrência não encontrada');
-    if (!S.month || !/^\\d{4}-\\d{2}$/.test(S.month)) return alert('Mês selecionado inválido');
-    const [yy, mm] = S.month.split('-').map(Number);
-    const ld = lastDayOfMonth(yy, mm);
-    const day = (rec.ajuste_fim_mes ? Math.min(Number(rec.dia_mes||1), ld) : Number(rec.dia_mes||1));
-    const occ = toYMD(new Date(yy, mm-1, day));
-    await materializeOne(rec, occ);
-    await loadAll();
-    alert('Ocorrência gerada para '+occ);
-  }catch(e){
-    console.error('backfillRecurrenceToSelectedMonth', e);
-    alert('Falha ao gerar ocorrência do mês selecionado.');
-  }
-}
-
-async function quickEditRecurrenceStart(recId){
-  try{
-    const rec = (S.recs||[]).find(r => String(r.id)===String(recId));
-    if (!rec) return alert('Recorrência não encontrada');
-    const cur = rec.proxima_data || nowYMD();
-    const s = prompt('Defina a PRÓXIMA DATA (YYYY-MM-DD):', cur);
-    if (!s) return;
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return alert('Formato inválido. Use YYYY-MM-DD.');
-    const { error } = await supabaseClient.from('recurrences').update({ proxima_data: s }).eq('id', rec.id);
-    if (error) { console.error(error); return alert('Erro ao salvar.'); }
-    await loadAll();
-    alert('Próxima data atualizada.');
-  }catch(e){
-    console.error('quickEditRecurrenceStart', e);
-    alert('Falha ao editar recorrência.');
-  }
-}
-// ========= UI BÁSICA =========
+  // ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
@@ -641,16 +581,12 @@ const selPag = qs('#mPagamento');
 
     }
 const chkRepetir = qs("#mRepetir");
-    const wantsRec = !!chkRepetir?.checked;
-
-    // Sempre salva/atualiza o lançamento em si
-    await saveTx(t);
-
-    if (!wantsRec) {
+    if (S.editingId || !chkRepetir?.checked) {
+      await saveTx(t);
       await loadAll();
-      if (window.resetValorInput) window.resetValorInput();
-      if (!keepOpen) { toggleModal(false); }
-      return;
+    if (window.resetValorInput) window.resetValorInput();
+    if (!keepOpen) { toggleModal(false); }
+    return;
     }
 
     // Criar recorrência
@@ -666,16 +602,16 @@ const chkRepetir = qs("#mRepetir");
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
     if (per === "Mensal") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0,4)), Number(inicio.slice(5,7)));
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0,4)), Number(inicio.slice(5,7)) - 1, day));
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
       proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
     } else if (per === "Semanal") {
       proxima = incWeekly(inicio);
     } else if (per === "Anual") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0,4)), mes);
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0,4)), mes - 1, day));
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
       proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
     }
 
@@ -702,8 +638,9 @@ const chkRepetir = qs("#mRepetir");
       return alert("Erro ao salvar recorrência.");
     }
 
-    // Se a data do lançamento já é igual à próxima recorrência, não materializa de novo.
+    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
     if (t.data === saved.proxima_data) {
+      await materializeOne(saved, saved.proxima_data);
       if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
       else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
       else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
@@ -776,48 +713,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
   }
-
-
-function renderRecorrentes() {
-  const ul = document.getElementById("listaRecorrentes");
-  if (!ul) return;
-
-  ul.innerHTML = "";
-  if (!Array.isArray(S.recs) || !S.recs.length) {
-    const li = document.createElement("li");
-    li.className = "muted";
-    li.textContent = "Nenhuma recorrência cadastrada.";
-    ul.appendChild(li);
-    return;
-  }
-
-  const list = [...S.recs]
-    .filter(r => r && r.ativo !== false)
-    .sort((a,b) => String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')))
-    .slice(0, 12);
-
-  list.forEach(r => {
-    const li = document.createElement("li");
-    li.className = "item";
-    const valor = Number(r.valor) || 0;
-    li.innerHTML = `
-      <div class="left">
-        <div class="tag">${r.tipo || '-'}</div>
-        <div>
-          <div class="titulo"><strong>${r.descricao || '-'}</strong></div>
-          <div class="muted subinfo" style="font-size:12px">
-            ${r.categoria || '-'} • Próx: ${r.proxima_data || '-'}
-          </div>
-        </div>
-      </div>
-      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(valor)}</div>
-    `;
-    ul.appendChild(li);
-  });
-}
-
-
-
 
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
@@ -3151,18 +3046,7 @@ try {
   document.addEventListener('change', function(ev){
     var id = ev.target && ev.target.id;
     if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
-      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
-
-// Delegação de cliques para ações nas recorrências
-document.addEventListener('click', function(ev){
-  const btn = ev.target.closest('button[data-action]');
-  if (!btn) return;
-  const act = btn.getAttribute('data-action');
-  const id  = btn.getAttribute('data-id');
-  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
-  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
-});
- catch(_) {}
+      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
     }
   });
 } catch(_) {}
@@ -3172,18 +3056,7 @@ document.addEventListener('click', function(ev){
 try {
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.tab[data-tab="relatorios"]');
-    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
-
-// Delegação de cliques para ações nas recorrências
-document.addEventListener('click', function(ev){
-  const btn = ev.target.closest('button[data-action]');
-  if (!btn) return;
-  const act = btn.getAttribute('data-action');
-  const id  = btn.getAttribute('data-id');
-  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
-  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
-});
- catch(_) {} }, 0); }
+    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
   });
 } catch(_) {}
 
@@ -3195,18 +3068,7 @@ try {
     var hmObserver = new MutationObserver(function(){
       var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
       if (panel && panel.classList.contains('active')) {
-        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(e) {}
-
-// Delegação de cliques para ações nas recorrências
-document.addEventListener('click', function(ev){
-  const btn = ev.target.closest('button[data-action]');
-  if (!btn) return;
-  const act = btn.getAttribute('data-action');
-  const id  = btn.getAttribute('data-id');
-  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
-  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
-});
- catch(_) {}
+        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
       }
     });
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
