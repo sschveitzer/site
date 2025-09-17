@@ -2068,7 +2068,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
     updateState();
   } catch(e){ console.warn('enhanceNewCategory error:', e); }
-} catch(e){})();
 
 // Prevent form submission inside modal (avoid page reload)
 (function(){
