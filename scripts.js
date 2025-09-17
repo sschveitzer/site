@@ -351,6 +351,15 @@ function ensureMonthSelectLabels(){
     try { window.applyRecurrences = applyRecurrences; } catch(_) {}
     if (!Array.isArray(S.recs) || !S.recs.length) return;
     const today = nowYMD();
+    // Materializa até o fim do mês selecionado (S.month) para que o mês corrente já veja as recorrências futuras
+    let horizon = today;
+    try {
+      if (S && S.month && /^\d{4}-\d{2}$/.test(S.month)) {
+        const [yy, mm] = S.month.split('-').map(Number);
+        const endOfSel = toYMD(new Date(yy, mm, 0)); // último dia do mês selecionado
+        horizon = (String(endOfSel) > String(today)) ? endOfSel : today;
+      }
+    } catch(_) {}
 
     for (const r of S.recs) {
       if (!r.ativo) continue;
@@ -359,7 +368,7 @@ function ensureMonthSelectLabels(){
       let next = r.proxima_data || today;
       let changed = false;
 
-      while (next <= today) {
+      while (next <= horizon) {
         if (r.fim_em && next > r.fim_em) break;
         await materializeOne(r, next);
         changed = true;
