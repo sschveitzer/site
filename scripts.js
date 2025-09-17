@@ -105,9 +105,13 @@ try {
       .slice(0, 10);
   }
   function toYMD(d) {
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 10);
+    try {
+      const dt = (d instanceof Date) ? d : new Date(d);
+      if (!(dt instanceof Date) || isNaN(dt.getTime())) return '';
+      return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 10);
+    } catch(e){ console.error('toYMD invalid date:', d, e); return ''; }
   }
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -398,6 +402,8 @@ function ensureMonthSelectLabels(){
   const c=document.getElementById('mCategoria'); if(c) c.selectedIndex=0;
 }
 function toggleModal(show, titleOverride) {
+  try { window.toggleModal = toggleModal; } catch(_) {}
+
   const selPag = qs('#mPagamento');
 
     const m = qs("#modalLanc");
@@ -596,7 +602,8 @@ const chkRepetir = qs("#mRepetir");
     const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
     const dow    = Number(qs("#mDiaSemana")?.value || 1);
     const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
-    const inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
+    let inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
+    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
     const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
     const ajuste = !!qs("#mAjusteFimMes")?.checked;
 
