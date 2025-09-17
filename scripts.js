@@ -26,7 +26,7 @@ if (typeof window.backfillRecurrenceToSelectedMonth !== 'function') {
       const [yy, mm] = S.month.split('-').map(Number);
       const ld = new Date(yy, mm, 0).getDate();
       const day = (rec.ajuste_fim_mes ? Math.min(Number(rec.dia_mes||1), ld) : Number(rec.dia_mes||1));
-      const occ = toYMD(new Date(yy, mm-1, day));
+      const occ = new Date(yy, mm-1, day).toISOString().slice(0,10);
       await materializeOne(rec, occ);
       await loadAll();
       alert('Ocorrência gerada para '+occ);
