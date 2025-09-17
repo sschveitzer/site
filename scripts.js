@@ -2454,30 +2454,39 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       } else {
         tiles.innerHTML = '';
 
-      // Cálculo
-      var ym = S.month;
-      var casaTot = computeCasaTotal(ym);
-      var meiaCasa = casaTot/2;
-      var split = computeSplitPessoas(ym);
-      var totMar = meiaCasa + (Number(split.Marido)||0);
-      var totEsp = meiaCasa + (Number(split.Esposa)||0);
+// Cálculo
+var ym = S.month;
+var casaTot = computeCasaTotal(ym);
+var meiaCasa = casaTot / 2;
+var split = computeSplitPessoas(ym);
+var totMar = meiaCasa + (Number(split.Marido) || 0);
+var totEsp = meiaCasa + (Number(split.Esposa) || 0);
 
-      function makeTile(titulo, valor){
-        var b = document.createElement('div'); b.className = 'sum-box';
-        b.innerHTML = '<div class="muted">'+titulo+'</div><div class="sum-value">'+fmt(valor)+'</div>';
-        return b;
-      }
-      tiles.appendChild(makeTile('Total Divisão de Despesas — Marido', totMar));
-      tiles.appendChild(makeTile('Total Divisão de Despesas — Esposa', totEsp));
-    } catch(e){ console.error('renderGastoTotalTiles:', e); }
-  }
-  window.renderGastoTotalTiles = renderGastoTotalTiles;
+function makeTile(titulo, valor) {
+  var b = document.createElement('div'); 
+  b.className = 'sum-box';
+  b.innerHTML = '<div class="muted">' + titulo + '</div><div class="sum-value">' + fmt(valor) + '</div>';
+  return b;
+}
+tiles.appendChild(makeTile('Total Divisão de Despesas — Marido', totMar));
+tiles.appendChild(makeTile('Total Divisão de Despesas — Esposa', totEsp));
+} catch (e) {
+  console.error('renderGastoTotalTiles:', e);
+}
+} // <-- fecha a função renderGastoTotalTiles
+window.renderGastoTotalTiles = renderGastoTotalTiles;
 
-  // --- Integrar no pipeline existente ---
+// --- Integrar no pipeline existente ---
+(function () {
   var _renderGasto = window.renderGastoTotalPessoas;
-  window.renderGastoTotalPessoas = function(){
-    try { if (_renderGasto) _renderGasto(); }  catch(_) {} }
-  } catch(e){};
+  window.renderGastoTotalPessoas = function () {
+    try {
+      if (typeof _renderGasto === 'function') _renderGasto();
+      // chama os tiles novos
+      if (typeof renderGastoTotalTiles === 'function') renderGastoTotalTiles();
+    } catch (_) {}
+  };
+})();
 
   // Render inicial + eventos
   function boot(){
