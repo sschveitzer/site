@@ -16,6 +16,25 @@
   } catch(e){}
 })();
 
+// === Bootstrap shim for toggleModal (so inline onclick won't break) ===
+(function(){
+  try {
+    if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
+      window.toggleModal = function(show, title){
+        try {
+          // If the real toggleModal is defined later, delegate on next tick
+          setTimeout(function(){
+            try { if (typeof window.toggleModal === 'function' && window.toggleModal !== arguments.callee) window.toggleModal(show, title); } catch(_){}
+          }, 0);
+          // Fallback: try openNovoLanc for show=true
+          if (show === true && typeof window.openNovoLanc === 'function') { window.openNovoLanc(); }
+        } catch(e){ console.error(e); }
+      };
+    }
+  } catch(e){}
+})();
+
+
 
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
@@ -311,7 +330,24 @@ function ensureMonthSelectLabels(){
 
   // ========= RECORRÊNCIAS =========
   async function saveRec(r) {
-    return await supabaseClient.from("recurrences").upsert([r]).select().single();
+    try {
+      const rec = Object.assign({}, r || {});
+      if (!rec || typeof rec !== 'object') throw new Error('rec inválido');
+      // remove id se vazio/undefined para permitir insert
+      if (rec.id === undefined || rec.id === null || rec.id === '' ) { delete rec.id; }
+      // tipos garantidos
+      rec.valor = Number(rec.valor) || 0;
+      rec.ativo = (rec.ativo !== false);
+      if (rec.proxima_data && !/^\d{4}-\d{2}-\d{2}$/.test(rec.proxima_data)) { delete rec.proxima_data; }
+      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(rec.fim_em)) { rec.fim_em = null; }
+      rec.dia_mes = Number(rec.dia_mes || 0) || null;
+      rec.dia_semana = Number(rec.dia_semana || 0) || null;
+      rec.mes = Number(rec.mes || 0) || null;
+      return await supabaseClient.from("recurrences").upsert([rec]).select().single();
+    } catch(e){
+      console.error('saveRec failed:', e);
+      return { data: null, error: e };
+    }
   }
   async function deleteRec(id) {
     return await supabaseClient.from("recurrences").delete().eq("id", id);
@@ -624,7 +660,7 @@ const chkRepetir = qs("#mRepetir");
     }
 
     const rec = {
-      id: undefined,
+      // id ausente para INSERT, será atribuído pelo banco
       tipo: t.tipo,
       categoria: t.categoria,
       descricao: t.descricao,
