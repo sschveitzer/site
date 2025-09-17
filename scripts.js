@@ -27,7 +27,9 @@ if (typeof window.backfillRecurrenceToSelectedMonth !== 'function') {
       const ld = new Date(yy, mm, 0).getDate();
       const day = (rec.ajuste_fim_mes ? Math.min(Number(rec.dia_mes||1), ld) : Number(rec.dia_mes||1));
       const occ = new Date(yy, mm-1, day).toISOString().slice(0,10);
-      await materializeOne(rec, occ);
+      const saved = await materializeOne(rec, occ);
+      if (!saved) { alert('Falha ao salvar ocorrência. Veja o console.'); return; }
+      console.log('[backfill] criada em transactions →', saved);
       await loadAll();
       alert('Ocorrência gerada para '+occ);
     }catch(e){
@@ -475,7 +477,8 @@ function ensureMonthSelectLabels(){
 
       while (next <= today) {
         if (r.fim_em && next > r.fim_em) break;
-        await materializeOne(r, next);
+        const _m = await materializeOne(r, next);
+        if (!_m) { console.warn('applyRecurrences: falha ao materializar', r, next); break; }
         changed = true;
 
         if (r.periodicidade === "Mensal") {
