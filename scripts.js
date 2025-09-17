@@ -331,21 +331,43 @@ function ensureMonthSelectLabels(){
   // ========= RECORRÊNCIAS =========
   async function saveRec(r) {
     try {
-      const rec = Object.assign({}, r || {});
-      if (!rec || typeof rec !== 'object') throw new Error('rec inválido');
-      // remove id se vazio/undefined para permitir insert
-      if (rec.id === undefined || rec.id === null || rec.id === '' ) { delete rec.id; }
-      // tipos garantidos
+      const src = Object.assign({}, r || {});
+      const allowed = ['id','tipo','categoria','descricao','valor','obs','periodicidade','proxima_data','fim_em','ativo','ajuste_fim_mes','dia_mes','dia_semana','mes'];
+      const rec = {};
+      allowed.forEach(k => { if (k in src) rec[k] = src[k]; });
+
+      if (rec.id === undefined || rec.id === null || rec.id === '') delete rec.id;
+      rec.tipo = String(rec.tipo || '').trim();
+      rec.categoria = String(rec.categoria || '').trim();
+      rec.descricao = String(rec.descricao || '').trim();
+      rec.obs = (rec.obs == null ? null : String(rec.obs));
+      rec.periodicidade = String(rec.periodicidade || '').trim();
+
       rec.valor = Number(rec.valor) || 0;
       rec.ativo = (rec.ativo !== false);
-      if (rec.proxima_data && !/^\d{4}-\d{2}-\d{2}$/.test(rec.proxima_data)) { delete rec.proxima_data; }
-      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(rec.fim_em)) { rec.fim_em = null; }
-      rec.dia_mes = Number(rec.dia_mes || 0) || null;
-      rec.dia_semana = Number(rec.dia_semana || 0) || null;
-      rec.mes = Number(rec.mes || 0) || null;
-      return await supabaseClient.from("recurrences").upsert([rec]).select().single();
+      rec.ajuste_fim_mes = !!rec.ajuste_fim_mes;
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(rec.proxima_data||''))) {
+        rec.proxima_data = nowYMD();
+      }
+      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(String(rec.fim_em))) {
+        rec.fim_em = null;
+      }
+
+      rec.dia_mes = (Number(rec.dia_mes) || null);
+      rec.dia_semana = (Number(rec.dia_semana) || null);
+      rec.mes = (Number(rec.mes) || null);
+
+      console.log('[saveRec] payload →', rec);
+      const { data, error } = await supabaseClient.from("recurrences").upsert([rec]).select().single();
+      if (error) {
+        console.error('[saveRec] supabase error →', error);
+        alert('Erro ao salvar recorrência: ' + (error.message || JSON.stringify(error)));
+      }
+      return { data, error };
     } catch(e){
-      console.error('saveRec failed:', e);
+      console.error('saveRec failed (catch):', e);
+      alert('Falha ao salvar recorrência: ' + (e && e.message ? e.message : e));
       return { data: null, error: e };
     }
   }
