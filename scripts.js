@@ -276,6 +276,7 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
+    try { renderRecorrentes(); } catch(e) {}
     try { renderRecManager(); } catch(e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
@@ -788,6 +789,48 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
   }
+
+
+// === Dashboard: Transações recorrentes ===
+function renderRecorrentes() {
+  const ul = document.getElementById("listaRecorrentes");
+  if (!ul) return;
+  ul.innerHTML = "";
+
+  const recs = Array.isArray(S.recs) ? S.recs.filter(r => r && r.ativo !== false) : [];
+  if (!recs.length) {
+    const li = document.createElement("li");
+    li.className = "muted";
+    li.textContent = "Nenhuma recorrência cadastrada.";
+    ul.appendChild(li);
+    return;
+  }
+
+  // Ordena pela próxima data crescente e limita a 12
+  const list = [...recs].sort((a,b) => String(a.proxima_data||'').localeCompare(String(b.proxima_data||''))).slice(0,12);
+
+  list.forEach(r => {
+    const li = document.createElement("li");
+    li.className = "item";
+    const valor = Number(r.valor) || 0;
+    li.innerHTML = `
+      <div class="left">
+        <div class="tag">${r.tipo || '-'}</div>
+        <div>
+          <div class="titulo"><strong>${r.descricao || '-'}</strong></div>
+          <div class="muted subinfo" style="font-size:12px">
+            ${r.categoria || '-'} • Próx: ${r.proxima_data || '-'}
+          </div>
+        </div>
+      </div>
+      <div class="${S.hide ? 'blurred' : ''}" style="font-weight:700">${fmtMoney(valor)}</div>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+
+
 
 
 // === Recorrências: manager (Config) ===
@@ -1393,6 +1436,7 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
+    try { renderRecorrentes(); } catch(e) {}
     try { renderRecManager(); } catch(e) {}
     };
   }
@@ -1873,6 +1917,7 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
+    try { renderRecorrentes(); } catch(e) {}
     try { renderRecManager(); } catch(e) {}
     await savePrefs();
   };
