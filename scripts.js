@@ -55,7 +55,6 @@ function humanFormaPagamento(v){
     case 'outros': return 'Outros';
     default: return v || '-';
   }
-}
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
@@ -139,13 +138,9 @@ try {
   function parseMoneyMasked(str) {
     if (!str) return 0;
     return Number(str.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
-  
-
-  }
 
 function money(v){
   return (typeof v === 'number') ? v : parseMoneyMasked(String(v||''));
-}
 
   function addDays(ymd, days) {
     const [y, m, d] = ymd.split("-").map(Number);
@@ -155,7 +150,6 @@ function money(v){
   }
   function lastDayOfMonth(y, m) {
     return new Date(y, m, 0).getDate(); // m = 1..12
-  }
 
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
@@ -168,10 +162,6 @@ function money(v){
       d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
     }
-  }
-  
-  
-  
 
   const qs  = (s) => document.querySelector(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
@@ -187,7 +177,6 @@ function abbrevLabelFromYM(ym){
     var mes = (m>=1 && m<=12) ? abrev[m-1] : ym;
     return mes + '/' + String(y).slice(2);
   } catch(_) { return String(ym); }
-}
 
 function ensureMonthSelectLabels(){
   try {
@@ -201,7 +190,6 @@ function ensureMonthSelectLabels(){
       }
     });
   } catch(_) {}
-}
 
   // ========= LOAD DATA =========
   async function loadAll() {
@@ -236,7 +224,6 @@ function ensureMonthSelectLabels(){
       if (selPag) selPag.disabled = false;
         S.useCycleForReports = true;
       }
-    }
 
     // Garante mês atual se não houver salvo
     if (!S.month) {
@@ -244,7 +231,6 @@ function ensureMonthSelectLabels(){
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
       S.month = `${y}-${m}`;
-    }
 
     // Carrega metas do Supabase
     await fetchMetas();
@@ -269,7 +255,6 @@ function ensureMonthSelectLabels(){
     monthSel._wiredLanc = true;
   }
   try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
-}
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
@@ -293,13 +278,11 @@ function ensureMonthSelectLabels(){
     console.error("Erro ao salvar preferências:", error);
     alert("Não foi possível salvar as preferências: " + (error.message || "Erro desconhecido"));
   }
-}
 
   // Atualiza categoria nas transações (rename)
   async function updateTxCategory(oldName, newName) {
     if (!oldName || !newName || oldName === newName) return;
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
-  }
 
   async 
   async 
@@ -313,7 +296,6 @@ function ensureMonthSelectLabels(){
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
-  }
 
   function clearModalFields(){
   try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
@@ -434,7 +416,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     if (!S.editingId) {
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = "Nova " + modalTipo;
     }
-  }
 
   function rebuildCatSelect(selected) {
     const sel = qs("#mCategoria");
@@ -447,7 +428,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       if (c.nome === selected) o.selected = true;
       sel.append(o);
     });
-  }
 
 // Floating Action Button (FAB) for new entry
 var fabBtn = document.getElementById('btnNovoFab');
@@ -456,7 +436,6 @@ if (fabBtn && !fabBtn._wired) {
     try { toggleModal(true); } catch(e) { console.error(e); }
   });
   fabBtn._wired = true;
-}
 
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
@@ -502,52 +481,11 @@ const selPag = qs('#mPagamento');
     if (window.resetValorInput) window.resetValorInput();
     if (!keepOpen) { toggleModal(false); }
     return;
-    }
-
-    const per = perEl ? perEl.value : "Mensal";
-    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
-
-    // define próxima data inicial baseada no "início"
-    let proxima = inicio;
-    if (per === "Mensal") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
-      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
-      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
-    } else if (per === "Semanal") {
-      proxima = incWeekly(inicio);
-    } else if (per === "Anual") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
-      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
-      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
-    }
-
-      // id ausente para INSERT, será atribuído pelo banco
-      tipo: t.tipo,
-      categoria: t.categoria,
-      descricao: t.descricao,
-      valor: t.valor,
-      obs: t.obs,
-      proxima_data: proxima,
-      fim_em: fim,
-      ativo: true,
-      ajuste_fim_mes: ajuste,
-      dia_mes: diaMes,
-      dia_semana: dow,
-      mes: mes
-    };
-
     if (error) {
       console.error(error);
-    }
 
     // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
     if (t.data === saved.proxima_data) {
-      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
-      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
-      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
-    }
 
     await loadAll();
     if (!keepOpen) { toggleModal(false); }
@@ -601,7 +539,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       if (btnDel)  btnDel.onclick = () => window.delTx && window.delTx(x.id);
     }
     return li;
-  }
 
   function renderRecentes() {
     const ul = qs("#listaRecentes");
@@ -612,7 +549,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     ul.innerHTML = "";
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
-  }
 
 document.addEventListener('click', async function(ev){
   if (!btn) return;
@@ -651,7 +587,6 @@ function computeGastosPorCarteira(ym){
     if (car in sum) sum[car] += Number(x.valor) || 0;
   });
   return sum;
-}
 
 function renderGastosCarteiras(){
   
@@ -699,7 +634,6 @@ function renderGastosCarteiras(){
         + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
     }
   } catch(e){ console.error('renderGastosCarteiras:', e); }
-}
 
   function renderLancamentos() {
 
@@ -731,7 +665,6 @@ h3.textContent = 'Lançamentos — ' + label;
       const compactPref = localStorage.getItem('lancCompact') === '1';
       if (chkCompact.checked !== compactPref) chkCompact.checked = compactPref;
       document.body.classList.toggle('compact', chkCompact.checked);
-    }
 
     const tipo  = (selTipo && selTipo.value) || 'todos';
     const cat   = (selCat && selCat.value) || 'todas';
@@ -744,7 +677,6 @@ h3.textContent = 'Lançamentos — ' + label;
     // Exibe apenas lançamentos cujo campo data (YYYY-MM-DD) começa com Sref.month (YYYY-MM).
     if (Sref && Sref.month && Sref.month !== 'all') {
       list = list.filter(x => x && x.data && String(x.data).startsWith(Sref.month));
-    }
 
     list = list.filter(x => {
       if (tipo !== 'todos' && x.tipo !== tipo) return false;
@@ -784,7 +716,6 @@ h3.textContent = 'Lançamentos — ' + label;
       frag.appendChild(makePill('Despesas: ' + fmt(totDesp), 'warn'));
       frag.appendChild(makePill('Saldo: ' + fmt(saldo)));
       sumEl.appendChild(frag);
-    }
 
     if (!ul) return;
     ul.innerHTML = '';
@@ -795,7 +726,6 @@ h3.textContent = 'Lançamentos — ' + label;
       li.innerHTML = '<div class="empty"><div class="title">Nenhum lançamento encontrado</div><div class="hint">Ajuste os filtros ou crie um novo lançamento.</div></div>';
       ul.append(li);
       return;
-    }
 
     list.forEach(x => {
       const li = document.createElement('li');
@@ -836,7 +766,6 @@ h3.textContent = 'Lançamentos — ' + label;
       }
       renderLancamentos._wired = true;
     }
-  }
 
   function openEdit(id) {
   const selPag = qs('#mPagamento');
@@ -865,7 +794,6 @@ h3.textContent = 'Lançamentos — ' + label;
       if (fTransf) fTransf.style.display = "none";
       const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
     const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
-    }
 
     if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
@@ -911,7 +839,6 @@ h3.textContent = 'Lançamentos — ' + label;
       li.appendChild(left);
       ul.appendChild(li);
       return;
-    }
 
     list.forEach(c => {
       const li = document.createElement("li");
@@ -972,7 +899,6 @@ h3.textContent = 'Lançamentos — ' + label;
       li.appendChild(right);
       ul.appendChild(li);
     });
-  }
 
   // ========= RELATÓRIOS / KPIs / GRÁFICOS EXISTENTES =========
   function updateKpis() {
@@ -1067,7 +993,6 @@ h3.textContent = 'Lançamentos — ' + label;
       kpiDespesasPct.textContent = pctDespesas;
       kpiDespesasPct.classList.toggle("blurred", S.hide);
     }
-  }
 
   let chartSaldo, chartPie, chartFluxo;
   function renderCharts() {
@@ -1091,7 +1016,6 @@ h3.textContent = 'Lançamentos — ' + label;
         type: "line",
         data: { labels: months, datasets: [{ label: "Saldo", data: saldoData }] }
       });
-    }
 
     // Pizza por categoria (mês atual)
     if (chartPie) chartPie.destroy();
@@ -1110,7 +1034,6 @@ h3.textContent = 'Lançamentos — ' + label;
         type: "pie",
         data: { labels: Object.keys(porCat), datasets: [{ data: Object.values(porCat) }] }
       });
-    }
 
     // Fluxo por mês
     if (chartFluxo) chartFluxo.destroy();
@@ -1128,7 +1051,6 @@ h3.textContent = 'Lançamentos — ' + label;
         data: { labels, datasets: [{ label: "Fluxo", data: labels.map(l => porMes[l]) }] }
       });
     }
-  }
 
   // ========= SELECTOR DE MESES =========
   function buildMonthSelect() {
@@ -1162,7 +1084,6 @@ h3.textContent = 'Lançamentos — ' + label;
       savePrefs();
       render();
     };
-  }
 
   // ========= NOVOS INSIGHTS / ANÁLISES =========
   // Helpers de série temporal
@@ -1182,7 +1103,6 @@ h3.textContent = 'Lançamentos — ' + label;
   function netByMonth(ym) {
     const txs = (S.tx || []).filter(x => x.data && String(x.data).startsWith(ym));
     const des = txs.filter(x=>x.tipo==="Despesa").reduce((a,b)=>a+Number(b.valor),0);
-  }
 
   // Top 5 categorias (12 meses) — preenche #tblTop
   function renderTopCategorias12m(limit=5){
@@ -1207,7 +1127,6 @@ h3.textContent = 'Lançamentos — ' + label;
         tbody.appendChild(tr);
       });
     }
-  }
 
   // Média de gastos por categoria (6 meses) — preenche #tblMediaCats
   function renderMediaPorCategoria(windowMonths=6){
@@ -1235,7 +1154,6 @@ h3.textContent = 'Lançamentos — ' + label;
         tbody.appendChild(tr);
       });
     }
-  }
 
   // Tendência do saldo (projeção até o fim do mês) — mostra em #kpiForecastFinal
   function renderTendenciaSaldo(){
@@ -1261,7 +1179,6 @@ h3.textContent = 'Lançamentos — ' + label;
       el.textContent = fmtMoney(proj);
       el.style.color = proj >= 0 ? "var(--ok)" : "var(--warn)";
     }
-  }
 
   // Previsão simples com média móvel de 3 meses (gráfico)
   let chartForecast;
@@ -1291,7 +1208,6 @@ h3.textContent = 'Lançamentos — ' + label;
         ]
       }
     });
-  }
 
   // Heatmap de gastos por dia do mês
   function renderHeatmap(){
@@ -1334,7 +1250,6 @@ h3.textContent = 'Lançamentos — ' + label;
         cell.title = `Despesas em ${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoney(v)}`;
       }
       wrap.appendChild(cell);
-    }
 
     // Legenda
     const legend = document.createElement('div');
@@ -1344,7 +1259,6 @@ h3.textContent = 'Lançamentos — ' + label;
     const sw3 = document.createElement('span'); sw3.className='swatch'; sw3.style.background='hsl(0,85%,40%)';
     legend.append('Menor', sw1, sw2, sw3, 'Maior');
     wrap.appendChild(legend);
-  }
 
   // ========= RENDER PRINCIPAL =========
   function buildLancCatFilter(){
@@ -1362,7 +1276,6 @@ h3.textContent = 'Lançamentos — ' + label;
       sel.append(o);
     });
     sel.value = current;
-  }
 
   
   // ===== Carteiras helpers =====
@@ -1378,14 +1291,13 @@ h3.textContent = 'Lançamentos — ' + label;
       }
     });
     return map;
-  }
+
   
   // ===== Carteiras — cálculos auxiliares =====
   // Usa o mês selecionado (ou ciclo de fatura se ativado)
   function txSelected(){
     const all = Array.isArray(S.tx) ? S.tx : [];
     return all.filter(x => x && x.data && inSelectedMonth(x));
-  }
 
   function sumInOutByWallet(wallet){
     const tx = txSelected().filter(x => (x.carteira === wallet && (x.tipo==="Receita" || x.tipo==="Despesa")));
@@ -1425,7 +1337,6 @@ h3.textContent = 'Lançamentos — ' + label;
                      '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
       ul.appendChild(li);
     });
-  }
 
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
@@ -1547,7 +1458,6 @@ function render() {
     // Metas
     renderMetaCard();
     renderMetasConfig();
-  }
 
   // ========= EVENTOS =========
 
@@ -1630,7 +1540,6 @@ function render() {
         await savePrefs();
       }
     });
-  }
 
   // Suporta #toggleHide (novo) e #cfgHide (antigo)
   const toggleHide = qs("#toggleHide") || qs("#cfgHide");
@@ -1674,11 +1583,9 @@ function render() {
   const fldDW = qs("#fieldDiaSemana");
   const fldM = qs("#fieldMes");
     if (!on) return;
-    const per = selPer?.value || "Mensal";
     if (fldDM) fldDM.style.display = (per === "Mensal" || per === "Anual") ? "block" : "none";
     if (fldDW) fldDW.style.display = (per === "Semanal") ? "block" : "none";
     if (fldM)  fldM.style.display  = (per === "Anual") ? "block" : "none";
-  }
 
   // ====== UX additions: currency mask, keyboard and focus handling ======
   (function enhanceModalUX(){
@@ -1728,7 +1635,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
           valorInput.setSelectionRange(len,len);
         });
       });
-    }
 
     function validateModal(){
       if (!formError) return true;
@@ -1743,7 +1649,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         return false;
       }
       return true;
-    }
 
     if (dialog){
       dialog.addEventListener('keydown', (e) => {
@@ -1837,7 +1742,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       chip.textContent = '—';
       chip.classList.remove('ok','warn');
       if (obs) obs.textContent = 'Defina uma meta para acompanhar o progresso.';
-    }
 
     const btnGo = document.getElementById('btnGoMetas');
     if (btnGo){
@@ -1876,7 +1780,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         alert(ok ? 'Metas salvas!' : 'Não foi possível salvar as metas.');
       };
     }
-  }
 
   // ========= RELATÓRIOS: estado, filtros e subtabs =========
   let R = { tab: 'fluxo', charts: {} };
@@ -1904,14 +1807,12 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (selCat){
       selCat.innerHTML = '<option value="todas" selected>Todas</option>' +
         (Array.isArray(S.cats)? S.cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('') : '');
-    }
 
     // ações de export e fullscreen
     document.querySelectorAll('[data-fs]').forEach(b=> b.onclick = ()=> openChartFullscreen(b.dataset.fs));
     document.querySelectorAll('[data-export]').forEach(b=> b.onclick = ()=> exportChartPNG(b.dataset.export));
     const fsClose = document.getElementById('fsClose');
     if (fsClose) fsClose.onclick = ()=> closeChartFullscreen();
-  }
 
   function getReportFilters(){
     const period = (document.getElementById('rPeriodo')||{}).value || '6m';
@@ -1927,7 +1828,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     } else if (period==='ytd') {
       const d = new Date(today.getFullYear(),0,1);
       startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    }
 
     // filtra transações
     let list = Array.isArray(S.tx)? S.tx.slice(): [];
@@ -1936,19 +1836,16 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
 
     return { period, tipo, cat, list };
-  }
 
   function chartTheme(){
     const dark = !!document.body.classList.contains('dark');
     return { color: dark? '#e5e7eb':'#0f172a', grid: dark? 'rgba(255,255,255,.08)':'rgba(2,6,23,.08)' };
-  }
 
   function ensureChart(id, cfg){
     if (R.charts[id]){ R.charts[id].destroy(); }
     const ctx = document.getElementById(id);
     if (!ctx || !window.Chart) return;
     R.charts[id] = new Chart(ctx, cfg);
-  }
 
   function renderReports(){
     const { list } = getReportFilters();
@@ -1956,7 +1853,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (window.Chart){
       Chart.defaults.color = theme.color;
       Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-    }
 
     // ==== Fluxo por mês (bar)
     {
@@ -1968,7 +1864,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         data:{ labels, datasets:[{ label:'Fluxo', data: labels.map(l=>byYM[l]) }] },
         options:{ scales:{ x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } }
       });
-    }
 
     // ==== Pie categorias (despesas)
     {
@@ -1981,7 +1876,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       const tb = document.querySelector('#tblTop2 tbody'); if (tb){
         tb.innerHTML = labels.map((l,i)=>`<tr><td>${l||'-'}</td><td>${(Number(data[i])||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
       }
-    }
 
     // ==== Previsão simples (média móvel) & média por categoria
     {
@@ -1995,7 +1889,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       ] }, options:{ scales:{ x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
       const kpi = document.getElementById('kpiForecastFinal2'); if (kpi){
         const last = vals.at(-1)||0; kpi.textContent = last.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-      }
 
       // média por categoria (despesa)
       const byCat = {};
@@ -2009,7 +1902,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
         }).join('');
         tb.innerHTML = lines;
       }
-    }
 
     // ==== YoY (barras lado a lado)
     {
@@ -2020,7 +1912,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       const labels = months.map(m=>m);
       const ds = years.map(y=>({ label:y, data: months.map(m=> byYearMonth[`${y}-${m}`]||0) }));
       ensureChart('chartYoY', { type:'bar', data:{ labels, datasets: ds }, options:{ scales:{ x:{ stacked:false, grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
-    }
 
     // ==== Receitas x Despesas (stacked)
     {
@@ -2028,13 +1919,11 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
       const labels = Object.keys(byYM).sort();
       const des = labels.map(l=> -byYM[l].D);
-    }
 
     // ==== Heatmap reaproveitado
     const hm = document.getElementById('heatmap2');
     const hmOld = document.getElementById('heatmap');
     if (hm){ hm.innerHTML = hmOld ? hmOld.innerHTML : '<div class="muted">Sem dados</div>'; }
-  }
 
   // ===== Exportar gráfico para PNG =====
   function exportChartPNG(id){
@@ -2045,7 +1934,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     link.download = `${id}.png`;
     link.href = c.toDataURL('image/png');
     link.click();
-  }
 
   // ===== Tela cheia =====
   function openChartFullscreen(id){
@@ -2063,7 +1951,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const fs = document.getElementById('chartFs');
     fs.hidden = true;
     if (R.charts._fs){ R.charts._fs.destroy(); R.charts._fs = null; }
-  }
 
   // ===== Hook no render existente =====
   const _origRender = typeof render === 'function' ? render : null;
@@ -2105,7 +1992,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
-}
 
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
@@ -2133,7 +2019,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     } catch (e) {
       return (String((x && x.data) || '').slice(0, 7) || '');
     }
-  }
 
   // inSelectedMonth: calendário por padrão; se S.useCycleForReports=true, usa ciclo (txBucketYM)
   function inSelectedMonth(x) {
@@ -2143,7 +2028,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       return txBucketYM(x) === SS.month;
     }
     return ymCal === SS.month;
-  }
 
   // Expor helpers no console
   try { window.txBucketYM = txBucketYM; window.inSelectedMonth = inSelectedMonth; } catch (e) {}
@@ -2164,7 +2048,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       btn.disabled = !v || dup;
       inp.classList.toggle('invalid', !!dup);
       btn.title = dup ? 'Categoria já existe' : 'Adicionar';
-    }
 
     btn.addEventListener('click', async () => {
       const v = inp.value.trim();
@@ -2187,7 +2070,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
     updateState();
   } catch(e){ console.warn('enhanceNewCategory error:', e); }
-})();
+} catch(e){})();
 
 // Prevent form submission inside modal (avoid page reload)
 (function(){
@@ -2211,7 +2094,6 @@ if (!window.resetValorInput) {
       if (el) el.value = '';
     } catch(_) {}
   };
-}
 
 // Garante setUseCycleForReports (se a versão do script não exportar)
 if (typeof window.setUseCycleForReports !== 'function' && window.S) {
@@ -2349,7 +2231,6 @@ function renderPessoas() {
     var list = listAll.slice();
     if (tipo !== "todos") {
       list = list.filter(function(x){ return x.tipo === tipo; });
-    }
 
     // ordena por data desc
     list.sort(function(a,b){ return String(b.data||"").localeCompare(String(a.data||"")); });
@@ -2364,11 +2245,9 @@ function renderPessoas() {
     var outEl = document.getElementById(outSel);
     if (inEl)  inEl.textContent  = fmt(totInAll);
     if (outEl) outEl.textContent = fmt(totOutAll);
-  }
 
   renderPessoa("Marido", "p1List", ".mini-toolbar[data-owner='Marido']", "p1In", "p1Out");
   renderPessoa("Esposa", "p2List", ".mini-toolbar[data-owner='Esposa']", "p2In", "p2Out");
-}
 
 // === LIGAÇÃO DOS BOTÕES DE FILTRO (Carteiras) ===
 document.addEventListener("click", function(e) {
@@ -2400,7 +2279,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     const prev = !!(el && el.disabled);
     if (el) el.disabled = true;
     try { return run(); } finally { if (el && !prev) el.disabled = false; }
-  }
 
   // Render debounced — preserva window.render original se existir
   const renderNow = (typeof render === 'function') ? render : () => {};
@@ -2492,7 +2370,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
     ].join('\n');
     document.head.appendChild(css);
-  }
 
   // --- helpers locais (redeclara, mas isolado neste IIFE) ---
   function toISO10(d){ var dd = new Date(d.getTime() - d.getTimezoneOffset()*60000); return dd.toISOString().slice(0,10); }
@@ -2564,7 +2441,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         header.id = 'resumoFamiliarHeader';
         header.innerHTML = '<div class="title"></div>';
         sec.insertBefore(header, sec.firstChild);
-      }
 
       // Container dos tiles
       var tiles = document.getElementById('gastosTotalTiles');
@@ -2574,7 +2450,6 @@ try { window.toggleModal = toggleModal; } catch(e) {}
         header.insertAdjacentElement('afterend', tiles);
       } else {
         tiles.innerHTML = '';
-      }
 
       // Cálculo
       var ym = S.month;
@@ -2617,14 +2492,13 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     });
   }
   if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
-})();
+} catch(e){})();
 
 /* === Compat alias to avoid ReferenceError === */
 if (typeof getActiveRangeForYM !== 'function') {
   function getActiveRangeForYM(ym) {
     return (typeof getRange === 'function') ? getRange(ym) : { start: '', end: '' };
   }
-}
 
 /* === Compat global for ymdInRange used by top-level functions === */
 if (typeof ymdInRange !== 'function') {
@@ -2632,7 +2506,6 @@ if (typeof ymdInRange !== 'function') {
     var s = String(ymd||''); 
     return s >= String(start||'') && s <= String(end||'');
   }
-}
 
 function openNovoLanc() {
   document.getElementById("modalLanc").style.display = "flex";
@@ -2682,7 +2555,6 @@ document.addEventListener("DOMContentLoaded", function(){
         var o = document.getElementById('mObs'); if (o) o.value='';
       }
     } catch(e){ console.error('openNovoLanc failed:', e); }
-  }
 
   function wire(){
     var btn = document.getElementById('btnNovo');
@@ -2692,7 +2564,6 @@ document.addEventListener("DOMContentLoaded", function(){
       openNovoLanc();
     });
     btn._wiredOpenNovoLanc = true;
-  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wire);
@@ -2729,7 +2600,6 @@ document.addEventListener("DOMContentLoaded", function(){
     // 0..6 (Domingo..Sábado) -> labels curtinhas
     var arr = ['D','S','T','Q','Q','S','S'];
     return arr[d] || '';
-  }
 
   function renderHeatmapMesAtual(){
     try{
@@ -2744,7 +2614,6 @@ document.addEventListener("DOMContentLoaded", function(){
       if (!/^\d{4}-\d{2}$/.test(ym)) {
         var dnow = new Date();
         ym = dnow.getFullYear() + '-' + String(dnow.getMonth()+1).padStart(2,'0');
-      }
 
       // Total de despesas por dia do mês
       var map = Object.create(null);
@@ -2756,7 +2625,6 @@ document.addEventListener("DOMContentLoaded", function(){
         if (!ds.startsWith(ym)) continue;
         var v = Number(t.valor)||0;
         map[ds] = (map[ds]||0) + v;
-      }
 
       var y = Number(ym.slice(0,4));
       var m = Number(ym.slice(5,7));
@@ -2768,7 +2636,6 @@ document.addEventListener("DOMContentLoaded", function(){
       for (var d=1; d<=ndays; d++){
         var ymd = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
         if ((map[ymd]||0) > vmax) vmax = map[ymd];
-      }
 
       // Cabeçalho: label mês/ano + legenda
       var head = document.createElement('div');
@@ -2800,14 +2667,12 @@ document.addEventListener("DOMContentLoaded", function(){
         lab.style.fontSize = '12px';
         lab.style.opacity = '.7';
         grid.appendChild(lab);
-      }
 
       // Preenche "blanks" antes do dia 1
       for (var k=0; k<startWeekday; k++){
         var blank = document.createElement('div');
         blank.style.height = '38px';
         grid.appendChild(blank);
-      }
 
       // Criar células do mês
       for (var day=1; day<=ndays; day++){
@@ -2874,7 +2739,6 @@ document.addEventListener("DOMContentLoaded", function(){
           };
         })(ymd, tot));
 grid.appendChild(cell);
-      }
 
       cont.appendChild(grid);
 
@@ -2889,7 +2753,6 @@ grid.appendChild(cell);
     } catch(e){
       console.error('renderHeatmapMesAtual:', e);
     }
-  }
 
   // expõe global
   try { window.renderHeatmapMesAtual = renderHeatmapMesAtual; } catch(_){}
