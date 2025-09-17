@@ -2685,8 +2685,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
       '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
-    ].join('
-');
+    ].join('\n');
     document.head.appendChild(css);
   }
 
