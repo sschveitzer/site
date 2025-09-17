@@ -1,4 +1,21 @@
 
+/* === debug: global error & promise rejection logging === */
+(function(){
+  if (!window.__dbg) {
+    window.__dbg = true;
+    try {
+      window.addEventListener('error', function(e){
+        try { console.error('[window.onerror]', e.error || e.message, e); } catch(_) {}
+      });
+      window.addEventListener('unhandledrejection', function(e){
+        try { console.error('[unhandledrejection]', e.reason || e); } catch(_) {}
+      });
+      console.info('[boot] scripts.js loaded at', new Date().toISOString());
+    } catch(_) {}
+  }
+})();
+
+
 // === Bootstrap opener for FAB (+Lançamento) ===
 (function(){
   try {
@@ -56,6 +73,8 @@ function humanFormaPagamento(v){
 })();
 
 window.onload = function () {
+  try { console.log('[onload] start'); } catch(_) {}
+
   // Usa o supabase já criado no dashboard.html
   const supabaseClient = window.supabaseClient || supabase;
 
@@ -3071,4 +3090,6 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
+  try { console.log('[onload] end'); } catch(_) {}
+
 };
