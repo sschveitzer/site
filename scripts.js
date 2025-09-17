@@ -1,13 +1,18 @@
 
 // === Bootstrap opener for FAB (+Lançamento) ===
 (function(){
+  try {
     if (typeof window !== 'undefined' && typeof window.openNovoLanc !== 'function') {
       window.openNovoLanc = function(){
+        try {
           if (typeof toggleModal === 'function') { toggleModal(true); return; }
           if (typeof window.toggleModal === 'function') { window.toggleModal(true); return; }
           setTimeout(function(){
-            try { if (typeof window.toggleModal === 'function') window.toggleModal(true); } catch(e){ console.error(e); }
-          }, 0);
+            setTimeout(function(){
+              if (typeof window.toggleModal === 'function') {
+                try { window.toggleModal(true); } catch(e) { console.error(e); }
+              }
+            }, 0);
         } catch(e){ console.error(e); }
       };
     }
@@ -16,8 +21,10 @@
 
 // === Bootstrap shim for toggleModal (so inline onclick won't break) ===
 (function(){
+  try {
     if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
       window.toggleModal = function(show, title){
+        try {
           // If the real toggleModal is defined later, delegate on next tick
           setTimeout(function(){
             try { if (typeof window.toggleModal === 'function' && window.toggleModal !== arguments.callee) window.toggleModal(show, title); } catch(_){}
@@ -57,6 +64,7 @@ function humanFormaPagamento(v){
 
 // === Bootstrap globals (S, supabaseClient) ===
 (function(){
+  try {
     if (typeof window !== 'undefined') {
       window.S = window.S || {};
       // If a Supabase client exists on window, alias it to a global var name used by the app
@@ -93,6 +101,7 @@ window.onload = function () {
   S.walletList = ["Casa","Marido","Esposa"];
 
 // Expor S e um setter global para alternar o modo de ciclo nos relatórios/metas
+try {
   window.S = S;
   if (typeof window.setUseCycleForReports !== 'function') {
     window.setUseCycleForReports = function(v){
@@ -118,6 +127,7 @@ window.onload = function () {
       .slice(0, 10);
   }
   function toYMD(d) {
+    try {
       const dt = (d instanceof Date) ? d : new Date(d);
       if (!(dt instanceof Date) || isNaN(dt.getTime())) return '';
       return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
@@ -157,6 +167,7 @@ function money(v){
 
   // Retorna "YYYY-MM" do mês anterior ao fornecido (também "YYYY-MM")
   function prevYM(ym) {
+    try {
       const [y, m] = ym.split("-").map(Number);
       const d = new Date(y, (m - 1) - 1, 1);
       return d.toISOString().slice(0, 7);
@@ -188,6 +199,7 @@ function money(v){
 
 // === Helpers de abreviação de mês/ano ===
 function abbrevLabelFromYM(ym){
+  try {
     if (!/^\d{4}-\d{2}$/.test(String(ym))) return String(ym);
     var parts = ym.split('-');
     var y = Number(parts[0]);
@@ -199,6 +211,7 @@ function abbrevLabelFromYM(ym){
 }
 
 function ensureMonthSelectLabels(){
+  try {
     var sel = document.getElementById('monthSelect');
     if (!sel) return;
     Array.from(sel.options || []).forEach(function(opt){
@@ -253,12 +266,20 @@ function ensureMonthSelectLabels(){
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
       S.month = `${y}-${m}`;
-}
+    }
+
+    // Recorrências
+    const { data: recs, error: recErr } = await supabaseClient.from("recurrences").select("*");
+    if (recErr) { console.error("Erro ao carregar recorrências:", recErr); S.recs = []; }
+    else { S.recs = recs || []; }
+
+    // Materializa recorrências vencidas
+    await (window.applyRecurrences ? window.applyRecurrences() : applyRecurrences());
     // Carrega metas do Supabase
     await fetchMetas();
 
     render();
-    
+    try { renderRecManager(); } catch(e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -311,23 +332,131 @@ function ensureMonthSelectLabels(){
   }
 
   // ========= RECORRÊNCIAS =========
-  
-/* removed function saveRec */
+  async function saveRec(r) {
+    try {
+      const src = Object.assign({}, r || {});
+      const allowed = ['id','tipo','categoria','descricao','valor','obs','periodicidade','proxima_data','fim_em','ativo','ajuste_fim_mes','dia_mes','dia_semana','mes'];
+      const rec = {};
+      allowed.forEach(k => { if (k in src) rec[k] = src[k]; });
 
-  
-/* removed function deleteRec */
+      if (rec.id === undefined || rec.id === null || rec.id === '') delete rec.id;
+      rec.tipo = String(rec.tipo || '').trim();
+      rec.categoria = String(rec.categoria || '').trim();
+      rec.descricao = String(rec.descricao || '').trim();
+      rec.obs = (rec.obs == null ? null : String(rec.obs));
+      rec.periodicidade = String(rec.periodicidade || '').trim();
 
-  
-/* removed function toggleRecAtivo */
+      rec.valor = Number(rec.valor) || 0;
+      rec.ativo = (rec.ativo !== false);
+      rec.ajuste_fim_mes = !!rec.ajuste_fim_mes;
+      if (rec.obs !== null && rec.obs !== undefined && String(rec.obs).trim() === '') rec.obs = null;
+      // Periodicidade: preserva apenas campos relevantes
+      if (rec.periodicidade === 'Mensal') {
+        rec.dia_semana = null; rec.mes = null;
+      } else if (rec.periodicidade === 'Semanal') {
+        rec.dia_mes = null; rec.mes = null;
+      } else if (rec.periodicidade === 'Anual') {
+        rec.dia_semana = null;
+      }
 
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(rec.proxima_data||''))) {
+        rec.proxima_data = nowYMD();
+      }
+      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(String(rec.fim_em))) {
+        rec.fim_em = null;
+      }
 
-  
-/* removed function materializeOne */
+      rec.dia_mes = (Number(rec.dia_mes) || null);
+      rec.dia_semana = (Number(rec.dia_semana) || null);
+      rec.mes = (Number(rec.mes) || null);
 
+      console.log('[saveRec] payload →', rec);
+      const { data, error } = await supabaseClient.from("recurrences").upsert([rec]).select().single();
+      if (error) {
+        console.error('[saveRec] supabase error →', error);
+        alert('Erro ao salvar recorrência: ' + (error.message || JSON.stringify(error)));
+      }
+      return { data, error };
+    } catch(e){
+      console.error('saveRec failed (catch):', e);
+      alert('Falha ao salvar recorrência: ' + (e && e.message ? e.message : e));
+      return { data: null, error: e };
+    }
+  }
+  async function deleteRec(id) {
+    return await supabaseClient.from("recurrences").delete().eq("id", id);
+  }
+  async function toggleRecAtivo(id, ativo) {
+    return await supabaseClient.from("recurrences").update({ ativo }).eq("id", id);
+  }
 
-  
-/* removed function applyRecurrences */
+  async function materializeOne(rec, occDate) {
+  const selPag = qs('#mPagamento');
+    const t = {
+      id: gid(),
+      tipo: rec.tipo,
+      categoria: rec.categoria,
+      data: occDate,
+      descricao: rec.descricao,
+      valor: Number(rec.valor) || 0,
+      obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
+      recurrence_id: rec.id,
+      occurrence_date: occDate
+    };
+    // Carteira/Transferência
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+    }
+    /* removed stray save */
+}
 
+  async function applyRecurrences() {
+  const selPag = qs('#mPagamento');
+    try { window.applyRecurrences = applyRecurrences; } catch(_) {}
+    if (!Array.isArray(S.recs) || !S.recs.length) return;
+    const today = nowYMD();
+
+    for (const r of S.recs) {
+      if (!r.ativo) continue;
+      if (r.fim_em && r.fim_em < today) continue;
+
+      let next = r.proxima_data || today;
+      let changed = false;
+
+      while (next <= today) {
+        if (r.fim_em && next > r.fim_em) break;
+        await materializeOne(r, next);
+        changed = true;
+
+        if (r.periodicidade === "Mensal") {
+          next = incMonthly(next, r.dia_mes || 1, r.ajuste_fim_mes ?? true);
+        } else if (r.periodicidade === "Semanal") {
+          next = incWeekly(next);
+        } else if (r.periodicidade === "Anual") {
+          next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
+        } else {
+      if (selPag) selPag.disabled = false;
+          break;
+        }
+      }
+
+      if (changed) {
+        await supabaseClient.from("recurrences").update({ proxima_data: next }).eq("id", r.id);
+      }
+    }
+
+    // Recarrega transações após gerar
+    const { data: tx } = await supabaseClient.from("transactions").select("*");
+    S.tx = tx || [];
+  }
 
   // ========= UI BÁSICA =========
   function setTab(name) {
@@ -366,6 +495,28 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
 
+      // Reset de recorrência
+      const chk = qs("#mRepetir");
+      const box = qs("#recurrenceFields");
+      if (chk && box) {
+        chk.checked = false;
+        box.style.display = "none";
+      }
+      const inpIni = qs("#mInicio");
+      const inpFim = qs("#mFim");
+      const inpDM  = qs("#mDiaMes");
+      const selDW  = qs("#mDiaSemana");
+      const selM   = qs("#mMes");
+      const selPer = qs("#mPeriodicidade");
+      const chkAdj = qs("#mAjusteFimMes");
+      if (inpIni) inpIni.value = nowYMD();
+      if (inpFim) inpFim.value = "";
+      if (inpDM)  inpDM.value  = new Date().getDate();
+      if (selDW)  selDW.value  = String(new Date().getDay() || 1);
+      if (selM)   selM.value   = String(new Date().getMonth() + 1);
+      if (selPer) selPer.value = "Mensal";
+      if (chkAdj) chkAdj.checked = true;
+
       setTimeout(() => qs("#mValorBig")?.focus(), 0);
     } else {
       if (selPag) selPag.disabled = false;
@@ -399,6 +550,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       var t = ev.target;
       if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
         ev.preventDefault();
+        try {
           if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
             window.addOrUpdate && setTimeout(() => window.addOrUpdate(true), 0);
           } else {
@@ -472,6 +624,7 @@ async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
+    try {
 const selPag = qs('#mPagamento');
 
     const valor = parseMoneyMasked(qs("#mValorBig")?.value);
@@ -501,11 +654,28 @@ const selPag = qs('#mPagamento');
       t.carteira_origem = null;
       t.carteira_destino = null;
     // forma de pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? 'outros' : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-}
+const chkRepetir = qs("#mRepetir");
+    if (S.editingId || !chkRepetir?.checked) {
+      await saveTx(t);
+      await loadAll();
+    if (window.resetValorInput) window.resetValorInput();
+    if (!keepOpen) { toggleModal(false); }
+    return;
+    }
 
+    // Criar recorrência
+    const perEl = qs("#mPeriodicidade");
+    const per = perEl ? perEl.value : "Mensal";
+    const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
+    const dow    = Number(qs("#mDiaSemana")?.value || 1);
+    const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
+    let inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
+    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
+    const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
+    const ajuste = !!qs("#mAjusteFimMes")?.checked;
 
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
@@ -552,28 +722,21 @@ const selPag = qs('#mPagamento');
       if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
       else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
       else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
-      await supabaseClient.from('transactions') /* removed recurrences ref */.update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
+      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
     }
 
     await loadAll();
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
-  
-
-        await saveTx(t);
-        await loadAll();
-        if (window.resetValorInput) window.resetValorInput();
-        if (!keepOpen) { toggleModal(false); }
-        return;
-        
-}
+  }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
   
   // ========= EXCLUIR LANÇAMENTO =========
   async function delTx(id) {
+    try {
       if (!id) return;
       const ok = typeof confirm === 'function' ? confirm("Excluir lançamento?") : true;
       if (!ok) return;
@@ -631,8 +794,77 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
 // === Recorrências: manager (Config) ===
+function renderRecManager(){
+  const tb = document.querySelector('#tblRecorrencias tbody');
+  if (!tb) return;
+  tb.innerHTML = '';
+  const recs = Array.isArray(S.recs) ? [...S.recs] : [];
+  if (!recs.length){
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 8;
+    td.className = 'muted';
+    td.textContent = 'Nenhuma recorrência cadastrada.';
+    tr.appendChild(td);
+    tb.appendChild(tr);
+    return;
+  }
+  recs.sort((a,b)=>String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')));
+  recs.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.descricao||'-'}</td>
+      <td>${r.categoria||'-'}</td>
+      <td>${r.tipo||'-'}</td>
+      <td>${fmtMoney(Number(r.valor)||0)}</td>
+      <td>${r.periodicidade||'-'}</td>
+      <td>${r.proxima_data||'-'}</td>
+      <td><input type="checkbox" data-act="toggle" data-id="${r.id}" ${r.ativo!==false?'checked':''}></td>
+      <td>
+        <button class="btn-acao" data-act="edit-next" data-id="${r.id}" title="Editar próxima data"><i class="ph ph-calendar-check"></i></button>
+        <button class="btn-acao" data-act="gen-month" data-id="${r.id}" title="Gerar mês selecionado"><i class="ph ph-calendar-plus"></i></button>
+        <button class="btn-acao" data-act="del" data-id="${r.id}" title="Excluir"><i class="ph ph-trash"></i></button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+}
 
-/* removed function renderRecManager */
+document.addEventListener('click', async function(ev){
+  const btn = ev.target.closest('#tblRecorrencias [data-act], #btnNovaRec');
+  if (!btn) return;
+  if (btn.id === 'btnNovaRec'){
+    try { toggleModal(true, 'Nova recorrência'); } catch(_) {}
+    setTimeout(()=>{
+      const chk = document.getElementById('mRepetir');
+      if (chk) { chk.checked = true; const box=document.getElementById('recurrenceFields'); if (box) box.style.display=''; }
+    }, 0);
+    return;
+  }
+  const act = btn.getAttribute('data-act');
+  const id  = btn.getAttribute('data-id');
+  if (!id) return;
+  if (act==='edit-next'){
+    quickEditRecurrenceStart(id);
+  } else if (act==='gen-month'){
+    backfillRecurrenceToSelectedMonth(id);
+  } else if (act==='del'){
+    if (!confirm('Excluir esta recorrência?')) return;
+    await deleteRec(id);
+    await loadAll();
+  }
+});
+
+document.addEventListener('change', async function(ev){
+  const cb = ev.target.closest('#tblRecorrencias input[type="checkbox"][data-act="toggle"]');
+  if (!cb) return;
+  const id = cb.getAttribute('data-id');
+  await toggleRecAtivo(id, !!cb.checked);
+  await loadAll();
+});
+
+
+
 
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
@@ -653,6 +885,7 @@ function computeGastosPorCarteira(ym){
 function renderGastosCarteiras(){
   
   if (!S || !S.month) return;
+  try {
     const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
     // Deltas do split (Dinheiro/Pix) para Marido/Esposa
     const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
@@ -865,11 +1098,15 @@ h3.textContent = 'Lançamentos — ' + label;
     const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
     }
 
-    
+    // Edição: esconde blocos de recorrência (edita só esta instância)
+    const chk = qs("#mRepetir");
+    const box = qs("#recurrenceFields");
+    if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
     
     // Garantir exibição da forma de pagamento ao editar
+    try {
       const __selPag = qs('#mPagamento');
       if (x && __selPag) {
         if (x.tipo !== "Transferência") {
@@ -993,6 +1230,7 @@ h3.textContent = 'Lançamentos — ' + label;
     // ==== mês anterior para comparação ====
     function _ymPrev(ym){
       if (!ym || ym.length < 7) { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
+      try {
         const parts = ym.split('-'); const y = parseInt(parts[0],10); const m = parseInt(parts[1],10);
         const d = new Date(y, m-2, 1); return d.toISOString().slice(0,7);
       } catch(_) { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
@@ -1158,7 +1396,7 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
-    
+    try { renderRecManager(); } catch(e) {}
     };
   }
 
@@ -1434,6 +1672,7 @@ h3.textContent = 'Lançamentos — ' + label;
 function computeSplitDeltas(items){
   var delta = { Marido: 0, Esposa: 0 };
   if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
+  try {
     items.forEach(function(x){
       if (!x || x.tipo !== "Despesa") return;
       var car = x.carteira || "";
@@ -1471,6 +1710,7 @@ function renderCarteiras(){
         el.appendChild(card);
       
   // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
+  try {
     var section = document.getElementById('carteiras');
 if (section) {
   var grid = section.querySelector('.grid-carteiras');
@@ -1636,13 +1876,14 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
-    
+    try { renderRecManager(); } catch(e) {}
     await savePrefs();
   };
 
   // Toggle do ciclo na topbar (ao lado de Esconder valores)
   const toggleCycle = qs('#toggleCycle') || qs('#useCycleForReports');
   if (toggleCycle) toggleCycle.onchange = async e => {
+    try {
       setUseCycleForReports(!!e.target.checked); // já salva e re-renderiza
     } catch (err) {
       console.error('Falha ao alternar ciclo:', err);
@@ -1671,8 +1912,8 @@ function render() {
   });
 
   // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
-  const chkRepetir = qs("#");
-  const recurrenceBox = qs("#");
+  const chkRepetir = qs("#mRepetir");
+  const recurrenceBox = qs("#recurrenceFields");
   const selPer = qs("#mPeriodicidade");
   const fldDM = qs("#fieldDiaMes");
   const fldDW = qs("#fieldDiaSemana");
@@ -1782,6 +2023,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
   // ========= METAS (Supabase) =========
   async function fetchMetas(){
+    try{
       const { data, error } = await supabaseClient
         .from('goals')
         .select('*')
@@ -1795,6 +2037,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     }
   }
   async function persistMetas(m){
+    try{
       const payload = { id: 1, total: Number(m.total)||0, por_cat: m.porCat||{}, updated_at: new Date().toISOString() };
       const { error } = await supabaseClient.from('goals').upsert([payload]);
       if (error) { console.error('Erro ao salvar metas:', error); return false; }
@@ -2110,6 +2353,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   loadAll();
 
   // Expose some functions for out-of-onload modules
+  try {
     window.saveCat = saveCat;
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
@@ -2121,6 +2365,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   // Se não houver fechamento, usa mês-calendário (YYYY-MM).
   function txBucketYM(x) {
   const selPag = qs('#mPagamento');
+    try {
       const SS = (typeof S !== 'undefined' ? S : (typeof window !== 'undefined' ? window.S : null)) || {};
       const ymd = String((x && x.data) || '');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
@@ -2159,6 +2404,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
 // === UX: Nova Categoria (enter para enviar, valida duplicado, botão desabilita) ===
 (function enhanceNewCategory(){
+  try {
     const inp = document.querySelector('#newCatName');
     const btn = document.querySelector('#addCat');
     if (!inp || !btn) return;
@@ -2219,6 +2465,7 @@ if (!window.qsa) window.qsa = (sel, ctx = document) => Array.from((ctx || docume
 // Garante resetValorInput global (usado ao abrir/fechar modal)
 if (!window.resetValorInput) {
   window.resetValorInput = function(){
+    try {
       const el = document.getElementById('mValorBig');
       if (el) el.value = '';
     } catch(_) {}
@@ -2564,6 +2811,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
 
   // --- Render dos tiles ---
   function renderGastoTotalTiles(){
+    try{
       if (!(window.S && S.month)) return;
       var sec = document.getElementById('carteiras'); if (!sec) return;
       ensureTilesCSS();
@@ -2667,8 +2915,8 @@ function openNovoLanc() {
   if (document.getElementById("mCategoria")) document.getElementById("mCategoria").selectedIndex = 0;
   if (document.getElementById("mPagamento")) document.getElementById("mPagamento").selectedIndex = 0;
   if (document.getElementById("mCarteira")) document.getElementById("mCarteira").selectedIndex = 0;
-  document.getElementById("").checked = false;
-  if (document.getElementById("")) document.getElementById("").style.display = "none";
+  document.getElementById("mRepetir").checked = false;
+  if (document.getElementById("recurrenceFields")) document.getElementById("recurrenceFields").style.display = "none";
   document.getElementById("mData").valueAsDate = new Date();
   document.getElementById("modalTitle").textContent = "Nova Despesa";
   document.querySelectorAll("#tipoTabs button").forEach(btn => {
@@ -2691,6 +2939,7 @@ document.addEventListener("DOMContentLoaded", function(){
 // === Force "+ Lançamentos → Novo" to open as 'Nova Despesa' exactly like the screenshot ===
 (function ensureOpenNovoLanc(){
   function openNovoLanc(){
+    try {
       if (typeof toggleModal === 'function') {
         // Use the internal opener which already resets fields, sets date, title, tabs, etc.
         toggleModal(true, "Nova Despesa");
@@ -2708,8 +2957,8 @@ document.addEventListener("DOMContentLoaded", function(){
         var v = document.getElementById('mValorBig'); if (v) v.value='';
         var d = document.getElementById('mDesc'); if (d) d.value='';
         var o = document.getElementById('mObs'); if (o) o.value='';
-        var chk = document.getElementById(''); if (chk) chk.checked = false;
-        var box = document.getElementById(''); if (box) box.style.display = 'none';
+        var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
+        var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
       }
     } catch(e){ console.error('openNovoLanc failed:', e); }
   }
@@ -2763,6 +3012,7 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function renderHeatmapMesAtual(){
+    try{
       var cont = document.getElementById('heatmap2');
       if (!cont) return;
       // Limpa conteúdo anterior
@@ -2867,6 +3117,7 @@ document.addEventListener("DOMContentLoaded", function(){
         // Tooltip em vez de alert()
         cell.addEventListener('click', (function(ymdCopy, totCopy){
           return function(ev){
+            try{
               // Cria/recupera tooltip única dentro do container
               var cont = document.getElementById('heatmap2');
               if (!cont) return;
@@ -2924,6 +3175,7 @@ grid.appendChild(cell);
   try { window.renderHeatmapMesAtual = renderHeatmapMesAtual; } catch(_){}
 
   // tenta renderizar imediatamente se a div existir e houver dados
+  try {
     if (document.getElementById('heatmap2')) {
       // aguarda possível load dos dados
       setTimeout(function(){ 
@@ -2935,6 +3187,7 @@ grid.appendChild(cell);
 
 
 // Hook: re-render heatmap when switching to Heatmap tab in Relatórios
+try {
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.rtab[data-rtab="heatmap"]');
     if (btn) { try { window.renderHeatmapMesAtual(); } catch(_) {} }
@@ -2943,6 +3196,7 @@ grid.appendChild(cell);
 
 
 // Re-render heatmap when report/dashboard filters change
+try {
   document.addEventListener('change', function(ev){
     var id = ev.target && ev.target.id;
     if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
@@ -2953,6 +3207,7 @@ grid.appendChild(cell);
 
 
 // Ensure heatmap renders when entering the Relatórios top tab
+try {
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.tab[data-tab="relatorios"]');
     if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
@@ -2961,6 +3216,7 @@ grid.appendChild(cell);
 
 
 // Safety net: render when the heatmap panel becomes visible via mutations
+try {
   var hmObsTarget = document.getElementById('relatorios');
   if (hmObsTarget && 'MutationObserver' in window) {
     var hmObserver = new MutationObserver(function(){
