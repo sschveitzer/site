@@ -346,6 +346,15 @@ function ensureMonthSelectLabels(){
       rec.valor = Number(rec.valor) || 0;
       rec.ativo = (rec.ativo !== false);
       rec.ajuste_fim_mes = !!rec.ajuste_fim_mes;
+      if (rec.obs !== null && rec.obs !== undefined && String(rec.obs).trim() === '') rec.obs = null;
+      // Periodicidade: preserva apenas campos relevantes
+      if (rec.periodicidade === 'Mensal') {
+        rec.dia_semana = null; rec.mes = null;
+      } else if (rec.periodicidade === 'Semanal') {
+        rec.dia_mes = null; rec.mes = null;
+      } else if (rec.periodicidade === 'Anual') {
+        rec.dia_semana = null;
+      }
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(rec.proxima_data||''))) {
         rec.proxima_data = nowYMD();
