@@ -34,8 +34,6 @@
   } catch(e){}
 })();
 
-
-
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -110,8 +108,6 @@ try {
   }
 } catch (e) {}
 
-
-
   // ========= HELPERS GERAIS =========
   function gid() {
     return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
@@ -173,18 +169,9 @@ function money(v){
       return d.toISOString().slice(0, 7);
     }
   }
-    const [y, m] = ymd.split("-").map(Number);
-    let yy = y, mm = m + 1;
-    if (mm > 12) { mm = 1; yy += 1; }
-    const ld = lastDayOfMonth(yy, mm);
-    return toYMD(new Date(yy, mm - 1, day));
-  }
-  function incWeekly(ymd) { return addDays(ymd, 7); }
-    const [y] = ymd.split("-").map(Number);
-    const yy = y + 1;
-    const ld = lastDayOfMonth(yy, mes);
-    return toYMD(new Date(yy, mes - 1, day));
-  }
+  
+  
+  
 
   const qs  = (s) => document.querySelector(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
@@ -215,7 +202,6 @@ function ensureMonthSelectLabels(){
     });
   } catch(_) {}
 }
-
 
   // ========= LOAD DATA =========
   async function loadAll() {
@@ -260,6 +246,7 @@ function ensureMonthSelectLabels(){
       S.month = `${y}-${m}`;
     }
 
+    // Carrega metas do Supabase
     await fetchMetas();
 
     render();
@@ -314,6 +301,14 @@ function ensureMonthSelectLabels(){
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
   }
 
+  async 
+  async 
+  async 
+
+  async 
+
+  async 
+
   // ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
@@ -351,6 +346,10 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       syncTipoTabs();
       const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
 
+      if (chk && box) {
+        chk.checked = false;
+        box.style.display = "none";
+      }
       if (inpIni) inpIni.value = nowYMD();
       if (inpFim) inpFim.value = "";
       if (inpDM)  inpDM.value  = new Date().getDate();
@@ -450,7 +449,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     });
   }
 
-
 // Floating Action Button (FAB) for new entry
 var fabBtn = document.getElementById('btnNovoFab');
 if (fabBtn && !fabBtn._wired) {
@@ -499,15 +497,64 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-await saveTx(t);
+      await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
+    if (!keepOpen) { toggleModal(false); }
+    return;
+    }
+
+    const per = perEl ? perEl.value : "Mensal";
+    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
+
+    // define próxima data inicial baseada no "início"
+    let proxima = inicio;
+    if (per === "Mensal") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
+      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
+    } else if (per === "Semanal") {
+      proxima = incWeekly(inicio);
+    } else if (per === "Anual") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
+      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
+    }
+
+      // id ausente para INSERT, será atribuído pelo banco
+      tipo: t.tipo,
+      categoria: t.categoria,
+      descricao: t.descricao,
+      valor: t.valor,
+      obs: t.obs,
+      proxima_data: proxima,
+      fim_em: fim,
+      ativo: true,
+      ajuste_fim_mes: ajuste,
+      dia_mes: diaMes,
+      dia_semana: dow,
+      mes: mes
+    };
+
+    if (error) {
+      console.error(error);
+    }
+
+    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
+    if (t.data === saved.proxima_data) {
+      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
+      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
+    }
+
+    await loadAll();
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
   }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
-
 
   
   // ========= EXCLUIR LANÇAMENTO =========
@@ -524,7 +571,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     }
   }
   try { window.delTx = delTx; } catch (e) {}
-
 
   
   // ========= TRANSAÇÕES =========
@@ -568,6 +614,29 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     list.forEach(x => ul.append(itemTx(x, true)));
   }
 
+document.addEventListener('click', async function(ev){
+  if (!btn) return;
+  if (btn.id === 'btnNovaRec'){
+    setTimeout(()=>{
+    }, 0);
+    return;
+  }
+  const act = btn.getAttribute('data-act');
+  const id  = btn.getAttribute('data-id');
+  if (!id) return;
+  if (act==='edit-next'){
+  } else if (act==='gen-month'){
+  } else if (act==='del'){
+    await deleteRec(id);
+    await loadAll();
+  }
+});
+
+document.addEventListener('change', async function(ev){
+  if (!cb) return;
+  const id = cb.getAttribute('data-id');
+  await loadAll();
+});
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
 function computeGastosPorCarteira(ym){
@@ -632,7 +701,6 @@ function renderGastosCarteiras(){
   } catch(e){ console.error('renderGastosCarteiras:', e); }
 }
 
-
   function renderLancamentos() {
 
     // Atualiza o título com o mês selecionado (ex.: "Lançamentos — Setembro/2025")
@@ -677,7 +745,6 @@ h3.textContent = 'Lançamentos — ' + label;
     if (Sref && Sref.month && Sref.month !== 'all') {
       list = list.filter(x => x && x.data && String(x.data).startsWith(Sref.month));
     }
-
 
     list = list.filter(x => {
       if (tipo !== 'todos' && x.tipo !== tipo) return false;
@@ -800,7 +867,7 @@ h3.textContent = 'Lançamentos — ' + label;
     const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
     }
 
-        if (chk && box) { chk.checked = false; box.style.display = "none"; }
+    if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
     const modal = qs("#modalLanc"); if (modal) modal.style.display = "flex";
     
@@ -966,7 +1033,6 @@ h3.textContent = 'Lançamentos — ' + label;
 
     const saldoPrev = receitasPrev - despesasPrev;
 
-
     function formatDeltaPct(cur, prev) {
       if (prev > 0) {
         const pct = ((cur - prev) / prev) * 100;
@@ -1115,9 +1181,7 @@ h3.textContent = 'Lançamentos — ' + label;
   }
   function netByMonth(ym) {
     const txs = (S.tx || []).filter(x => x.data && String(x.data).startsWith(ym));
-    const rec = txs.filter(x=>x.tipo==="Receita").reduce((a,b)=>a+Number(b.valor),0);
     const des = txs.filter(x=>x.tipo==="Despesa").reduce((a,b)=>a+Number(b.valor),0);
-    return rec - des;
   }
 
   // Top 5 categorias (12 meses) — preenche #tblTop
@@ -1363,7 +1427,6 @@ h3.textContent = 'Lançamentos — ' + label;
     });
   }
 
-
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
 // === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
 // Regra: só quem NÃO pagou recebe ajuste (cobrança de 50%).
@@ -1587,7 +1650,6 @@ function render() {
     }
   };
 
-
   // Ícone de Config na topbar (abre a aba Config)
   function wireBtnConfig(){
     const btn = document.getElementById('btnConfig');
@@ -1608,18 +1670,15 @@ function render() {
     }
   });
 
-  function syncRecurrenceFields() {
-    if (!chkRepetir || !recurrenceBox) return;
-    const on = chkRepetir.checked;
-    recurrenceBox.style.display = on ? "block" : "none";
+  const fldDM = qs("#fieldDiaMes");
+  const fldDW = qs("#fieldDiaSemana");
+  const fldM = qs("#fieldMes");
     if (!on) return;
     const per = selPer?.value || "Mensal";
     if (fldDM) fldDM.style.display = (per === "Mensal" || per === "Anual") ? "block" : "none";
     if (fldDW) fldDW.style.display = (per === "Semanal") ? "block" : "none";
     if (fldM)  fldM.style.display  = (per === "Anual") ? "block" : "none";
   }
-  if (chkRepetir) chkRepetir.addEventListener("change", syncRecurrenceFields);
-  if (selPer) selPer.addEventListener("change", syncRecurrenceFields);
 
   // ====== UX additions: currency mask, keyboard and focus handling ======
   (function enhanceModalUX(){
@@ -1968,9 +2027,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       const byYM = {};
       list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
       const labels = Object.keys(byYM).sort();
-      const rec = labels.map(l=> byYM[l].R);
       const des = labels.map(l=> -byYM[l].D);
-      ensureChart('chartRxV', { type:'bar', data:{ labels, datasets:[ {label:'Receitas', data:rec}, {label:'Despesas', data:des} ] }, options:{ scales:{ x:{ stacked:true, grid:{ color: theme.grid } }, y:{ stacked:true, grid:{ color: theme.grid } } } } });
     }
 
     // ==== Heatmap reaproveitado
@@ -2091,7 +2148,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   // Expor helpers no console
   try { window.txBucketYM = txBucketYM; window.inSelectedMonth = inSelectedMonth; } catch (e) {}
 
-
 // === UX: Nova Categoria (enter para enviar, valida duplicado, botão desabilita) ===
 (function enhanceNewCategory(){
   try {
@@ -2133,9 +2189,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   } catch(e){ console.warn('enhanceNewCategory error:', e); }
 })();
 
-
-
-
 // Prevent form submission inside modal (avoid page reload)
 (function(){
   var modalForm = document.querySelector('#modalLanc form') || document.querySelector('#modalLanc');
@@ -2144,8 +2197,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     modalForm._prevented = true;
   }
 })();
-
-
 
 // ===== Compat Shims (não invasivos) =====
 // Garante helpers globais se algum código externo esperar por eles
@@ -2178,7 +2229,6 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
     window.money = window.money || money;
   }
 } catch(_){} })();
-
 
 // ===== Pessoas (Marido/Esposa): mini-list, filtros e totais =====
 (function(){
@@ -2266,8 +2316,6 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
   }
   try { window.renderPessoas = renderPessoas; } catch(_){}
 })();
-
-
 
 // === RENDERIZAÇÃO DAS LISTAS DE PESSOAS (Carteiras) ===
 function renderPessoas() {
@@ -2392,11 +2440,34 @@ try { window.toggleModal = toggleModal; } catch(e) {}
     };
   })();
 
-  // materializeOne — override mantendo assinatura
-  window.materializeOne = )();
+    const t = {
+      id: (typeof gid==='function'? gid(): String(Date.now())),
+      data: occDate,
+      occurrence_date: occDate
+    };
+    if (window.modalTipo === 'Transferência') {
+      return (function(){
+        return withPagamentoDisabled(() => {
+          t.carteira = null;
+          t.carteira_origem  = ($('#mOrigem')?.value || 'Casa');
+          t.carteira_destino = ($('#mDestino')?.value || 'Marido');
+          return t;
+        });
+      })();
+    } else {
+      t.carteira = ($('#mCarteira')?.value || 'Casa');
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+      return t;
+    }
+  };
+
+  // addOrUpdate — override mantendo assinatura
+  window.addOrUpdate = /* módulo removido: cartões duplicados 'Gasto total — Marido/Esposa' */
+(function(){
+  // intencionalmente vazio para não injetar cartões duplicados
 })();
-
-
+})();
 
 /* =========================================================================
    GASTO TOTAL — TILES (2 colunas): Esposa e Marido
@@ -2563,7 +2634,6 @@ if (typeof ymdInRange !== 'function') {
   }
 }
 
-
 function openNovoLanc() {
   document.getElementById("modalLanc").style.display = "flex";
   document.getElementById("mValorBig").value = "";
@@ -2588,8 +2658,6 @@ document.addEventListener("DOMContentLoaded", function(){
   var btnFecharModal = document.getElementById("btnFecharModal");
   if(btnFecharModal){ btnFecharModal.addEventListener("click", () => { document.getElementById("modalLanc").style.display = "none"; }); }
 });
-
-
 
 // === Force "+ Lançamentos → Novo" to open as 'Nova Despesa' exactly like the screenshot ===
 (function ensureOpenNovoLanc(){
@@ -2632,7 +2700,6 @@ document.addEventListener("DOMContentLoaded", function(){
     wire();
   }
 })();
-
 
 /* ==== Heatmap de despesas (mês atual) ====
    Uso: window.renderHeatmapMesAtual()  // renderiza imediatamente se #heatmap2 existir
@@ -2838,7 +2905,6 @@ grid.appendChild(cell);
   } catch(_){}
 })();
 
-
 // Hook: re-render heatmap when switching to Heatmap tab in Relatórios
 try {
   document.addEventListener('click', function(ev){
@@ -2846,7 +2912,6 @@ try {
     if (btn) { try { window.renderHeatmapMesAtual(); } catch(_) {} }
   });
 } catch(_){}
-
 
 // Re-render heatmap when report/dashboard filters change
 try {
@@ -2858,7 +2923,6 @@ try {
   });
 } catch(_) {}
 
-
 // Ensure heatmap renders when entering the Relatórios top tab
 try {
   document.addEventListener('click', function(ev){
@@ -2866,7 +2930,6 @@ try {
     if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
   });
 } catch(_) {}
-
 
 // Safety net: render when the heatmap panel becomes visible via mutations
 try {
