@@ -2038,7 +2038,9 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     if (!inp || !btn) return;
 
     const norm = s => (s||'').trim().toLowerCase();
-    const isDup = (name) => Array.isArray(window.S?.cats) && window.S.cats.some(c => norm(c?.nome) === norm(name));
+    const isDup = (name) =>
+      Array.isArray(window.S?.cats) &&
+      window.S.cats.some(c => norm(c?.nome) === norm(name));
 
     function updateState(){
       const v = inp.value.trim();
@@ -2046,6 +2048,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       btn.disabled = !v || dup;
       inp.classList.toggle('invalid', !!dup);
       btn.title = dup ? 'Categoria já existe' : 'Adicionar';
+    }
 
     btn.addEventListener('click', async () => {
       const v = inp.value.trim();
@@ -2067,7 +2070,9 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     });
 
     updateState();
-  } catch(e){ console.warn('enhanceNewCategory error:', e); }
+  } catch(e){ 
+    console.warn('enhanceNewCategory error:', e); 
+  }
 })();
 
 // Prevent form submission inside modal (avoid page reload)
