@@ -252,7 +252,7 @@ function ensureMonthSelectLabels(){
     // Carrega metas do Supabase
     await fetchMetas();
 
-    render();
+    render();\n    try { renderRecManager(); } catch(e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -712,7 +712,77 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     ul.innerHTML = "";
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
+  }\n\n
+// === Recorrências: manager (Config) ===
+function renderRecManager(){
+  const tb = document.querySelector('#tblRecorrencias tbody');
+  if (!tb) return;
+  tb.innerHTML = '';
+  const recs = Array.isArray(S.recs) ? [...S.recs] : [];
+  if (!recs.length){
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 8;
+    td.className = 'muted';
+    td.textContent = 'Nenhuma recorrência cadastrada.';
+    tr.appendChild(td);
+    tb.appendChild(tr);
+    return;
   }
+  recs.sort((a,b)=>String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')));
+  recs.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.descricao||'-'}</td>
+      <td>${r.categoria||'-'}</td>
+      <td>${r.tipo||'-'}</td>
+      <td>${fmtMoney(Number(r.valor)||0)}</td>
+      <td>${r.periodicidade||'-'}</td>
+      <td>${r.proxima_data||'-'}</td>
+      <td><input type="checkbox" data-act="toggle" data-id="${r.id}" ${r.ativo!==false?'checked':''}></td>
+      <td>
+        <button class="btn-acao" data-act="edit-next" data-id="${r.id}" title="Editar próxima data"><i class="ph ph-calendar-check"></i></button>
+        <button class="btn-acao" data-act="gen-month" data-id="${r.id}" title="Gerar mês selecionado"><i class="ph ph-calendar-plus"></i></button>
+        <button class="btn-acao" data-act="del" data-id="${r.id}" title="Excluir"><i class="ph ph-trash"></i></button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+document.addEventListener('click', async function(ev){
+  const btn = ev.target.closest('#tblRecorrencias [data-act], #btnNovaRec');
+  if (!btn) return;
+  if (btn.id === 'btnNovaRec'){
+    try { toggleModal(true, 'Nova recorrência'); } catch(_) {}
+    setTimeout(()=>{
+      const chk = document.getElementById('mRepetir');
+      if (chk) { chk.checked = true; const box=document.getElementById('recurrenceFields'); if (box) box.style.display=''; }
+    }, 0);
+    return;
+  }
+  const act = btn.getAttribute('data-act');
+  const id  = btn.getAttribute('data-id');
+  if (!id) return;
+  if (act==='edit-next'){
+    quickEditRecurrenceStart(id);
+  } else if (act==='gen-month'){
+    backfillRecurrenceToSelectedMonth(id);
+  } else if (act==='del'){
+    if (!confirm('Excluir esta recorrência?')) return;
+    await deleteRec(id);
+    await loadAll();
+  }
+});
+
+document.addEventListener('change', async function(ev){
+  const cb = ev.target.closest('#tblRecorrencias input[type="checkbox"][data-act="toggle"]');
+  if (!cb) return;
+  const id = cb.getAttribute('data-id');
+  await toggleRecAtivo(id, !!cb.checked);
+  await loadAll();
+});
+\n\n
 
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
@@ -1243,7 +1313,7 @@ h3.textContent = 'Lançamentos — ' + label;
     sel.onchange = () => {
       S.month = sel.value;
       savePrefs();
-      render();
+      render();\n    try { renderRecManager(); } catch(e) {}
     };
   }
 
@@ -1722,7 +1792,7 @@ function render() {
   const toggleHide = qs("#toggleHide") || qs("#cfgHide");
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
-    render();
+    render();\n    try { renderRecManager(); } catch(e) {}
     await savePrefs();
   };
 

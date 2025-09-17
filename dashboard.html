@@ -409,7 +409,30 @@
         <h3>Transações recorrentes</h3>
         <ul id="listaRecorrentes" class="list"></ul>
       </div>
-    </section>
+    
+      <!-- Recorrências: Gerenciador -->
+      <div class="card" style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3>Recorrências</h3>
+          <button class="btn" id="btnNovaRec"><i class="ph ph-plus"></i> Nova recorrência</button>
+        </div>
+        <table id="tblRecorrencias" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Categoria</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Periodicidade</th>
+              <th>Próxima</th>
+              <th>Ativo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+</section>
   </div>
 
   <!-- Modal Lançamento (atualizado para recorrência) -->
