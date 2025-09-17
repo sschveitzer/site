@@ -4,13 +4,13 @@
   
     if (typeof window !== 'undefined' && typeof window.openNovoLanc !== 'function') {
       window.openNovoLanc = function(){
-        try {
+        
           if (typeof toggleModal === 'function') { toggleModal(true); return; }
           if (typeof window.toggleModal === 'function') { window.toggleModal(true); return; }
           setTimeout(function(){
             try { if (typeof window.toggleModal === 'function') window.toggleModal(true); }
           }, 0);
-        }
+        
       };
     }
   
@@ -21,14 +21,14 @@
   
     if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
       window.toggleModal = function(show, title){
-        try {
+        
           // If the real toggleModal is defined later, delegate on next tick
           setTimeout(function(){
             try { if (typeof window.toggleModal === 'function' && window.toggleModal !== arguments.callee) window.toggleModal(show, title); }
           }, 0);
           // Fallback: try openNovoLanc for show=true
           if (show === true && typeof window.openNovoLanc === 'function') { window.openNovoLanc(); }
-        }
+        
       };
     }
   
@@ -66,7 +66,7 @@ function humanFormaPagamento(v){
         window.supabaseClient = window.supabase;
       }
       // Also expose a global identifier (var) to avoid ReferenceError when the code uses bare supabaseClient
-      try { window.supabaseClient = window.supabaseClient || null; }
+       window.supabaseClient = window.supabaseClient || null; 
     }
   
 })();
@@ -99,10 +99,10 @@ window.onload = function () {
   if (typeof window.setUseCycleForReports !== 'function') {
     window.setUseCycleForReports = function(v){
       S.useCycleForReports = !!v;
-      try { savePrefs(); }
-      try { render();
+       savePrefs(); 
+       render();
     ensureMonthSelectLabels();
-    try { renderPessoas(); } }
+    try { renderPessoas(); } 
     };
   }
 
@@ -1393,7 +1393,7 @@ var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSel
       var sign = function(x){ return x>=0?'+':''; };
       var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
       var ym = (window.S && S.month) ? S.month : new Date().toISOString().slice(0,7);
-      var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } })();
+      var labelMes = (function(){  return abbrevLabelFromYM(ym);  })();
 
       host.innerHTML = ''
         + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Outros) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
@@ -2453,21 +2453,21 @@ document.addEventListener("click", function(e) {
   // --- Integrar no pipeline existente ---
   var _renderGasto = window.renderGastoTotalPessoas;
   window.renderGastoTotalPessoas = function(){
-    try { if (_renderGasto) _renderGasto(); } }
+     if (_renderGasto) _renderGasto();  }
   };
 
   // Render inicial + eventos
   function boot(){
-    try { renderGastoTotalTiles(); }
+     renderGastoTotalTiles(); 
     var monthSel = document.getElementById('monthSelect');
     if (monthSel && !monthSel._wiredGastoTotalTiles){
-      monthSel.addEventListener('change', function(){ try { renderGastoTotalTiles(); } });
+      monthSel.addEventListener('change', function(){  renderGastoTotalTiles();  });
       monthSel._wiredGastoTotalTiles = true;
     }
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab[data-tab="carteiras"]')||[]);
     tabs.forEach(function(tab){
       if (tab._wiredGastoTotalTiles) return;
-      tab.addEventListener('click', function(){ try { renderGastoTotalTiles(); } });
+      tab.addEventListener('click', function(){  renderGastoTotalTiles();  });
       tab._wiredGastoTotalTiles = true;
     });
   }
@@ -2739,7 +2739,7 @@ grid.appendChild(cell);
     if (document.getElementById('heatmap2')) {
       // aguarda possível load dos dados
       setTimeout(function(){ 
-        try { window.renderHeatmapMesAtual(); }
+         window.renderHeatmapMesAtual(); 
       }, 50);
     }
   
@@ -2749,7 +2749,7 @@ grid.appendChild(cell);
 
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.rtab[data-rtab="heatmap"]');
-    if (btn) { try { window.renderHeatmapMesAtual(); } }
+    if (btn) {  window.renderHeatmapMesAtual();  }
   });
 
 // Re-render heatmap when report/dashboard filters change
@@ -2757,7 +2757,7 @@ grid.appendChild(cell);
   document.addEventListener('change', function(ev){
     var id = ev.target && ev.target.id;
     if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
-      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+       window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); 
     }
   });
 
@@ -2765,7 +2765,7 @@ grid.appendChild(cell);
 
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.tab[data-tab="relatorios"]');
-    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } }, 0); }
+    if (btn) { setTimeout(function(){  window.renderHeatmapMesAtual && window.renderHeatmapMesAtual();  }, 0); }
   });
 
 // Safety net: render when the heatmap panel becomes visible via mutations
@@ -2775,7 +2775,7 @@ grid.appendChild(cell);
     var hmObserver = new MutationObserver(function(){
       var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
       if (panel && panel.classList.contains('active')) {
-        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+         window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); 
       }
     });
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
