@@ -439,39 +439,7 @@ async function addOrUpdate(keepOpen=false) {
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
-    try {
-const selPag = qs('#mPagamento');
-
-    const valor = parseMoneyMasked(qs("#mValorBig")?.value);
-    const t = {
-      id: S.editingId || gid(),
-      tipo: modalTipo,
-      categoria: qs("#mCategoria")?.value || "",
-      data: isIsoDate(qs("#mData")?.value) ? qs("#mData").value : nowYMD(),
-      descricao: (qs("#mDesc")?.value || "").trim(),
-      valor: isFinite(valor) ? valor : 0,
-      obs: (qs("#mObs")?.value || "").trim()
-    };
-    if (!t.categoria) return alert("Selecione categoria");
-    if (!t.descricao) return alert("Descrição obrigatória");
-    if (!(t.valor > 0)) return alert("Informe o valor");
-
     
-    // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
-    if (modalTipo === "Transferência") {
-      if (selPag) selPag.disabled = true;
-      t.carteira = null;
-      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
-      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
-    } else {
-      if (selPag) selPag.disabled = false;
-      t.carteira = (qs("#mCarteira")?.value || "Casa");
-      t.carteira_origem = null;
-      t.carteira_destino = null;
-    // forma de pagamento
-    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
-
-    }
     try {
   // Recorrência removida — sempre salva uma transação única
   await saveTx(t);
