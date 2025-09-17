@@ -252,7 +252,8 @@ function ensureMonthSelectLabels(){
     // Carrega metas do Supabase
     await fetchMetas();
 
-    render();\n    try { renderRecManager(); } catch(e) {}
+    render();
+    try { renderRecManager(); } catch(e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -712,7 +713,9 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     ul.innerHTML = "";
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
-  }\n\n
+  }
+
+
 // === Recorrências: manager (Config) ===
 function renderRecManager(){
   const tb = document.querySelector('#tblRecorrencias tbody');
@@ -782,7 +785,9 @@ document.addEventListener('change', async function(ev){
   await toggleRecAtivo(id, !!cb.checked);
   await loadAll();
 });
-\n\n
+
+
+
 
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
@@ -1313,7 +1318,8 @@ h3.textContent = 'Lançamentos — ' + label;
     sel.onchange = () => {
       S.month = sel.value;
       savePrefs();
-      render();\n    try { renderRecManager(); } catch(e) {}
+      render();
+    try { renderRecManager(); } catch(e) {}
     };
   }
 
@@ -1792,7 +1798,8 @@ function render() {
   const toggleHide = qs("#toggleHide") || qs("#cfgHide");
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
-    render();\n    try { renderRecManager(); } catch(e) {}
+    render();
+    try { renderRecManager(); } catch(e) {}
     await savePrefs();
   };
 
@@ -2678,7 +2685,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
       '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
-    ].join('\n');
+    ].join('
+');
     document.head.appendChild(css);
   }
 
