@@ -16,6 +16,50 @@
   } catch(e){}
 })();
 
+// === Recorrências: ações rápidas (globais) ===
+if (typeof window.backfillRecurrenceToSelectedMonth !== 'function') {
+  async function backfillRecurrenceToSelectedMonth(recId){
+    try{
+      const rec = (S.recs||[]).find(r => String(r.id)===String(recId));
+      if (!rec) return alert('Recorrência não encontrada');
+      if (!S.month || !/^\d{4}-\d{2}$/.test(S.month)) return alert('Mês selecionado inválido');
+      const [yy, mm] = S.month.split('-').map(Number);
+      const ld = lastDayOfMonth(yy, mm);
+      const day = (rec.ajuste_fim_mes ? Math.min(Number(rec.dia_mes||1), ld) : Number(rec.dia_mes||1));
+      const occ = toYMD(new Date(yy, mm-1, day));
+      await materializeOne(rec, occ);
+      await loadAll();
+      alert('Ocorrência gerada para '+occ);
+    }catch(e){
+      console.error('backfillRecurrenceToSelectedMonth', e);
+      alert('Falha ao gerar ocorrência do mês selecionado.');
+    }
+  }
+  try { window.backfillRecurrenceToSelectedMonth = backfillRecurrenceToSelectedMonth; } catch(_){}
+}
+
+if (typeof window.quickEditRecurrenceStart !== 'function') {
+  async function quickEditRecurrenceStart(recId){
+    try{
+      const rec = (S.recs||[]).find(r => String(r.id)===String(recId));
+      if (!rec) return alert('Recorrência não encontrada');
+      const cur = rec.proxima_data || nowYMD();
+      const s = prompt('Defina a PRÓXIMA DATA (YYYY-MM-DD):', cur);
+      if (!s) return;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return alert('Formato inválido. Use YYYY-MM-DD.');
+      const { error } = await supabaseClient.from('recurrences').update({ proxima_data: s }).eq('id', rec.id);
+      if (error) { console.error(error); return alert('Erro ao salvar.'); }
+      await loadAll();
+      alert('Próxima data atualizada.');
+    }catch(e){
+      console.error('quickEditRecurrenceStart', e);
+      alert('Falha ao editar recorrência.');
+    }
+  }
+  try { window.quickEditRecurrenceStart = quickEditRecurrenceStart; } catch(_){}
+}
+
+
 // === Bootstrap shim for toggleModal (so inline onclick won't break) ===
 (function(){
   try {
