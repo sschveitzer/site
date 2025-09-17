@@ -13,7 +13,6 @@
                 try { window.toggleModal(true); } catch(e) { console.error(e); }
               }
             }, 0);
-        } catch(e){ console.error(e); }
       };
     }
   } catch(e){}
