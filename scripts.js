@@ -584,12 +584,16 @@ const selPag = qs('#mPagamento');
 
     }
 const chkRepetir = qs("#mRepetir");
-    if (S.editingId || !chkRepetir?.checked) {
-      await saveTx(t);
+    const wantsRec = !!chkRepetir?.checked;
+
+    // Sempre salva/atualiza o lançamento em si
+    await saveTx(t);
+
+    if (!wantsRec) {
       await loadAll();
-    if (window.resetValorInput) window.resetValorInput();
-    if (!keepOpen) { toggleModal(false); }
-    return;
+      if (window.resetValorInput) window.resetValorInput();
+      if (!keepOpen) { toggleModal(false); }
+      return;
     }
 
     // Criar recorrência
@@ -641,9 +645,8 @@ const chkRepetir = qs("#mRepetir");
       return alert("Erro ao salvar recorrência.");
     }
 
-    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
+    // Se a data do lançamento já é igual à próxima recorrência, não materializa de novo.
     if (t.data === saved.proxima_data) {
-      await materializeOne(saved, saved.proxima_data);
       if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
       else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
       else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
