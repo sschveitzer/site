@@ -16,25 +16,6 @@
   } catch(e){}
 })();
 
-// === Bootstrap shim for toggleModal (so inline onclick won't break) ===
-(function(){
-  try {
-    if (typeof window !== 'undefined' && typeof window.toggleModal !== 'function') {
-      window.toggleModal = function(show, title){
-        try {
-          // If the real toggleModal is defined later, delegate on next tick
-          setTimeout(function(){
-            try { if (typeof window.toggleModal === 'function' && window.toggleModal !== arguments.callee) window.toggleModal(show, title); } catch(_){}
-          }, 0);
-          // Fallback: try openNovoLanc for show=true
-          if (show === true && typeof window.openNovoLanc === 'function') { window.openNovoLanc(); }
-        } catch(e){ console.error(e); }
-      };
-    }
-  } catch(e){}
-})();
-
-
 
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
@@ -124,13 +105,9 @@ try {
       .slice(0, 10);
   }
   function toYMD(d) {
-    try {
-      const dt = (d instanceof Date) ? d : new Date(d);
-      if (!(dt instanceof Date) || isNaN(dt.getTime())) return '';
-      return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 10);
-    } catch(e){ console.error('toYMD invalid date:', d, e); return ''; }
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
   }
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -276,7 +253,6 @@ function ensureMonthSelectLabels(){
     await fetchMetas();
 
     render();
-    try { renderRecManager(); } catch(e) {}
     try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
     try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
 
@@ -307,22 +283,23 @@ function ensureMonthSelectLabels(){
 // Envia em snake_case para bater com o schema
   const payload = {
     id: 1,
-    month: S.month,
-    hide: !!S.hide,
-    dark: !!S.dark,
-    cc_due_day: (Number(S.ccDueDay) || null),
-    cc_closing_day: (Number(S.ccClosingDay) || null),
-    // ✅ novo: persiste o uso do ciclo da fatura
-    use_cycle_for_reports: !!S.useCycleForReports
-  };
-  const { error } = await supabaseClient.from("preferences").upsert([payload]);
-  if (error) {
-    console.error("Erro ao salvar preferências:", error);
-    alert("Não foi possível salvar as preferências: " + (error.message || "Erro desconhecido"));
-  }
-}
-
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
+// removed stray await block
   // Atualiza categoria nas transações (rename)
+}
   async function updateTxCategory(oldName, newName) {
     if (!oldName || !newName || oldName === newName) return;
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
@@ -330,55 +307,7 @@ function ensureMonthSelectLabels(){
 
   // ========= RECORRÊNCIAS =========
   async function saveRec(r) {
-    try {
-      const src = Object.assign({}, r || {});
-      const allowed = ['id','tipo','categoria','descricao','valor','obs','periodicidade','proxima_data','fim_em','ativo','ajuste_fim_mes','dia_mes','dia_semana','mes'];
-      const rec = {};
-      allowed.forEach(k => { if (k in src) rec[k] = src[k]; });
-
-      if (rec.id === undefined || rec.id === null || rec.id === '') delete rec.id;
-      rec.tipo = String(rec.tipo || '').trim();
-      rec.categoria = String(rec.categoria || '').trim();
-      rec.descricao = String(rec.descricao || '').trim();
-      rec.obs = (rec.obs == null ? null : String(rec.obs));
-      rec.periodicidade = String(rec.periodicidade || '').trim();
-
-      rec.valor = Number(rec.valor) || 0;
-      rec.ativo = (rec.ativo !== false);
-      rec.ajuste_fim_mes = !!rec.ajuste_fim_mes;
-      if (rec.obs !== null && rec.obs !== undefined && String(rec.obs).trim() === '') rec.obs = null;
-      // Periodicidade: preserva apenas campos relevantes
-      if (rec.periodicidade === 'Mensal') {
-        rec.dia_semana = null; rec.mes = null;
-      } else if (rec.periodicidade === 'Semanal') {
-        rec.dia_mes = null; rec.mes = null;
-      } else if (rec.periodicidade === 'Anual') {
-        rec.dia_semana = null;
-      }
-
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(rec.proxima_data||''))) {
-        rec.proxima_data = nowYMD();
-      }
-      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(String(rec.fim_em))) {
-        rec.fim_em = null;
-      }
-
-      rec.dia_mes = (Number(rec.dia_mes) || null);
-      rec.dia_semana = (Number(rec.dia_semana) || null);
-      rec.mes = (Number(rec.mes) || null);
-
-      console.log('[saveRec] payload →', rec);
-      const { data, error } = await supabaseClient.from("recurrences").upsert([rec]).select().single();
-      if (error) {
-        console.error('[saveRec] supabase error →', error);
-        alert('Erro ao salvar recorrência: ' + (error.message || JSON.stringify(error)));
-      }
-      return { data, error };
-    } catch(e){
-      console.error('saveRec failed (catch):', e);
-      alert('Falha ao salvar recorrência: ' + (e && e.message ? e.message : e));
-      return { data: null, error: e };
-    }
+    return await supabaseClient.from("recurrences").upsert([r]).select().single();
   }
   async function deleteRec(id) {
     return await supabaseClient.from("recurrences").delete().eq("id", id);
@@ -469,8 +398,6 @@ function ensureMonthSelectLabels(){
   const c=document.getElementById('mCategoria'); if(c) c.selectedIndex=0;
 }
 function toggleModal(show, titleOverride) {
-  try { window.toggleModal = toggleModal; } catch(_) {}
-
   const selPag = qs('#mPagamento');
 
     const m = qs("#modalLanc");
@@ -656,9 +583,13 @@ const selPag = qs('#mPagamento');
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
-      await saveTx(t);
-      await loadAll();
-    if (window.resetValorInput) window.resetValorInput();
+      try {
+    await saveTx(t);
+    await loadAll();
+  } catch(e){
+    console.error('Erro ao salvar transação', e);
+  }
+if (window.resetValorInput) window.resetValorInput();
     if (!keepOpen) { toggleModal(false); }
     return;
     }
@@ -669,8 +600,7 @@ const chkRepetir = qs("#mRepetir");
     const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
     const dow    = Number(qs("#mDiaSemana")?.value || 1);
     const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
-    let inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
-    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
+    const inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
     const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
     const ajuste = !!qs("#mAjusteFimMes")?.checked;
 
@@ -691,7 +621,7 @@ const chkRepetir = qs("#mRepetir");
     }
 
     const rec = {
-      // id ausente para INSERT, será atribuído pelo banco
+      id: undefined,
       tipo: t.tipo,
       categoria: t.categoria,
       descricao: t.descricao,
@@ -788,80 +718,6 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
     if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
     list.forEach(x => ul.append(itemTx(x, true)));
   }
-
-
-// === Recorrências: manager (Config) ===
-function renderRecManager(){
-  const tb = document.querySelector('#tblRecorrencias tbody');
-  if (!tb) return;
-  tb.innerHTML = '';
-  const recs = Array.isArray(S.recs) ? [...S.recs] : [];
-  if (!recs.length){
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 8;
-    td.className = 'muted';
-    td.textContent = 'Nenhuma recorrência cadastrada.';
-    tr.appendChild(td);
-    tb.appendChild(tr);
-    return;
-  }
-  recs.sort((a,b)=>String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')));
-  recs.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.descricao||'-'}</td>
-      <td>${r.categoria||'-'}</td>
-      <td>${r.tipo||'-'}</td>
-      <td>${fmtMoney(Number(r.valor)||0)}</td>
-      <td>${r.periodicidade||'-'}</td>
-      <td>${r.proxima_data||'-'}</td>
-      <td><input type="checkbox" data-act="toggle" data-id="${r.id}" ${r.ativo!==false?'checked':''}></td>
-      <td>
-        <button class="btn-acao" data-act="edit-next" data-id="${r.id}" title="Editar próxima data"><i class="ph ph-calendar-check"></i></button>
-        <button class="btn-acao" data-act="gen-month" data-id="${r.id}" title="Gerar mês selecionado"><i class="ph ph-calendar-plus"></i></button>
-        <button class="btn-acao" data-act="del" data-id="${r.id}" title="Excluir"><i class="ph ph-trash"></i></button>
-      </td>
-    `;
-    tb.appendChild(tr);
-  });
-}
-
-document.addEventListener('click', async function(ev){
-  const btn = ev.target.closest('#tblRecorrencias [data-act], #btnNovaRec');
-  if (!btn) return;
-  if (btn.id === 'btnNovaRec'){
-    try { toggleModal(true, 'Nova recorrência'); } catch(_) {}
-    setTimeout(()=>{
-      const chk = document.getElementById('mRepetir');
-      if (chk) { chk.checked = true; const box=document.getElementById('recurrenceFields'); if (box) box.style.display=''; }
-    }, 0);
-    return;
-  }
-  const act = btn.getAttribute('data-act');
-  const id  = btn.getAttribute('data-id');
-  if (!id) return;
-  if (act==='edit-next'){
-    quickEditRecurrenceStart(id);
-  } else if (act==='gen-month'){
-    backfillRecurrenceToSelectedMonth(id);
-  } else if (act==='del'){
-    if (!confirm('Excluir esta recorrência?')) return;
-    await deleteRec(id);
-    await loadAll();
-  }
-});
-
-document.addEventListener('change', async function(ev){
-  const cb = ev.target.closest('#tblRecorrencias input[type="checkbox"][data-act="toggle"]');
-  if (!cb) return;
-  const id = cb.getAttribute('data-id');
-  await toggleRecAtivo(id, !!cb.checked);
-  await loadAll();
-});
-
-
-
 
 
 // === Carteiras: gastos por carteira (mês/ciclo) ===
@@ -1393,7 +1249,6 @@ h3.textContent = 'Lançamentos — ' + label;
       S.month = sel.value;
       savePrefs();
       render();
-    try { renderRecManager(); } catch(e) {}
     };
   }
 
@@ -1873,7 +1728,6 @@ function render() {
   if (toggleHide) toggleHide.onchange = async e => {
     S.hide = !!e.target.checked;
     render();
-    try { renderRecManager(); } catch(e) {}
     await savePrefs();
   };
 
@@ -2469,14 +2323,6 @@ if (!window.resetValorInput) {
   };
 }
 
-// Garante setUseCycleForReports (se a versão do script não exportar)
-if (typeof window.setUseCycleForReports !== 'function' && window.S) {
-  window.setUseCycleForReports = function(v){
-    try { window.S.useCycleForReports = !!v; } catch(_) {}
-    try { if (typeof savePrefs === 'function') savePrefs(); } catch(_) {}
-    try { if (typeof render === 'function') render(); } catch(_) {}
-  };
-}
 // === Exports for console/debug ===
 (function(){ try {
   if (typeof window !== 'undefined'){
@@ -3225,3 +3071,4 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
+};
