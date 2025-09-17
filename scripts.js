@@ -82,7 +82,7 @@ window.onload = function () {
   let S = {
     tx: [],
     cats: [],
-    recs: [], // 
+    recs: [], // recorrências
     metas: { total: 0, porCat: {} },
     month: null,
     hide: false,
@@ -265,13 +265,12 @@ function ensureMonthSelectLabels(){
       S.month = `${y}-${m}`;
     }
 
-    // 
-    const /* [removed] recurrences fetch */
-
-    if (recErr) { console.error("Erro ao carregar :", recErr); S.recs = []; }
+    // Recorrências
+    const { data: recs, error: recErr } = await supabaseClient.from("recurrences").select("*");
+    if (recErr) { console.error("Erro ao carregar recorrências:", recErr); S.recs = []; }
     else { S.recs = recs || []; }
 
-    // Materializa  vencidas
+    // Materializa recorrências vencidas
     await (window.applyRecurrences ? window.applyRecurrences() : applyRecurrences());
     // Carrega metas do Supabase
     await fetchMetas();
@@ -284,8 +283,217 @@ function ensureMonthSelectLabels(){
   // === Re-render de Lançamentos ao trocar o mês no topo ===
   const monthSel = document.getElementById('monthSelect');
   if (monthSel && !monthSel._wiredLanc) {
-    monthSel./* [removed] UI recurrence ref */
+    monthSel.addEventListener('change', (e) => {
+      S.month = e.target.value;
+      try { savePrefs(); } catch (e) {}
+      try { render(); } catch (e) {}
+      try { renderPessoas(); } catch (e) {}
+      try { renderLancamentos(); } catch (e) {}
+      try { renderGastosCarteiras && renderGastosCarteiras(); } catch (e) {}
+      try { renderGastoTotalTiles && renderGastoTotalTiles(); } catch (e) {}
+    });
+    ensureMonthSelectLabels();
+    monthSel._wiredLanc = true;
+  }
+  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+}
 
+  // ========= SAVE =========
+  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
+  async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
+  async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
+  async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
+  async function savePrefs(){
+// Envia em snake_case para bater com o schema
+  const payload = {
+    id: 1,
+    month: S.month,
+    hide: !!S.hide,
+    dark: !!S.dark,
+    cc_due_day: (Number(S.ccDueDay) || null),
+    cc_closing_day: (Number(S.ccClosingDay) || null),
+    // ✅ novo: persiste o uso do ciclo da fatura
+    use_cycle_for_reports: !!S.useCycleForReports
+  };
+  const { error } = await supabaseClient.from("preferences").upsert([payload]);
+  if (error) {
+    console.error("Erro ao salvar preferências:", error);
+    alert("Não foi possível salvar as preferências: " + (error.message || "Erro desconhecido"));
+  }
+}
+
+  // Atualiza categoria nas transações (rename)
+  async function updateTxCategory(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return;
+    await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
+  }
+
+  // ========= RECORRÊNCIAS =========
+  async function saveRec(r) {
+    try {
+      const src = Object.assign({}, r || {});
+      const allowed = ['id','tipo','categoria','descricao','valor','obs','periodicidade','proxima_data','fim_em','ativo','ajuste_fim_mes','dia_mes','dia_semana','mes'];
+      const rec = {};
+      allowed.forEach(k => { if (k in src) rec[k] = src[k]; });
+
+      if (rec.id === undefined || rec.id === null || rec.id === '') delete rec.id;
+      rec.tipo = String(rec.tipo || '').trim();
+      rec.categoria = String(rec.categoria || '').trim();
+      rec.descricao = String(rec.descricao || '').trim();
+      rec.obs = (rec.obs == null ? null : String(rec.obs));
+      rec.periodicidade = String(rec.periodicidade || '').trim();
+
+      rec.valor = Number(rec.valor) || 0;
+      rec.ativo = (rec.ativo !== false);
+      rec.ajuste_fim_mes = !!rec.ajuste_fim_mes;
+      if (rec.obs !== null && rec.obs !== undefined && String(rec.obs).trim() === '') rec.obs = null;
+      // Periodicidade: preserva apenas campos relevantes
+      if (rec.periodicidade === 'Mensal') {
+        rec.dia_semana = null; rec.mes = null;
+      } else if (rec.periodicidade === 'Semanal') {
+        rec.dia_mes = null; rec.mes = null;
+      } else if (rec.periodicidade === 'Anual') {
+        rec.dia_semana = null;
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(rec.proxima_data||''))) {
+        rec.proxima_data = nowYMD();
+      }
+      if (rec.fim_em && !/^\d{4}-\d{2}-\d{2}$/.test(String(rec.fim_em))) {
+        rec.fim_em = null;
+      }
+
+      rec.dia_mes = (Number(rec.dia_mes) || null);
+      rec.dia_semana = (Number(rec.dia_semana) || null);
+      rec.mes = (Number(rec.mes) || null);
+
+      console.log('[saveRec] payload →', rec);
+      const { data, error } = await supabaseClient.from("recurrences").upsert([rec]).select().single();
+      if (error) {
+        console.error('[saveRec] supabase error →', error);
+        alert('Erro ao salvar recorrência: ' + (error.message || JSON.stringify(error)));
+      }
+      return { data, error };
+    } catch(e){
+      console.error('saveRec failed (catch):', e);
+      alert('Falha ao salvar recorrência: ' + (e && e.message ? e.message : e));
+      return { data: null, error: e };
+    }
+  }
+  async function deleteRec(id) {
+    return await supabaseClient.from("recurrences").delete().eq("id", id);
+  }
+  async function toggleRecAtivo(id, ativo) {
+    return await supabaseClient.from("recurrences").update({ ativo }).eq("id", id);
+  }
+
+  async function materializeOne(rec, occDate) {
+  const selPag = qs('#mPagamento');
+    const t = {
+      id: gid(),
+      tipo: rec.tipo,
+      categoria: rec.categoria,
+      data: occDate,
+      descricao: rec.descricao,
+      valor: Number(rec.valor) || 0,
+      obs: rec.obs ? (rec.obs + " (recorrente)") : "Recorrente",
+      recurrence_id: rec.id,
+      occurrence_date: occDate
+    };
+    // Carteira/Transferência
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+    }
+    /* removed stray save */
+}
+
+  async function applyRecurrences() {
+  const selPag = qs('#mPagamento');
+    try { window.applyRecurrences = applyRecurrences; } catch(_) {}
+    if (!Array.isArray(S.recs) || !S.recs.length) return;
+    const today = nowYMD();
+
+    for (const r of S.recs) {
+      if (!r.ativo) continue;
+      if (r.fim_em && r.fim_em < today) continue;
+
+      let next = r.proxima_data || today;
+      let changed = false;
+
+      while (next <= today) {
+        if (r.fim_em && next > r.fim_em) break;
+        await materializeOne(r, next);
+        changed = true;
+
+        if (r.periodicidade === "Mensal") {
+          next = incMonthly(next, r.dia_mes || 1, r.ajuste_fim_mes ?? true);
+        } else if (r.periodicidade === "Semanal") {
+          next = incWeekly(next);
+        } else if (r.periodicidade === "Anual") {
+          next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
+        } else {
+      if (selPag) selPag.disabled = false;
+          break;
+        }
+      }
+
+      if (changed) {
+        await supabaseClient.from("recurrences").update({ proxima_data: next }).eq("id", r.id);
+      }
+    }
+
+    // Recarrega transações após gerar
+    const { data: tx } = await supabaseClient.from("transactions").select("*");
+    S.tx = tx || [];
+  }
+
+  // ========= UI BÁSICA =========
+  function setTab(name) {
+    qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+    qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
+  }
+
+  function clearModalFields(){
+  try{ if (window.resetValorInput) window.resetValorInput(); }catch(e){}
+  const v=document.getElementById('mValorBig'); if(v) v.value='';
+  const d=document.getElementById('mDesc'); if(d) d.value='';
+  const o=document.getElementById('mObs'); if(o) o.value='';
+  const c=document.getElementById('mCategoria'); if(c) c.selectedIndex=0;
+}
+function toggleModal(show, titleOverride) {
+  try { window.toggleModal = toggleModal; } catch(_) {}
+
+  const selPag = qs('#mPagamento');
+
+    const m = qs("#modalLanc");
+    if (!m) return;
+    m.style.display = show ? "flex" : "none";
+    document.body.classList.toggle("modal-open", !!show);
+    if (show) {
+      
+    
+    try{ window.resetValorInput && window.resetValorInput(); }catch(_){ }
+if (window.resetValorInput) window.resetValorInput();
+const vData = qs("#mData"); if (vData) vData.value = nowYMD();
+      rebuildCatSelect();
+      const vDesc = qs("#mDesc"); if (vDesc) vDesc.value = "";
+      const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
+      const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
+      if (selPag) selPag.value = "";
+      modalTipo = "Despesa";
+      syncTipoTabs();
+      const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = titleOverride || "Nova Despesa";
+
+      // Reset de recorrência
+      const chk = qs("#mRepetir");
       const box = qs("#recurrenceFields");
       if (chk && box) {
         chk.checked = false;
@@ -317,14 +525,315 @@ function ensureMonthSelectLabels(){
   // Open
   var openBtn = document.getElementById('btnNovo');
   if (openBtn && !openBtn._wired) {
-    openBtn./* [removed] UI recurrence ref */
+    openBtn.addEventListener('click', function(){ try { toggleModal(true); } catch(e) { console.error(e); } });
+    openBtn._wired = true;
+  }
+  // Close / Cancel (delegated inside modal)
+  var modal = document.getElementById('modalLanc');
+  if (modal && !modal._wiredClose) {
+    modal.addEventListener('click', function(ev){
+      var t = ev.target;
+      // Any element marked to close or common close buttons
+      if (t.closest('[data-close-modal], #btnFecharModal, #btnCancelar, #cancelar, .icon.close')) {
+        ev.preventDefault();
+        try { toggleModal(false); } catch(e) { console.error(e); }
+      }
+    });
+    modal._wiredClose = true;
+  }
+  // Save handler (delegated inside modal)
+  if (modal && !modal._wiredSave) {
+    modal.addEventListener('click', function(ev){
+      var t = ev.target;
+      if (t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo')) {
+        ev.preventDefault();
+        try {
+          if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
+            window.addOrUpdate && setTimeout(() => window.addOrUpdate(true), 0);
+          } else {
+            window.addOrUpdate && setTimeout(() => window.addOrUpdate(false), 0);
+          }
+        } catch(e) { console.error(e); }
+      } else if (t.closest('#cancelar')) {
+        ev.preventDefault();
+        try { toggleModal(false); } catch(e) {}
+      }
+    });
+    modal._wiredSave = true;
+  }
+// Esc key closes modal
+  if (!document._wiredEscClose) {
+    document.addEventListener('keydown', function(ev){
+      if (ev.key === 'Escape') {
+        try { toggleModal(false); } catch(_) {}
+      }
+    });
+    document._wiredEscClose = true;
+  }
+})();
 
+  let modalTipo = "Despesa";
+  function syncTipoTabs() {
+    const selPag = qs('#mPagamento');
+    const fCarteira = qs("#wrapCarteira");
+    const fTransf = qs("#wrapTransf");
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      if (fCarteira) fCarteira.style.display = "none";
+      if (fTransf) fTransf.style.display = "";
+    } else {
+      if (selPag) selPag.disabled = false;
+      if (fCarteira) fCarteira.style.display = "";
+      if (fTransf) fTransf.style.display = "none";
+    }
+    qsa("#tipoTabs button").forEach(b => b.classList.toggle("active", b.dataset.type === modalTipo));
+    if (!S.editingId) {
+      const ttl = qs("#modalTitle"); if (ttl) ttl.textContent = "Nova " + modalTipo;
+    }
+  }
+
+  function rebuildCatSelect(selected) {
+    const sel = qs("#mCategoria");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Selecione...</option>';
+    (S.cats || []).forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.nome;
+      o.textContent = c.nome;
+      if (c.nome === selected) o.selected = true;
+      sel.append(o);
+    });
+  }
+
+
+// Floating Action Button (FAB) for new entry
+var fabBtn = document.getElementById('btnNovoFab');
+if (fabBtn && !fabBtn._wired) {
+  fabBtn.addEventListener('click', function(){
+    try { toggleModal(true); } catch(e) { console.error(e); }
+  });
+  fabBtn._wired = true;
+}
+
+  // ========= TRANSAÇÕES =========
+  let __savingAddOrUpdate = false;
+async function addOrUpdate(keepOpen=false) {
+  
+    if (__savingAddOrUpdate) { return; }
+    __savingAddOrUpdate = true;
+    try {
+const selPag = qs('#mPagamento');
+
+    const valor = parseMoneyMasked(qs("#mValorBig")?.value);
+    const t = {
+      id: S.editingId || gid(),
+      tipo: modalTipo,
+      categoria: qs("#mCategoria")?.value || "",
+      data: isIsoDate(qs("#mData")?.value) ? qs("#mData").value : nowYMD(),
+      descricao: (qs("#mDesc")?.value || "").trim(),
+      valor: isFinite(valor) ? valor : 0,
+      obs: (qs("#mObs")?.value || "").trim()
+    };
+    if (!t.categoria) return alert("Selecione categoria");
+    if (!t.descricao) return alert("Descrição obrigatória");
+    if (!(t.valor > 0)) return alert("Informe o valor");
+
+    
+    // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+    // forma de pagamento
+    t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
+
+    }
+const chkRepetir = qs("#mRepetir");
+    if (S.editingId || !chkRepetir?.checked) {
+      await saveTx(t);
+      await loadAll();
+    if (window.resetValorInput) window.resetValorInput();
+    if (!keepOpen) { toggleModal(false); }
+    return;
+    }
+
+    // Criar recorrência
+    const perEl = qs("#mPeriodicidade");
+    const per = perEl ? perEl.value : "Mensal";
+    const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
+    const dow    = Number(qs("#mDiaSemana")?.value || 1);
+    const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
+    let inicio = isIsoDate(qs("#mInicio")?.value) ? qs("#mInicio").value : nowYMD();
+    if (!inicio || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) inicio = nowYMD();
+    const fim    = isIsoDate(qs("#mFim")?.value) ? qs("#mFim").value : null;
+    const ajuste = !!qs("#mAjusteFimMes")?.checked;
+
+    // define próxima data inicial baseada no "início"
+    let proxima = inicio;
+    if (per === "Mensal") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
+      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
+    } else if (per === "Semanal") {
+      proxima = incWeekly(inicio);
+    } else if (per === "Anual") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
+      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
+    }
+
+    const rec = {
+      // id ausente para INSERT, será atribuído pelo banco
+      tipo: t.tipo,
+      categoria: t.categoria,
+      descricao: t.descricao,
+      valor: t.valor,
+      obs: t.obs,
+      periodicidade: per,
+      proxima_data: proxima,
+      fim_em: fim,
+      ativo: true,
+      ajuste_fim_mes: ajuste,
+      dia_mes: diaMes,
+      dia_semana: dow,
+      mes: mes
+    };
+
+    const { data: saved, error } = await saveRec(rec);
+    if (error) {
+      console.error(error);
+      return alert("Erro ao salvar recorrência.");
+    }
+
+    // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
+    if (t.data === saved.proxima_data) {
+      await materializeOne(saved, saved.proxima_data);
+      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+      else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
+      else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
+      await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
+    }
+
+    await loadAll();
+    if (!keepOpen) { toggleModal(false); }
+    return;
+    } finally { __savingAddOrUpdate = false; }
+  }
+try { window.addOrUpdate = addOrUpdate; } catch(e){}
+
+
+  
+  // ========= EXCLUIR LANÇAMENTO =========
+  async function delTx(id) {
+    try {
+      if (!id) return;
+      const ok = typeof confirm === 'function' ? confirm("Excluir lançamento?") : true;
+      if (!ok) return;
+      await deleteTx(id);
+      await loadAll();
+    } catch (err) {
+      console.error("Falha ao excluir lançamento:", err);
+      alert("Não foi possível excluir o lançamento.");
+    }
+  }
+  try { window.delTx = delTx; } catch (e) {}
+
+
+  
+  // ========= TRANSAÇÕES =========
+  function itemTx(x, readOnly = false) {
+    const li = document.createElement("li");
+    li.className = "item";
+    const v = isFinite(Number(x.valor)) ? Number(x.valor) : 0;
+    const actions = readOnly
+      ? ""
+      : `
+        <button class="icon edit" title="Editar"><i class="ph ph-pencil-simple"></i></button>
+        <button class="icon del" title="Excluir"><i class="ph ph-trash"></i></button>`;
+    li.innerHTML = `
+      <div class="left">
+        <div class="tag">${x.tipo}</div>
+        <div>
+          <div><strong>${x.descricao || "-"}</strong></div>
+          <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="${S.hide ? "blurred" : ""}" style="font-weight:700">${fmtMoney(v)}</div>${actions}
+      </div>`;
+    if (!readOnly) {
+      const btnEdit = li.querySelector(".edit");
+      const btnDel  = li.querySelector(".del");
+      if (btnEdit) btnEdit.onclick = () => window.openEdit && window.openEdit(x.id);
+      if (btnDel)  btnDel.onclick = () => window.delTx && window.delTx(x.id);
+    }
+    return li;
+  }
+
+  function renderRecentes() {
+    const ul = qs("#listaRecentes");
+    if (!ul) return;
+    const list = (S.tx || [])
+      .sort((a, b) => String(b.data||"").localeCompare(String(a.data||"")))
+      .slice(0, 8);
+    ul.innerHTML = "";
+    if (!ul.classList.contains("lanc-grid")) ul.classList.add("lanc-grid");
+    list.forEach(x => ul.append(itemTx(x, true)));
+  }
+
+
+// === Recorrências: manager (Config) ===
+function renderRecManager(){
+  const tb = document.querySelector('#tblRecorrencias tbody');
+  if (!tb) return;
+  tb.innerHTML = '';
+  const recs = Array.isArray(S.recs) ? [...S.recs] : [];
+  if (!recs.length){
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 8;
+    td.className = 'muted';
+    td.textContent = 'Nenhuma recorrência cadastrada.';
+    tr.appendChild(td);
+    tb.appendChild(tr);
+    return;
+  }
+  recs.sort((a,b)=>String(a.proxima_data||'').localeCompare(String(b.proxima_data||'')));
+  recs.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.descricao||'-'}</td>
+      <td>${r.categoria||'-'}</td>
+      <td>${r.tipo||'-'}</td>
+      <td>${fmtMoney(Number(r.valor)||0)}</td>
+      <td>${r.periodicidade||'-'}</td>
+      <td>${r.proxima_data||'-'}</td>
+      <td><input type="checkbox" data-act="toggle" data-id="${r.id}" ${r.ativo!==false?'checked':''}></td>
+      <td>
+        <button class="btn-acao" data-act="edit-next" data-id="${r.id}" title="Editar próxima data"><i class="ph ph-calendar-check"></i></button>
+        <button class="btn-acao" data-act="gen-month" data-id="${r.id}" title="Gerar mês selecionado"><i class="ph ph-calendar-plus"></i></button>
+        <button class="btn-acao" data-act="del" data-id="${r.id}" title="Excluir"><i class="ph ph-trash"></i></button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+document.addEventListener('click', async function(ev){
+  const btn = ev.target.closest('#tblRecorrencias [data-act], #btnNovaRec');
   if (!btn) return;
   if (btn.id === 'btnNovaRec'){
-    try { toggleModal(true, 'Nova '); } catch(_) {}
+    try { toggleModal(true, 'Nova recorrência'); } catch(_) {}
     setTimeout(()=>{
-      const chk = /* [removed] UI recurrence ref */
-
+      const chk = document.getElementById('mRepetir');
       if (chk) { chk.checked = true; const box=document.getElementById('recurrenceFields'); if (box) box.style.display=''; }
     }, 0);
     return;
@@ -337,14 +846,257 @@ function ensureMonthSelectLabels(){
   } else if (act==='gen-month'){
     backfillRecurrenceToSelectedMonth(id);
   } else if (act==='del'){
-    if (!confirm('Excluir esta ?')) return;
+    if (!confirm('Excluir esta recorrência?')) return;
     await deleteRec(id);
     await loadAll();
   }
 });
 
-document./* [removed] UI recurrence ref */
+document.addEventListener('change', async function(ev){
+  const cb = ev.target.closest('#tblRecorrencias input[type="checkbox"][data-act="toggle"]');
+  if (!cb) return;
+  const id = cb.getAttribute('data-id');
+  await toggleRecAtivo(id, !!cb.checked);
+  await loadAll();
+});
 
+
+
+
+
+// === Carteiras: gastos por carteira (mês/ciclo) ===
+function computeGastosPorCarteira(ym){
+  const range = getActiveRangeForYM(ym);
+  const list = (S.tx || []).filter(x =>
+    x && x.tipo === "Despesa" && x.data && ymdInRange(String(x.data), range.start, range.end)
+  );
+  // Ignora transferências por segurança (se vierem marcadas como Despesa indevidamente)
+  const sum = { Casa: 0, Marido: 0, Esposa: 0 };
+  list.forEach(x => {
+    const car = x.carteira || '';
+    if (car in sum) sum[car] += Number(x.valor) || 0;
+  });
+  return sum;
+}
+
+function renderGastosCarteiras(){
+  
+  if (!S || !S.month) return;
+  try {
+    const g = computeGastosPorCarteira(S.month); // bruto (somente Despesas)
+    // Deltas do split (Dinheiro/Pix) para Marido/Esposa
+    const deltas = (typeof computeSplitDeltas === 'function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
+    // líquido = bruto - delta (refund diminui gasto, cobrança aumenta)
+    const fmt = (n) => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const sign = (n) => (n>=0?'+':'');
+
+    const brutoCasa = Number(g.Casa||0);
+    const brutoMar  = Number(g.Marido||0);
+    const brutoEsp  = Number(g.Esposa||0);
+
+    const adjMar = Number(deltas.Marido||0);
+    const adjEsp = Number(deltas.Esposa||0);
+    const adjCasa = 0;
+
+    const liqCasa = brutoCasa - adjCasa;
+    const liqMar  = brutoMar  - adjMar;
+    const liqEsp  = brutoEsp  - adjEsp;
+
+    const elC = document.getElementById('gastoCasa');
+    const elM = document.getElementById('gastoMarido');
+    const elE = document.getElementById('gastoEsposa');
+
+    if (elC) {
+      elC.innerHTML = ''
+        + '<div><strong>'+fmt(brutoCasa)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjCasa)+fmt(adjCasa)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqCasa)+'</strong></div>';
+    }
+    if (elM) {
+      elM.innerHTML = ''
+        + '<div><strong>'+fmt(brutoMar)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjMar)+fmt(adjMar)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqMar)+'</strong></div>';
+    }
+    if (elE) {
+      elE.innerHTML = ''
+        + '<div><strong>'+fmt(brutoEsp)+'</strong> <span class="muted">(bruto)</span></div>'
+        + '<div class="muted" style="font-size:12px">ajuste split: '+sign(adjEsp)+fmt(adjEsp)+'</div>'
+        + '<div class="muted" style="font-size:12px"><strong>líquido: '+fmt(liqEsp)+'</strong></div>';
+    }
+  } catch(e){ console.error('renderGastosCarteiras:', e); }
+}
+
+
+  function renderLancamentos() {
+
+    // Atualiza o título com o mês selecionado (ex.: "Lançamentos — Setembro/2025")
+    (function(){
+      if (!S || !S.month) return;
+      const h3 = document.querySelector('.lanc-header h3');
+      if (!h3) return;
+      const [y, m] = S.month.split('-').map(Number);
+      if (!y || !m) return;
+      const abrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const mes = (m && m>=1 && m<=12) ? abrev[m-1] : '';
+const ano = String(y).slice(2);
+const label = `${mes}/${ano}`;
+h3.textContent = 'Lançamentos — ' + label;
+    })();
+    const _qs = s => document.querySelector(s);
+    const Sref = S;
+
+    const selTipo    = _qs('#lancTipo');
+    const selCat     = _qs('#lancCat');
+    const inpBusca   = _qs('#lancSearch');
+    const selSort    = _qs('#lancSort');
+    const chkCompact = _qs('#lancCompact');
+    const ul         = _qs('#listaLanc');
+    const sumEl      = _qs('#lancSummary');
+
+    if (chkCompact) {
+      const compactPref = localStorage.getItem('lancCompact') === '1';
+      if (chkCompact.checked !== compactPref) chkCompact.checked = compactPref;
+      document.body.classList.toggle('compact', chkCompact.checked);
+    }
+
+    const tipo  = (selTipo && selTipo.value) || 'todos';
+    const cat   = (selCat && selCat.value) || 'todas';
+    const q     = ((inpBusca && inpBusca.value) || '').trim().toLowerCase();
+    const sort  = (selSort && selSort.value) || 'data_desc';
+
+    let list = Array.isArray(Sref.tx) ? Sref.tx.slice() : [];
+
+    // === Filtro por mês selecionado no topbar ===
+    // Exibe apenas lançamentos cujo campo data (YYYY-MM-DD) começa com Sref.month (YYYY-MM).
+    if (Sref && Sref.month && Sref.month !== 'all') {
+      list = list.filter(x => x && x.data && String(x.data).startsWith(Sref.month));
+    }
+
+
+    list = list.filter(x => {
+      if (tipo !== 'todos' && x.tipo !== tipo) return false;
+      if (cat  !== 'todas' && x.categoria !== cat) return false;
+      if (q) {
+        const hay = `${x.descricao||''} ${x.categoria||''} ${x.obs||''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const by = {
+      data_desc: (a,b)=> String(b.data||'').localeCompare(String(a.data||'')),
+      data_asc:  (a,b)=> String(a.data||'').localeCompare(String(b.data||'')),
+      valor_desc:(a,b)=> (Number(b.valor)||0) - (Number(a.valor)||0),
+      valor_asc: (a,b)=> (Number(a.valor)||0) - (Number(b.valor)||0),
+    };
+    list.sort(by[sort] || by.data_desc);
+
+    const fmt = v=> (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const totDesp = list.filter(x=>x.tipo==='Despesa').reduce((a,b)=>a+(Number(b.valor)||0),0);
+    const totRec  = list.filter(x=>x.tipo==='Receita').reduce((a,b)=>a+(Number(b.valor)||0),0);
+    const saldo   = totRec - totDesp;
+
+    if (sumEl){
+      // Reescrito para compatibilidade ES5 (sem template string)
+      sumEl.innerHTML = '';
+      function makePill(txt, cls){
+        var s = document.createElement('span');
+        s.className = 'pill' + (cls ? (' ' + cls) : '');
+        s.textContent = txt;
+        return s;
+      }
+      var frag = document.createDocumentFragment();
+      frag.appendChild(makePill('Itens: ' + list.length));
+      frag.appendChild(makePill('Receitas: ' + fmt(totRec), 'ok'));
+      frag.appendChild(makePill('Despesas: ' + fmt(totDesp), 'warn'));
+      frag.appendChild(makePill('Saldo: ' + fmt(saldo)));
+      sumEl.appendChild(frag);
+    }
+
+    if (!ul) return;
+    ul.innerHTML = '';
+
+    if (!list.length){
+      const li = document.createElement('li');
+      li.className = 'item';
+      li.innerHTML = '<div class="empty"><div class="title">Nenhum lançamento encontrado</div><div class="hint">Ajuste os filtros ou crie um novo lançamento.</div></div>';
+      ul.append(li);
+      return;
+    }
+
+    list.forEach(x => {
+      const li = document.createElement('li');
+      li.className = 'item';
+      li.dataset.tipo = x.tipo;
+      const v = Number(x.valor)||0;
+      const valor = fmt(v);
+      li.innerHTML = `
+        <div class="header-line">
+          <div class="chip">${x.tipo||'-'}</div>
+          <div class="actions">
+            <button class="icon edit" title="Editar"><i class="ph ph-pencil-simple"></i></button>
+            <button class="icon del" title="Excluir"><i class="ph ph-trash"></i></button>
+          </div>
+        </div>
+        <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
+        <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
+        <div class="muted">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+        <div class="valor">${valor}</div>
+      `;
+      const btnEdit = li.querySelector('.edit');
+      const btnDel  = li.querySelector('.del');
+      if (btnEdit) btnEdit.onclick = ()=> window.openEdit && window.openEdit(x.id);
+      if (btnDel)  btnDel.onclick  = ()=> window.delTx && window.delTx(x.id);
+      ul.append(li);
+    });
+
+    if (!renderLancamentos._wired){
+      if (selTipo) selTipo.onchange = renderLancamentos;
+      if (selCat) selCat.onchange = renderLancamentos;
+      if (inpBusca) inpBusca.oninput = renderLancamentos;
+      if (selSort) selSort.onchange = renderLancamentos;
+      if (chkCompact){
+        chkCompact.onchange = ()=>{
+          localStorage.setItem('lancCompact', chkCompact.checked ? '1':'0');
+          document.body.classList.toggle('compact', chkCompact.checked);
+        };
+      }
+      renderLancamentos._wired = true;
+    }
+  }
+
+  function openEdit(id) {
+  const selPag = qs('#mPagamento');
+  // abre o modal em modo edição
+  try { toggleModal(true, 'Editar lançamento'); } catch(_) {}
+  const x = (S.tx || []).find(t => t.id === id);
+    if (!x) return;
+    S.editingId = id;
+    modalTipo = x.tipo;
+    syncTipoTabs();
+    rebuildCatSelect(x.categoria);
+    const mData = qs("#mData"); if (mData) mData.value = isIsoDate(x.data) ? x.data : nowYMD();
+    const mDesc = qs("#mDesc"); if (mDesc) mDesc.value = x.descricao || "";
+    const mVal  = qs("#mValorBig"); if (mVal) mVal.value = fmtMoney(Number(x.valor) || 0);
+    const mObs  = qs("#mObs"); if (mObs) mObs.value = x.obs || "";
+    const ttl   = qs("#modalTitle"); if (ttl) ttl.textContent = "Editar lançamento";
+    const fCarteira = qs("#wrapCarteira"); const fTransf = qs("#wrapTransf");
+    if (x.tipo === "Transferência") {
+      if (fCarteira) fCarteira.style.display = "none";
+      if (fTransf) fTransf.style.display = "";
+      const o = qs("#mOrigem"); if (o) o.value = x.carteira_origem || "Casa";
+      const d = qs("#mDestino"); if (d) d.value = x.carteira_destino || "Marido";
+    } else {
+      if (selPag) selPag.disabled = false;
+      if (fCarteira) fCarteira.style.display = "";
+      if (fTransf) fTransf.style.display = "none";
+      const c = qs("#mCarteira"); if (c) c.value = x.carteira || "Casa";
+    const pag = qs("#mPagamento"); if (pag) { const mapLbl = {dinheiro:"Dinheiro", pix:"Pix", cartao:"Cartão", outros:"Outros"}; pag.value = mapLbl[String(x.forma_pagamento||"").toLowerCase()] || ""; }
+    }
+
+    // Edição: esconde blocos de recorrência (edita só esta instância)
+    const chk = qs("#mRepetir");
     const box = qs("#recurrenceFields");
     if (chk && box) { chk.checked = false; box.style.display = "none"; }
 
@@ -1101,8 +1853,63 @@ function render() {
   // Suporta #toggleDark (novo) e #cfgDark (antigo)
   const btnDark = qs("#toggleDark") || qs("#cfgDark");
   if (btnDark) {
-    btnDark./* [removed] UI recurrence ref */
+    btnDark.addEventListener('change', async () => {
+      S.dark = !!btnDark.checked;
+      document.body.classList.toggle("dark", S.dark);
+      await savePrefs();
+    });
+    // clique também alterna (para botões sem checkbox)
+    btnDark.addEventListener('click', async (e) => {
+      if (btnDark.tagName === 'BUTTON') {
+        S.dark = !S.dark;
+        document.body.classList.toggle("dark", S.dark);
+        await savePrefs();
+      }
+    });
+  }
 
+  // Suporta #toggleHide (novo) e #cfgHide (antigo)
+  const toggleHide = qs("#toggleHide") || qs("#cfgHide");
+  if (toggleHide) toggleHide.onchange = async e => {
+    S.hide = !!e.target.checked;
+    render();
+    try { renderRecManager(); } catch(e) {}
+    await savePrefs();
+  };
+
+  // Toggle do ciclo na topbar (ao lado de Esconder valores)
+  const toggleCycle = qs('#toggleCycle') || qs('#useCycleForReports');
+  if (toggleCycle) toggleCycle.onchange = async e => {
+    try {
+      setUseCycleForReports(!!e.target.checked); // já salva e re-renderiza
+    } catch (err) {
+      console.error('Falha ao alternar ciclo:', err);
+    }
+  };
+
+
+  // Ícone de Config na topbar (abre a aba Config)
+  function wireBtnConfig(){
+    const btn = document.getElementById('btnConfig');
+    if (btn && !btn.__wired){
+      btn.__wired = true;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setTab('config');
+      });
+    }
+  }
+  wireBtnConfig();
+  document.addEventListener('click', (e) => {
+    const target = e.target && e.target.closest ? e.target.closest('#btnConfig') : null;
+    if (target){
+      e.preventDefault();
+      setTab('config');
+    }
+  });
+
+  // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
+  const chkRepetir = qs("#mRepetir");
   const recurrenceBox = qs("#recurrenceFields");
   const selPer = qs("#mPeriodicidade");
   const fldDM = qs("#fieldDiaMes");
@@ -2105,8 +2912,7 @@ function openNovoLanc() {
   if (document.getElementById("mCategoria")) document.getElementById("mCategoria").selectedIndex = 0;
   if (document.getElementById("mPagamento")) document.getElementById("mPagamento").selectedIndex = 0;
   if (document.getElementById("mCarteira")) document.getElementById("mCarteira").selectedIndex = 0;
-  /* [removed] UI recurrence ref */
-
+  document.getElementById("mRepetir").checked = false;
   if (document.getElementById("recurrenceFields")) document.getElementById("recurrenceFields").style.display = "none";
   document.getElementById("mData").valueAsDate = new Date();
   document.getElementById("modalTitle").textContent = "Nova Despesa";
@@ -2148,8 +2954,7 @@ document.addEventListener("DOMContentLoaded", function(){
         var v = document.getElementById('mValorBig'); if (v) v.value='';
         var d = document.getElementById('mDesc'); if (d) d.value='';
         var o = document.getElementById('mObs'); if (o) o.value='';
-        var chk = /* [removed] UI recurrence ref */
- if (chk) chk.checked = false;
+        var chk = document.getElementById('mRepetir'); if (chk) chk.checked = false;
         var box = document.getElementById('recurrenceFields'); if (box) box.style.display = 'none';
       }
     } catch(e){ console.error('openNovoLanc failed:', e); }
@@ -2420,6 +3225,3 @@ try {
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
 } catch(_) {}
-
-
-
