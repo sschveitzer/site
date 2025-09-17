@@ -24,7 +24,7 @@ if (typeof window.backfillRecurrenceToSelectedMonth !== 'function') {
       if (!rec) return alert('Recorrência não encontrada');
       if (!S.month || !/^\d{4}-\d{2}$/.test(S.month)) return alert('Mês selecionado inválido');
       const [yy, mm] = S.month.split('-').map(Number);
-      const ld = lastDayOfMonth(yy, mm);
+      const ld = new Date(yy, mm, 0).getDate();
       const day = (rec.ajuste_fim_mes ? Math.min(Number(rec.dia_mes||1), ld) : Number(rec.dia_mes||1));
       const occ = toYMD(new Date(yy, mm-1, day));
       await materializeOne(rec, occ);
@@ -222,7 +222,7 @@ function money(v){
     const [y, m] = ymd.split("-").map(Number);
     let yy = y, mm = m + 1;
     if (mm > 12) { mm = 1; yy += 1; }
-    const ld = lastDayOfMonth(yy, mm);
+    const ld = new Date(yy, mm, 0).getDate();
     const day = ajusteFimMes ? Math.min(diaMes, ld) : diaMes;
     return toYMD(new Date(yy, mm - 1, day));
   }
