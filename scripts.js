@@ -72,7 +72,7 @@ function humanFormaPagamento(v){
   } catch(_) {}
 })();
 
-window.onload = function () {
+window.onload = async function () {
   try { console.log('[onload] start'); } catch(_) {}
 
   // Usa o supabase já criado no dashboard.html
@@ -604,7 +604,7 @@ const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
       try {
     await saveTx(t);
-    await loadAll();
+    await await loadAll();
   } catch(e){
     console.error('Erro ao salvar transação', e);
   }
@@ -671,7 +671,7 @@ if (window.resetValorInput) window.resetValorInput();
       await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
     }
 
-    await loadAll();
+    await await loadAll();
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
@@ -687,7 +687,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       const ok = typeof confirm === 'function' ? confirm("Excluir lançamento?") : true;
       if (!ok) return;
       await deleteTx(id);
-      await loadAll();
+      await await loadAll();
     } catch (err) {
       console.error("Falha ao excluir lançamento:", err);
       alert("Não foi possível excluir o lançamento.");
@@ -1061,13 +1061,13 @@ h3.textContent = 'Lançamentos — ' + label;
         await saveCat({ nome: novo });
         await updateTxCategory(c.nome, novo);
         await deleteCat(c.nome);
-        await loadAll();
+        await await loadAll();
       };
 
       btnDel.onclick = async () => {
         if (confirm("Excluir categoria? Transações existentes manterão o nome antigo.")) {
           await deleteCat(c.nome);
-          await loadAll();
+          await await loadAll();
         }
       };
 
@@ -1721,7 +1721,7 @@ function render() {
     }
     await saveCat({ nome });
     const inp = qs("#newCatName"); if (inp) inp.value = "";
-    loadAll();
+    await loadAll();
   };
 
   // Suporta #toggleDark (novo) e #cfgDark (antigo)
