@@ -8,11 +8,9 @@
           if (typeof toggleModal === 'function') { toggleModal(true); return; }
           if (typeof window.toggleModal === 'function') { window.toggleModal(true); return; }
           setTimeout(function(){
-            setTimeout(function(){
-              if (typeof window.toggleModal === 'function') {
-                try { window.toggleModal(true); } catch(e) { console.error(e); }
-              }
-            }, 0);
+            try { if (typeof window.toggleModal === 'function') window.toggleModal(true); } catch(e){ console.error(e); }
+          }, 0);
+        } catch(e){ console.error(e); }
       };
     }
   } catch(e){}
