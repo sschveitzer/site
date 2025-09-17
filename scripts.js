@@ -273,7 +273,18 @@ function ensureMonthSelectLabels(){
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
-  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+  try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+
+// Delegação de cliques para ações nas recorrências
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest('button[data-action]');
+  if (!btn) return;
+  const act = btn.getAttribute('data-action');
+  const id  = btn.getAttribute('data-id');
+  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
+  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
+});
+ catch(_) {}
 }
 
   // ========= SAVE =========
@@ -395,7 +406,44 @@ function ensureMonthSelectLabels(){
     S.tx = tx || [];
   }
 
-  // ========= UI BÁSICA =========
+  
+// === Recorrências: ações rápidas ===
+async function backfillRecurrenceToSelectedMonth(recId){
+  try{
+    const rec = (S.recs||[]).find(r => String(r.id)===String(recId));
+    if (!rec) return alert('Recorrência não encontrada');
+    if (!S.month || !/^\\d{4}-\\d{2}$/.test(S.month)) return alert('Mês selecionado inválido');
+    const [yy, mm] = S.month.split('-').map(Number);
+    const ld = lastDayOfMonth(yy, mm);
+    const day = (rec.ajuste_fim_mes ? Math.min(Number(rec.dia_mes||1), ld) : Number(rec.dia_mes||1));
+    const occ = toYMD(new Date(yy, mm-1, day));
+    await materializeOne(rec, occ);
+    await loadAll();
+    alert('Ocorrência gerada para '+occ);
+  }catch(e){
+    console.error('backfillRecurrenceToSelectedMonth', e);
+    alert('Falha ao gerar ocorrência do mês selecionado.');
+  }
+}
+
+async function quickEditRecurrenceStart(recId){
+  try{
+    const rec = (S.recs||[]).find(r => String(r.id)===String(recId));
+    if (!rec) return alert('Recorrência não encontrada');
+    const cur = rec.proxima_data || nowYMD();
+    const s = prompt('Defina a PRÓXIMA DATA (YYYY-MM-DD):', cur);
+    if (!s) return;
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return alert('Formato inválido. Use YYYY-MM-DD.');
+    const { error } = await supabaseClient.from('recurrences').update({ proxima_data: s }).eq('id', rec.id);
+    if (error) { console.error(error); return alert('Erro ao salvar.'); }
+    await loadAll();
+    alert('Próxima data atualizada.');
+  }catch(e){
+    console.error('quickEditRecurrenceStart', e);
+    alert('Falha ao editar recorrência.');
+  }
+}
+// ========= UI BÁSICA =========
   function setTab(name) {
     qsa(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     qsa("section").forEach(s => s.classList.toggle("active", s.id === name));
@@ -3103,7 +3151,18 @@ try {
   document.addEventListener('change', function(ev){
     var id = ev.target && ev.target.id;
     if (id === 'monthSelect' || id === 'rPeriodo' || id === 'rTipo' || id === 'rCategoria') {
-      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+      try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+
+// Delegação de cliques para ações nas recorrências
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest('button[data-action]');
+  if (!btn) return;
+  const act = btn.getAttribute('data-action');
+  const id  = btn.getAttribute('data-id');
+  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
+  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
+});
+ catch(_) {}
     }
   });
 } catch(_) {}
@@ -3113,7 +3172,18 @@ try {
 try {
   document.addEventListener('click', function(ev){
     var btn = ev.target.closest('.tab[data-tab="relatorios"]');
-    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {} }, 0); }
+    if (btn) { setTimeout(function(){ try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+
+// Delegação de cliques para ações nas recorrências
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest('button[data-action]');
+  if (!btn) return;
+  const act = btn.getAttribute('data-action');
+  const id  = btn.getAttribute('data-id');
+  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
+  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
+});
+ catch(_) {} }, 0); }
   });
 } catch(_) {}
 
@@ -3125,7 +3195,18 @@ try {
     var hmObserver = new MutationObserver(function(){
       var panel = document.querySelector('.rpanel[data-rtab="heatmap"]');
       if (panel && panel.classList.contains('active')) {
-        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); } catch(_) {}
+        try { window.renderHeatmapMesAtual && window.renderHeatmapMesAtual(); }
+
+// Delegação de cliques para ações nas recorrências
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest('button[data-action]');
+  if (!btn) return;
+  const act = btn.getAttribute('data-action');
+  const id  = btn.getAttribute('data-id');
+  if (act === 'backfill') { ev.preventDefault(); backfillRecurrenceToSelectedMonth(id); }
+  if (act === 'edit-start') { ev.preventDefault(); quickEditRecurrenceStart(id); }
+});
+ catch(_) {}
       }
     });
     hmObserver.observe(hmObsTarget, { attributes: true, subtree: true, attributeFilter: ['class'] });
