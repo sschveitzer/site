@@ -280,26 +280,23 @@ function ensureMonthSelectLabels(){
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
   async function savePrefs(){
-// Envia em snake_case para bater com o schema
+  // Envia em snake_case para bater com o schema
   const payload = {
     id: 1,
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-// removed stray await block
-  // Atualiza categoria nas transações (rename)
+    month: S.month,
+    hide: !!S.hide,
+    dark: !!S.dark,
+    cc_due_day: S.ccDueDay || null,
+    cc_closing_day: S.ccClosingDay || null,
+    use_cycle_for_reports: !!S.useCycleForReports
+  };
+  try {
+    await supabaseClient.from("preferences").upsert([payload]);
+  } catch (e) {
+    console.error("Erro ao salvar preferências:", e);
+  }
 }
+
   async function updateTxCategory(oldName, newName) {
     if (!oldName || !newName || oldName === newName) return;
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
