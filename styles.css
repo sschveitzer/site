@@ -1651,3 +1651,53 @@ body.dark #modalLanc .actions {
 @media (max-width: 640px){
   #dashboard .grid.cards { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+
+/* === Heatmap (Relatórios) === */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); /* 7 colunas (semana) */
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  user-select: none;
+}
+
+body.dark .heatmap-cell {
+  border-color: #2a3354;
+}
+
+.heatmap-legend {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.heatmap-legend .heatbar {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  height: 10px;
+}
+
+.heatmap-legend .heatbar > div:nth-child(1) { background: rgba(220, 38, 38, .12); }
+.heatmap-legend .heatbar > div:nth-child(2) { background: rgba(220, 38, 38, .25); }
+.heatmap-legend .heatbar > div:nth-child(3) { background: rgba(220, 38, 38, .45); }
+.heatmap-legend .heatbar > div:nth-child(4) { background: rgba(220, 38, 38, .65); }
+.heatmap-legend .heatbar > div:nth-child(5) { background: rgba(220, 38, 38, .85); }
+

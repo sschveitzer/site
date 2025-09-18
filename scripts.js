@@ -69,6 +69,7 @@ try {
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
       try { render();
+try { renderHeatmap(); } catch(e) { console.error(e); }
     ensureMonthSelectLabels();
     try { renderPessoas(); } catch(_) {} } catch(e) {}
     };
