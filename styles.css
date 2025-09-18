@@ -232,23 +232,7 @@ button.icon {
   font-size: 12px;
 }
 
-.fab {
-  z-index: 900;
-  position: fixed;
-  right: 26px;
-  bottom: 26px;
-  background: #ef4444;
-  border: none;
-  border-radius: 999px;
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-size: 28px;
-  box-shadow: 0 10px 24px rgba(239, 68, 68, .4);
-  cursor: pointer;
-}
+
 
 .modal {
   position: fixed;
@@ -1375,8 +1359,7 @@ body.dark textarea:focus {
 
 /* ====== Segurança/gesto (safe area + FAB) ====== */
 :root { --safe-bottom: env(safe-area-inset-bottom, 0px); }
-.fab {
-  z-index: 900; bottom: calc(26px + var(--safe-bottom)); }
+
 
 /* ====== Canvas responsivo ====== */
 .card canvas { width: 100% !important; height: auto !important; }
@@ -1644,4 +1627,22 @@ body.dark #modalLanc .actions {
   .grid.cards {
     grid-template-columns: 1fr;
   }
+}
+
+.fab {
+  z-index: 10000;
+  position: fixed;
+  right: 26px;
+  bottom: 26px;
+  background: #ef4444;
+  border: none;
+  border-radius: 999px;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 28px;
+  box-shadow: 0 10px 24px rgba(239, 68, 68, .4);
+  cursor: pointer;
 }

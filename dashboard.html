@@ -619,7 +619,7 @@
     window.addEventListener('load', updatePct);
   })();
   </script>
-<script src="scripts.js"></script>
+
 
 <script>
 document.addEventListener('click', function(e){
@@ -640,5 +640,22 @@ document.addEventListener('change', function(e){
  <!-- Botão flutuante -->
  <button class="fab" id="btnNovoFab" title="Novo lançamento"><i class="ph ph-plus"></i></button>
 		
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var fab = document.getElementById('btnNovoFab');
+  if (fab) {
+    fab.addEventListener('click', function(){
+      if (typeof window.toggleModal === 'function') {
+        window.toggleModal(true);
+      } else {
+        var btn = document.getElementById('btnNovo');
+        if (btn) btn.click();
+      }
+    });
+  }
+});
+</script>
+
 </body>
 </html>
