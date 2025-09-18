@@ -1,3 +1,4 @@
+console.log('scripts.js loaded (fixed)');
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1101,12 +1102,7 @@ h3.textContent = 'Lançamentos — ' + label;
     setChip("#kpiSaldoDelta", formatDeltaPct(saldo, saldoPrev));
 
     // Aplica "blurred" só nos valores principais
-    ['#kpiReceitas', '#kpiDespesas', '#kpiSaldo'].forEach(id => {
-      const el = qs(id);
-      if (el) el.classList.toggle('blurred', S.hide);
-    });
-
-    // Percentual de Despesas sobre Receitas
+['#kpiReceitas','#kpiDespesas','#kpiSaldo'].forEach(id=>{ const el = qs ? qs(id) : document.querySelector(id); if (el) el.classList.toggle('blurred', S && S.hide); });
     const kpiDespesasPct = qs("#kpiDespesasPct");
     let pctDespesas = "—";
     if (receitas > 0) {
@@ -2799,3 +2795,27 @@ document.addEventListener('DOMContentLoaded', () => {
     fab.addEventListener('click', () => btnNovo.click());
   }
 });
+
+
+// FAB wiring (robusto e idempotente)
+(function(){
+  if (window.__wiredFab) return;
+  window.__wiredFab = true;
+  function wireFab(){
+    var fab = document.getElementById('btnNovoFab');
+    if (!fab) return;
+    fab.addEventListener('click', function(){
+      if (typeof window.toggleModal === 'function') {
+        window.toggleModal(true);
+      } else {
+        var btn = document.getElementById('btnNovo');
+        if (btn) btn.click();
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireFab);
+  } else {
+    wireFab();
+  }
+})();
