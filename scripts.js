@@ -1,5 +1,3 @@
-console.log('scripts.js loaded (clean)');
-
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -649,6 +647,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
   function itemTx(x, readOnly = false) {
     const li = document.createElement("li");
     li.className = "item";
+    try { li.dataset.tipo = (x && x.tipo) ? x.tipo : ""; } catch(_) {}
     const v = isFinite(Number(x.valor)) ? Number(x.valor) : 0;
     const actions = readOnly
       ? ""
@@ -657,14 +656,14 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
         <button class="icon del" title="Excluir"><i class="ph ph-trash"></i></button>`;
     li.innerHTML = `
       <div class="left">
-        <div class="tag">${x.tipo}</div>
+        <div class="tag chip">${x.tipo}</div>
         <div>
           <div><strong>${x.descricao || "-"}</strong></div>
           <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
-        <div class="${S.hide ? "blurred" : ""}" style="font-weight:700">${fmtMoney(v)}</div>${actions}
+        <div class="${S.hide ? "blurred" : ""} valor" style="font-weight:700">${fmtMoney(v)}</div>${actions}
       </div>`;
     if (!readOnly) {
       const btnEdit = li.querySelector(".edit");
@@ -952,6 +951,7 @@ h3.textContent = 'Lançamentos — ' + label;
     if (!list.length) {
       const li = document.createElement("li");
       li.className = "item";
+    try { li.dataset.tipo = (x && x.tipo) ? x.tipo : ""; } catch(_) {}
       const left = document.createElement("div");
       left.className = "left";
       const strong = document.createElement("strong");
@@ -970,6 +970,7 @@ h3.textContent = 'Lançamentos — ' + label;
     list.forEach(c => {
       const li = document.createElement("li");
       li.className = "item";
+    try { li.dataset.tipo = (x && x.tipo) ? x.tipo : ""; } catch(_) {}
 
       const left = document.createElement("div");
       left.className = "left";
