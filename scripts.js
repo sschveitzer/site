@@ -1101,7 +1101,9 @@ h3.textContent = 'Lançamentos — ' + label;
     setChip("#kpiSaldoDelta", formatDeltaPct(saldo, saldoPrev));
 
     // Aplica "blurred" só nos valores principais
-      if (el) el.classList.toggle("blurred", S.hide);
+    ['#kpiReceitas', '#kpiDespesas', '#kpiSaldo'].forEach(id => {
+      const el = qs(id);
+      if (el) el.classList.toggle('blurred', S.hide);
     });
 
     // Percentual de Despesas sobre Receitas
