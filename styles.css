@@ -1701,3 +1701,19 @@ body.dark .heatmap-cell {
 .heatmap-legend .heatbar > div:nth-child(4) { background: rgba(220, 38, 38, .65); }
 .heatmap-legend .heatbar > div:nth-child(5) { background: rgba(220, 38, 38, .85); }
 
+/* === FIX: Saldos por carteira - 3 colunas fixas dentro do card === */
+.wallets-grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* sempre 3 colunas */
+  gap: 16px;
+  width: 100%;
+  padding: 0;              /* caso a estrutura seja <ul> */
+  list-style: none;        /* remove bullets se for <ul> */
+}
+.wallets-grid > *{
+  min-width: 0;            /* evita overflow e quebra de linha */
+  height: 100%;
+}
+@media (max-width: 768px){
+  .wallets-grid{ grid-template-columns: 1fr; } /* empilha no mobile */
+}
