@@ -85,39 +85,11 @@ try {
       .toISOString()
       .slice(0, 10);
   }
-  
-function toYMD(input) {
-  function fmt(d) { return d.toISOString().slice(0,10); }
-  if (!input) return fmt(new Date());
-  if (input instanceof Date) {
-    if (!isNaN(input.getTime())) return fmt(input);
-    return fmt(new Date());
+  function toYMD(d) {
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
   }
-  if (typeof input === 'string') {
-    const s = input.trim();
-    if (!s) return fmt(new Date());
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      const [y,m,d] = s.split('-').map(Number);
-      const dt = new Date(y, m-1, d);
-      return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt);
-    }
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-      const [d,m,y] = s.split('/').map(Number);
-      const dt = new Date(y, m-1, d);
-      return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt);
-    }
-    const t = Date.parse(s);
-    if (!isNaN(t)) return fmt(new Date(t));
-    return fmt(new Date());
-  }
-  try {
-    const dt = new Date(input);
-    return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt);
-  } catch (_) {
-    return fmt(new Date());
-  }
-}
-
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
   }
@@ -591,6 +563,8 @@ const chkRepetir = qs("#mRepetir");
     // Criar recorrência
     const perEl = qs("#mPeriodicidade");
     const per = perEl ? perEl.value : "Mensal";
+    const perNorm = (per||"").toLowerCase();
+    const perTitle = perNorm === "mensal" ? "Mensal" : perNorm === "semanal" ? "Semanal" : perNorm === "anual" ? "Anual" : per;
     const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
     const dow    = Number(qs("#mDiaSemana")?.value || 1);
     const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
@@ -621,7 +595,7 @@ const chkRepetir = qs("#mRepetir");
       descricao: t.descricao,
       valor: t.valor,
       obs: t.obs,
-      periodicidade: per,
+      periodicidade: (perTitle || per),
       proxima_data: proxima,
       fim_em: fim,
       ativo: true,
@@ -632,7 +606,11 @@ const chkRepetir = qs("#mRepetir");
     };
 
     const { data: saved, error } = await saveRec(rec);
-    if (error) {
+    
+    // [PATCH] Após salvar recorrência, recarrega dados e lista
+    try { if (window.loadAll) await loadAll(); } catch(_) {}
+    try { if (window.renderRecListSimple) await renderRecListSimple(true); } catch(_) {}
+if (error) {
       console.error(error);
       return alert("Erro ao salvar recorrência.");
     }
