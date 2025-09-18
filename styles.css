@@ -144,9 +144,7 @@ button.icon {
   grid-template-columns: 1.2fr .8fr;
 }
 
-.grid.cards {
-  grid-template-columns: repeat(4, 1fr);
-}
+
 
 .card {
   background: var(--card);
@@ -885,7 +883,7 @@ body.modal-open #lancamentos .lanc-toolbar{ position: static; }
 /* Fix metas card placement: occupy full row in dashboard grid */
 .metas-card.span-all { grid-column: 1 / -1; }
 
-.grid.cards { grid-auto-rows: minmax(min-content, auto); }
+
 
 /* Ensure no accidental overlay */
 .metas-card { position: static; z-index: auto; }
@@ -1356,7 +1354,7 @@ body.dark textarea:focus {
 
 /* ====== Tablet (<= 1024px) ====== */
 @media (max-width: 1024px) {
-  .grid.cards { grid-template-columns: repeat(2, 1fr); }      /* KPIs: 2x2 */
+        /* KPIs: 2x2 */
   .grid.two   { grid-template-columns: 1fr; }                  /* Gráficos: empilha */
   .container  { padding: 0 16px; }
   .card       { padding: 16px; }
@@ -1368,7 +1366,7 @@ body.dark textarea:focus {
 @media (max-width: 834px) {
   .tabs { gap: 6px; }
   .nav .wrap { padding: 12px 14px; }
-  .grid.cards { grid-template-columns: 1fr; }                  /* KPIs: 1 por linha */
+                    /* KPIs: 1 por linha */
   #listaLanc.lanc-grid, #listaRecentes.lanc-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
@@ -1464,7 +1462,7 @@ body.dark textarea:focus {
   .container{ padding: 10px; }
 
   /* KPIs: 2 por linha */
-  .grid.cards{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  
 
   /* Gráficos lado a lado */
   .grid.two{ grid-template-columns: 1fr 1fr; }
@@ -1624,5 +1622,26 @@ body.dark #modalLanc .actions {
 @supports (-webkit-touch-callout: none) {
   #modalLanc .actions {
     transform: translateZ(0);
+  }
+}
+
+/* === KPIs em 3 colunas + responsivo (substitui .grid.cards antiga) === */
+.grid.cards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Tablet (até 1024px): 2 colunas */
+@media (max-width: 1024px) {
+  .grid.cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile (até 640px): 1 coluna */
+@media (max-width: 640px) {
+  .grid.cards {
+    grid-template-columns: 1fr;
   }
 }
