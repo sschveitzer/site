@@ -563,8 +563,6 @@ const chkRepetir = qs("#mRepetir");
     // Criar recorrência
     const perEl = qs("#mPeriodicidade");
     const per = perEl ? perEl.value : "Mensal";
-    const perNorm = (per||"").toLowerCase();
-    const perTitle = perNorm === "mensal" ? "Mensal" : perNorm === "semanal" ? "Semanal" : perNorm === "anual" ? "Anual" : per;
     const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
     const dow    = Number(qs("#mDiaSemana")?.value || 1);
     const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
@@ -595,7 +593,7 @@ const chkRepetir = qs("#mRepetir");
       descricao: t.descricao,
       valor: t.valor,
       obs: t.obs,
-      periodicidade: (perTitle || per),
+      periodicidade: per,
       proxima_data: proxima,
       fim_em: fim,
       ativo: true,
@@ -606,11 +604,7 @@ const chkRepetir = qs("#mRepetir");
     };
 
     const { data: saved, error } = await saveRec(rec);
-    
-    // [PATCH] Após salvar recorrência, recarrega dados e lista
-    try { if (window.loadAll) await loadAll(); } catch(_) {}
-    try { if (window.renderRecListSimple) await renderRecListSimple(true); } catch(_) {}
-if (error) {
+    if (error) {
       console.error(error);
       return alert("Erro ao salvar recorrência.");
     }
@@ -2880,164 +2874,110 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
-/* === [REC] Lista simples no Config → Transações recorrentes (#listaRecorrentes) — v2 robust === */
+
+// === [PATCH-RUNTIME] Recorrências: garantir gravação e carregamento ===
 (function(){
-  function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
-  function isoToBR(d){ try { return d ? new Date(d).toLocaleDateString() : '-'; } catch(_) { return d||'-'; } }
-
-  async function fetchRecsFallback(){
+  // Helpers
+  function toISO(d){
+    if (!d) return new Date().toISOString().slice(0,10);
+    if (d instanceof Date && !isNaN(d.getTime())) return d.toISOString().slice(0,10);
+    if (typeof d === 'string') {
+      const s = d.trim();
+      if (!s) return new Date().toISOString().slice(0,10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+        const [dd,mm,yy] = s.split('/').map(Number);
+        return new Date(yy, mm-1, dd).toISOString().slice(0,10);
+      }
+      const t = Date.parse(s); if (!isNaN(t)) return new Date(t).toISOString().slice(0,10);
+    }
     try {
-      if (window.supabase && supabase.from) {
-        const { data, error } = await supabase.from('recurrences').select('*').order('id', { ascending: false });
-        if (!error && Array.isArray(data)) return data;
-      }
-    } catch(e){ console.warn('[Recorrências] Supabase fallback falhou', e); }
-    return [];
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? new Date().toISOString().slice(0,10) : dt.toISOString().slice(0,10);
+    } catch(_) { return new Date().toISOString().slice(0,10); }
+  }
+  function titlePeriodicidade(per){
+    const p = String(per||'').toLowerCase();
+    return p === 'mensal' ? 'Mensal' : p === 'semanal' ? 'Semanal' : p === 'anual' ? 'Anual' : per;
   }
 
-  function getRecsSync(){
-    if (window.S) {
-      if (Array.isArray(S.recs) && S.recs.length) return S.recs;
-      if (Array.isArray(S.recorrencias) && S.recorrencias.length) return S.recorrencias;
-      if (Array.isArray(S.recurrences) && S.recurrences.length) return S.recurrences;
+  async function fetchRecurrences(){
+    if (!window.supabaseClient?.from) return [];
+    try {
+      const { data, error } = await supabaseClient.from('recurrences').select('*').order('id', { ascending: false });
+      if (error) { console.warn('[recurrences] fetch error', error); return []; }
+      return Array.isArray(data) ? data : [];
+    } catch(e){ console.warn('[recurrences] fetch exception', e); return []; }
+  }
+
+  // Wrap loadAll to also refresh S.recs
+  (function wrapLoadAll(){
+    const orig = window.loadAll;
+    if (typeof orig === 'function' && !orig.__recWrapped2) {
+      window.loadAll = async function(){
+        const r = await orig.apply(this, arguments);
+        try {
+          const recs = await fetchRecurrences();
+          window.S = window.S || {};
+          S.recs = recs;
+          if (window.renderRecListSimple) { try { await renderRecListSimple(true); } catch(_) {} }
+        } catch(_) {}
+        return r;
+      };
+      window.loadAll.__recWrapped2 = true;
+    } else if (!orig) {
+      // if not defined yet, try again later
+      setTimeout(wrapLoadAll, 500);
     }
-    return null; // sinaliza que talvez ainda não carregou
-  }
+  })();
 
-  async function resolveRecs(){
-    const fromS = getRecsSync();
-    if (fromS) return fromS;
-    // tenta supabase se S ainda não tem
-    const fb = await fetchRecsFallback();
-    return fb;
-  }
-
-  function ensureButtons(){
-    const ul = document.getElementById('listaRecorrentes');
-    if (!ul) return;
-    if (document.getElementById('btn-reclist-refresh')) return;
-    const parent = ul.parentElement || ul;
-    const bar = document.createElement('div');
-    bar.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin:6px 0 8px;';
-    bar.innerHTML = '<button id="btn-reclist-refresh" class="btn btn-light" type="button">Recarregar</button>';
-    parent.insertBefore(bar, ul);
-    document.getElementById('btn-reclist-refresh').addEventListener('click', async ()=>{
-      try { if (window.loadAll) await loadAll(); } catch(_){}
-      await renderRecListSimple(true);
-    });
-  }
-
-  async function renderRecListSimple(force=false){
-    const ul = document.getElementById('listaRecorrentes');
-    if (!ul) return;
-    ensureButtons();
-
-    // Sinal de carregamento quando não for force
-    if (!force) ul.innerHTML = '<li style="opacity:.7">Carregando recorrências...</li>';
-
-    let recs = getRecsSync();
-    if (!recs || force) recs = await resolveRecs();
-
-    if (!recs || !recs.length) {
-      ul.innerHTML = '<li style="opacity:.7">Nenhuma recorrência cadastrada ainda.</li>';
-      return;
-    }
-
-    ul.innerHTML = recs.map(r => {
-      const prox = isoToBR(r.proxima_data);
-      const tagAtivo = r.ativo ? '<span class="tag success">Ativa</span>' : '<span class="tag">Pausada</span>';
-      const periodicidade = (r.periodicidade || '').toString();
-      return `<li class="rec-item" data-id="${r.id}">
-        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:240px">
-            <div><strong>${r.descricao || '(sem descrição)'}</strong></div>
-            <div style="font-size:12px;opacity:.8">${r.categoria || '-'} • ${periodicidade} • Próx: ${prox} • Valor: ${fmtBRL(r.valor)}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            ${tagAtivo}
-            <button class="btn btn-light" data-action="rec-apply">Aplicar agora</button>
-            <button class="btn btn-light" data-action="rec-toggle">${r.ativo ? 'Pausar' : 'Retomar'}</button>
-            <button class="btn btn-danger" data-action="rec-del">Excluir</button>
-          </div>
-        </div>
-      </li>`;
-    }).join('');
-  }
-
-  function bindRecListSimple(){
-    const ul = document.getElementById('listaRecorrentes');
-    if (!ul || ul.__recBound) return;
-    ul.__recBound = true;
-    ul.addEventListener('click', async (ev) => {
-      const li = ev.target.closest('.rec-item'); if (!li) return;
-      const id = li.dataset.id;
-      const recs = (getRecsSync() || []);
-      const rec = recs.find(r => String(r.id) === String(id)); if (!rec) return;
-      const action = ev.target.getAttribute('data-action');
-      try {
-        if (action === 'rec-apply' && window.applyRecurrences) {
-          await applyRecurrences();
-          try { if (window.loadAll) await loadAll(); } catch(_){}
-          await renderRecListSimple(true);
-        }
-        if (action === 'rec-toggle' && window.toggleRecAtivo) {
-          await toggleRecAtivo(rec.id, !rec.ativo);
-          try { if (window.loadAll) await loadAll(); } catch(_){}
-          await renderRecListSimple(true);
-        }
-        if (action === 'rec-del' && window.deleteRec) {
-          if (confirm('Excluir esta recorrência? Esta ação não remove transações já geradas.')) {
-            await deleteRec(rec.id);
-            try { if (window.loadAll) await loadAll(); } catch(_){}
-            await renderRecListSimple(true);
+  // Wrap or define saveRec so it always inserts into 'recurrences'
+  (function wrapSaveRec(){
+    const tryWrap = () => {
+      const hasClient = !!window.supabaseClient?.from;
+      const orig = window.saveRec;
+      if (orig && !orig.__recWrapped2) {
+        window.saveRec = async function(rec){
+          // normalize payload
+          const payload = { ...rec };
+          payload.periodicidade = titlePeriodicidade(payload.periodicidade);
+          payload.proxima_data = toISO(payload.proxima_data || payload.inicio || new Date());
+          if (typeof payload.ativo === 'undefined') payload.ativo = true;
+          // let original try first
+          try {
+            const res = await orig.call(this, payload);
+            // If original didn't really insert, fallback
+            if (res && (res.id || (res.data?.id))) return res;
+          } catch(e){
+            console.warn('[saveRec orig] falhou, tentando fallback direto no Supabase', e);
           }
-        }
-      } catch(e){ console.error('[Recorrências] ação falhou', e); alert('Algo deu errado. Veja o console.'); }
-    });
-  }
-
-  // 1) Render inicial (pode vir vazio se dados não carregaram ainda)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ()=>{ renderRecListSimple(); bindRecListSimple(); });
-  } else {
-    renderRecListSimple(); bindRecListSimple();
-  }
-
-  // 2) Se loadAll existir agora ou for atribuído depois, garantimos render pós-carregamento
-  const _desc = Object.getOwnPropertyDescriptor(window, 'loadAll');
-  if (_desc && typeof _desc.value === 'function') {
-    const _orig = _desc.value;
-    window.loadAll = async function(){
-      const r = await _orig.apply(this, arguments);
-      await renderRecListSimple(true);
-      bindRecListSimple();
-      return r;
-    };
-  } else {
-    // polling para aguardar loadAll surgir e/ou S.recs encher
-    let attempts = 0;
-    const iv = setInterval(async ()=>{
-      attempts++;
-      if (window.loadAll && !window.loadAll.__recWrapped) {
-        const orig = window.loadAll;
-        window.loadAll = async function(){
-          const r = await orig.apply(this, arguments);
-          await renderRecListSimple(true);
-          bindRecListSimple();
-          return r;
+          if (!hasClient) throw new Error('Supabase client indisponível');
+          const { data, error } = await supabaseClient.from('recurrences').insert([payload]).select('*');
+          if (error) { console.error('[saveRec fallback] erro:', error); throw error; }
+          try { if (window.loadAll) await loadAll(); } catch(_) {}
+          try { if (window.renderRecListSimple) await renderRecListSimple(true); } catch(_) {}
+          return data?.[0] || data;
         };
-        window.loadAll.__recWrapped = true; // usa 'true' válido
+        window.saveRec.__recWrapped2 = true;
+      } else if (!orig && hasClient) {
+        // define a basic saveRec if not present
+        window.saveRec = async function(rec){
+          const payload = { ...rec };
+          payload.periodicidade = titlePeriodicidade(payload.periodicidade);
+          payload.proxima_data = toISO(payload.proxima_data || payload.inicio || new Date());
+          if (typeof payload.ativo === 'undefined') payload.ativo = true;
+          const { data, error } = await supabaseClient.from('recurrences').insert([payload]).select('*');
+          if (error) { console.error('[saveRec basic] erro:', error); throw error; }
+          try { if (window.loadAll) await loadAll(); } catch(_) {}
+          try { if (window.renderRecListSimple) await renderRecListSimple(true); } catch(_) {}
+          return data?.[0] || data;
+        };
+        window.saveRec.__recWrapped2 = true;
+      } else {
+        setTimeout(tryWrap, 400);
       }
-      if (getRecsSync()) {
-        clearInterval(iv);
-        await renderRecListSimple(true);
-        bindRecListSimple();
-      }
-      if (attempts > 40) { clearInterval(iv); } // ~20s máx
-    }, 500);
-  }
-
-  // expor para debug manual
-  window.renderRecListSimple = renderRecListSimple;
+    };
+    tryWrap();
+  })();
 })();
 
