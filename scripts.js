@@ -2872,3 +2872,275 @@ document.addEventListener("DOMContentLoaded", function(){
   // Expose fill if needed elsewhere
   try { window.fillCcFixedFields = fill; } catch(_) {}
 })();
+
+// [PATCH Recorrencias] Helpers de data e preview
+(function(){
+  const toISODate = (d) => d.toISOString().slice(0,10);
+  const parseISO = (s) => { const [y,m,da] = s.split('-').map(Number); return new Date(y, m-1, da); };
+  const endOfMonth = (y, m) => new Date(y, m+1, 0).getDate();
+
+  function clampDay(y, m, day, ajuste) {
+    const max = endOfMonth(y, m);
+    return ajuste ? Math.min(day, max) : day;
+  }
+
+  function nextMonthly(fromISO, diaMes, ajusteFimMes=true) {
+    const d = parseISO(fromISO);
+    const y = d.getFullYear(); const m = d.getMonth();
+    let targetM = (d.getDate() <= diaMes) ? m : m+1;
+    const targetY = y + Math.floor(targetM/12);
+    targetM = targetM % 12;
+    const day = clampDay(targetY, targetM, diaMes, ajusteFimMes);
+    return toISODate(new Date(targetY, targetM, day));
+  }
+
+  function alignToWeekday(fromISO, dow) {
+    const d = parseISO(fromISO);
+    const diff = (7 + dow - d.getDay()) % 7;
+    d.setDate(d.getDate() + diff);
+    return toISODate(d);
+  }
+
+  function nextWeekly(fromISO, dow) {
+    const d = parseISO(fromISO);
+    d.setDate(d.getDate() + 7);
+    const aligned = alignToWeekday(toISODate(d), dow);
+    return aligned;
+  }
+
+  function nextAnnual(fromISO, mes, diaMes, ajusteFimMes=true) {
+    const d = parseISO(fromISO);
+    let y = d.getFullYear();
+    const thisYearDay = clampDay(y, mes-1, diaMes, ajusteFimMes);
+    let candidate = toISODate(new Date(y, mes-1, thisYearDay));
+    if (candidate < fromISO) {
+      y += 1;
+      const day = clampDay(y, mes-1, diaMes, ajusteFimMes);
+      candidate = toISODate(new Date(y, mes-1, day));
+    }
+    return candidate;
+  }
+
+  function previewNextDates(rec, count=6) {
+    const out = [];
+    let cur = rec.proxima_data || rec.inicio || toISODate(new Date());
+    for (let i=0; i<count; i++) {
+      out.push(cur);
+      if (rec.periodicidade === 'mensal') {
+        const d = parseISO(cur); const y = d.getFullYear(); const m = d.getMonth();
+        const nextM = m+1; const nextY = y + Math.floor(nextM/12);
+        const month = nextM % 12;
+        const day = clampDay(nextY, month, rec.dia_mes || d.getDate(), rec.ajuste_fim_mes !== false);
+        cur = toISODate(new Date(nextY, month, day));
+      } else if (rec.periodicidade === 'semanal') {
+        cur = nextWeekly(cur, Number(rec.dia_semana ?? parseISO(cur).getDay()));
+      } else {
+        const d = parseISO(cur); const y = d.getFullYear()+1;
+        const m = (rec.mes || (d.getMonth()+1)) - 1;
+        const day = clampDay(y, m, rec.dia_mes || d.getDate(), rec.ajuste_fim_mes !== false);
+        cur = toISODate(new Date(y, m, day));
+      }
+      if (rec.fim_em && cur > rec.fim_em) break;
+    }
+    return out;
+  }
+
+  // Exponha minimamente utilitários no escopo global para reuso interno (sem poluir muito)
+  window.__recUtils = { toISODate, parseISO, alignToWeekday, nextWeekly, nextMonthly, nextAnnual, previewNextDates };
+
+  // [PATCH Recorrencias] Painel
+  function renderRecurrencesPanel() {
+    const el = document.getElementById('rec-list');
+    if (!el || !window.S) return;
+    const q = (document.getElementById('rec-search')?.value || '').toLowerCase();
+    const onlyActive = document.getElementById('rec-only-active')?.checked;
+
+    const recs = (S.recs || []).filter(r => {
+      const text = `${r.descricao||''} ${r.categoria||''}`.toLowerCase();
+      const passQ = !q || text.includes(q);
+      const passActive = !onlyActive || r.ativo;
+      return passQ && passActive;
+    });
+
+    el.innerHTML = recs.map(r => {
+      const prox = r.proxima_data ? new Date(r.proxima_data).toLocaleDateString() : '-';
+      const preview = previewNextDates(r, 3).join(', ');
+      const valor = (Number(r.valor)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'});
+      return `
+        <div class="rec-card" data-id="${r.id}">
+          <div><strong>${r.descricao||'(sem descrição)'}</strong> — ${r.categoria||'-'} • ${r.tipo||'-'} • ${r.periodicidade||'-'}</div>
+          <div class="meta">Próxima: <strong>${prox}</strong> • Valor: ${valor}</div>
+          <div class="meta">Prévia: ${preview}</div>
+          <div class="actions">
+            <button class="btn btn-light" data-action="apply-now">Aplicar agora</button>
+            <button class="btn btn-light" data-action="toggle-active">${r.ativo? 'Pausar':'Retomar'}</button>
+            <button class="btn" data-action="edit">Editar</button>
+            <button class="btn btn-danger" data-action="delete">Excluir</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function openRecurrencesPanel(){ document.getElementById('recurrences-panel')?.classList.remove('hidden'); renderRecurrencesPanel(); }
+  function closeRecurrencesPanel(){ document.getElementById('recurrences-panel')?.classList.add('hidden'); }
+
+  // [PATCH Recorrencias] Edição
+  let EDITING_REC = null;
+
+  function fillEditForm(rec){
+    const form = document.getElementById('form-edit-rec');
+    if (!form) return;
+    EDITING_REC = rec;
+    form.descricao.value = rec.descricao||'';
+    form.categoria.value = rec.categoria||'';
+    form.tipo.value = rec.tipo||'despesa';
+    form.valor.value = rec.valor||0;
+    form.ativo.checked = !!rec.ativo;
+    form.periodicidade.value = rec.periodicidade||'mensal';
+    form.dia_mes.value = rec.dia_mes||'';
+    form.dia_semana.value = (rec.dia_semana ?? '').toString();
+    form.mes.value = rec.mes||'';
+    form.inicio.value = rec.inicio || (rec.proxima_data ?? __recUtils.toISODate(new Date()));
+    form.fim_em.value = rec.fim_em||'';
+    form.ajuste_fim_mes.checked = (rec.ajuste_fim_mes !== false);
+    renderEditPreview();
+  }
+
+  function collectEditForm(){
+    const f = document.getElementById('form-edit-rec');
+    const rec = {
+      ...EDITING_REC,
+      descricao: f.descricao.value.trim(),
+      categoria: f.categoria.value,
+      tipo: f.tipo.value,
+      valor: Number(f.valor.value||0),
+      ativo: f.ativo.checked,
+      periodicidade: f.periodicidade.value,
+      dia_mes: f.dia_mes.value ? Number(f.dia_mes.value) : null,
+      dia_semana: f.dia_semana.value !== '' ? Number(f.dia_semana.value) : null,
+      mes: f.mes.value ? Number(f.mes.value) : null,
+      inicio: f.inicio.value,
+      fim_em: f.fim_em.value || null,
+      ajuste_fim_mes: f.ajuste_fim_mes.checked,
+    };
+    rec.proxima_data = computeNextFromStart(rec);
+    return rec;
+  }
+
+  function computeNextFromStart(rec){
+    const start = rec.inicio || __recUtils.toISODate(new Date());
+    if (rec.periodicidade === 'mensal') {
+      const dia = rec.dia_mes || __recUtils.parseISO(start).getDate();
+      return __recUtils.nextMonthly(start, dia, rec.ajuste_fim_mes !== false);
+    }
+    if (rec.periodicidade === 'semanal') {
+      const dow = rec.dia_semana ?? __recUtils.parseISO(start).getDay();
+      return __recUtils.alignToWeekday(start, Number(dow));
+    }
+    const dia = rec.dia_mes || __recUtils.parseISO(start).getDate();
+    const mes = rec.mes || (__recUtils.parseISO(start).getMonth()+1);
+    return __recUtils.nextAnnual(start, Number(mes), Number(dia), rec.ajuste_fim_mes !== false);
+  }
+
+  function renderEditPreview(){
+    const list = document.getElementById('edit-rec-preview');
+    const rec = collectEditForm();
+    const dates = __recUtils.previewNextDates(rec, 6);
+    list.innerHTML = dates.map(d => `<li>${new Date(d).toLocaleDateString()}</li>`).join('');
+  }
+
+  function openEditRecurrence(rec){
+    // Popular categorias a partir de S.cats, se existir
+    const sel = document.querySelector('#form-edit-rec select[name="categoria"]');
+    if (sel && window.S?.cats) {
+      sel.innerHTML = S.cats.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+    }
+    fillEditForm(rec);
+    document.getElementById('modal-edit-recurrence')?.classList.remove('hidden');
+  }
+  function closeEditRecurrence(){
+    document.getElementById('modal-edit-recurrence')?.classList.add('hidden');
+    EDITING_REC = null;
+  }
+
+  // Bindings
+  function bindRecurrencesUI(){
+    const btnOpen = document.getElementById('btn-open-recurrences');
+    const btnClose = document.getElementById('btn-close-recurrences');
+    btnOpen?.addEventListener('click', openRecurrencesPanel);
+    btnClose?.addEventListener('click', closeRecurrencesPanel);
+    document.getElementById('rec-search')?.addEventListener('input', renderRecurrencesPanel);
+    document.getElementById('rec-only-active')?.addEventListener('change', renderRecurrencesPanel);
+
+    document.getElementById('rec-list')?.addEventListener('click', async (ev) => {
+      const card = ev.target.closest('.rec-card');
+      if (!card) return;
+      const id = card.dataset.id;
+      const rec = (window.S?.recs||[]).find(r => String(r.id) == String(id));
+      if (!rec) return;
+      const action = ev.target.getAttribute('data-action');
+
+      try {
+        if (action === 'toggle-active' && window.toggleRecAtivo) {
+          await toggleRecAtivo(rec.id, !rec.ativo);
+          if (window.loadAll) await loadAll();
+          renderRecurrencesPanel();
+        }
+        if (action === 'delete' && window.deleteRec) {
+          if (confirm('Excluir esta recorrência? Esta ação não remove transações já geradas.')) {
+            await deleteRec(rec.id);
+            if (window.loadAll) await loadAll();
+            renderRecurrencesPanel();
+          }
+        }
+        if (action === 'apply-now' && window.applyRecurrences) {
+          await applyRecurrences();
+          if (window.loadAll) await loadAll();
+          renderRecurrencesPanel();
+        }
+        if (action === 'edit') {
+          openEditRecurrence(rec);
+        }
+      } catch (e) { console.error('[Recorrências] ação falhou', e); alert('Algo deu errado. Veja o console.'); }
+    });
+
+    // Edit modal events
+    document.querySelectorAll('[data-action="close-edit-rec"]').forEach(el => el.addEventListener('click', closeEditRecurrence));
+    document.getElementById('form-edit-rec')?.addEventListener('input', (e)=>{
+      if (e.target.closest('input,select')) renderEditPreview();
+    });
+    document.getElementById('btn-save-edit-rec')?.addEventListener('click', async ()=>{
+      if (!window.saveRec) return alert('saveRec indisponível');
+      const updated = collectEditForm();
+      await saveRec(updated);
+      if (window.loadAll) await loadAll();
+      renderRecurrencesPanel();
+      closeEditRecurrence();
+    });
+    document.getElementById('btn-delete-rec')?.addEventListener('click', async ()=>{
+      if (!window.deleteRec || !EDITING_REC) return;
+      if (confirm('Excluir esta recorrência?')) {
+        await deleteRec(EDITING_REC.id);
+        if (window.loadAll) await loadAll();
+        renderRecurrencesPanel();
+        closeEditRecurrence();
+      }
+    });
+  }
+
+  // Aguarda DOM pronto para conectar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindRecurrencesUI);
+  } else {
+    bindRecurrencesUI();
+  }
+
+  // [PATCH Recorrencias] Ajuste semanal sugerido – exemplo de hook (depende do seu applyRecurrences)
+  // Nota: não sobrescrevemos applyRecurrences existente; este bloco é uma referência que
+  // você pode integrar onde avança a proxima_data semanal:
+  window.__advanceWeeklyWithDow = function(rec){
+    const dow = Number(rec.dia_semana ?? __recUtils.parseISO(rec.proxima_data).getDay());
+    rec.proxima_data = __recUtils.nextWeekly(rec.proxima_data, dow);
+    return rec.proxima_data;
+  };
+})();
