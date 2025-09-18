@@ -2808,46 +2808,10 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
-// === Config Modal: Dia de vencimento / Dia de fechamento ===
-(function setupConfigModal(){
-  function ensureModal(){
-    if (document.getElementById('configModal')) return;
-    const modal = document.createElement('div');
-    modal.id = 'configModal';
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <div class="content" role="dialog" aria-modal="true" aria-labelledby="cfgTitle">
-        <div class="title">
-          <h3 id="cfgTitle">Configurações</h3>
-          <button class="icon close" data-close-modal aria-label="Fechar"><i class="ph ph-x"></i></button>
-        </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="ccDueDay">Dia de vencimento</label>
-            <input id="ccDueDay" type="number" min="1" max="31" placeholder="ex: 10" />
-            <div class="helper">Obrigatório</div>
-          </div>
-          <div class="field">
-            <label for="ccClosingDay">Dia de fechamento <span class="optional">opcional</span></label>
-            <input id="ccClosingDay" type="number" min="1" max="31" placeholder="ex: 2" />
-            <div class="helper">Se vazio, fechamento = último dia do mês anterior ao vencimento</div>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-save" id="cfgSave">Salvar</button>
-          <button class="btn btn-cancel" data-close-modal>Fechar</button>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-  }
 
-  function toggle(show){
-    const m = document.getElementById('configModal');
-    if (!m) return;
-    m.style.display = show ? 'flex' : 'none';
-    document.body.classList.toggle('modal-open', !!show);
-  }
 
+// === Campos fixos de vencimento/fechamento (sem modal) ===
+(function setupCcFields(){
   function clampDay(v){
     v = Number(v);
     if (!isFinite(v)) return null;
@@ -2857,54 +2821,54 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function fill(){
-    const due = document.getElementById('ccDueDay');
-    const clo = document.getElementById('ccClosingDay');
-    if (!window.S) return;
-    due && (due.value = (window.S.ccDueDay ?? '') || '');
-    clo && (clo.value = (window.S.ccClosingDay ?? '') || '');
+    try {
+      const due = document.getElementById('ccDueDay');
+      const clo = document.getElementById('ccClosingDay');
+      if (!window.S) return;
+      if (due) due.value = (S.ccDueDay ?? '') || '';
+      if (clo) clo.value = (S.ccClosingDay ?? '') || '';
+    } catch(_) {}
   }
 
-  function save(){
-    const due = document.getElementById('ccDueDay');
-    const clo = document.getElementById('ccClosingDay');
-    if (!window.S) return;
-    window.S.ccDueDay = clampDay(due ? due.value : null);
-    const cv = clampDay(clo ? clo.value : null);
-    window.S.ccClosingDay = (cv === null || cv === undefined) ? null : cv;
-    if (typeof window.savePrefs === 'function') {
-      window.savePrefs();
-    }
+  function onChange(){
+    try {
+      const due = document.getElementById('ccDueDay');
+      const clo = document.getElementById('ccClosingDay');
+      if (!window.S) return;
+      S.ccDueDay = clampDay(due?.value);
+      const cv = clampDay(clo?.value);
+      S.ccClosingDay = (cv === null || cv === undefined) ? null : cv;
+      if (typeof savePrefs === 'function') savePrefs();
+    } catch(_) {}
   }
 
-  // Wire once DOM is ready
+  // Fill early and wire events
   document.addEventListener('DOMContentLoaded', function(){
-    ensureModal();
-    const btn = document.getElementById('btnConfig');
-    if (btn && !btn._wiredCfg) {
-      btn.addEventListener('click', function(){
-        fill();
-        toggle(true);
-      });
-      btn._wiredCfg = true;
-    }
-    const modal = document.getElementById('configModal');
-    if (modal && !modal._wiredClose) {
-      modal.addEventListener('click', function(ev){
-        const t = ev.target;
-        if (t.closest('[data-close-modal], .icon.close')) {
-          ev.preventDefault();
-          toggle(false);
-        }
-      });
-      modal._wiredClose = true;
-    }
-    const saveBtn = document.getElementById('cfgSave');
-    if (saveBtn && !saveBtn._wired) {
-      saveBtn.addEventListener('click', function(){
-        save();
-        toggle(false);
-      });
-      saveBtn._wired = true;
-    }
+    fill();
+    ['ccDueDay','ccClosingDay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el._wiredSave) {
+        el.addEventListener('change', onChange);
+        el._wiredSave = True;
+      }
+    });
   });
+
+  // Refill after data finishes loading
+  (function hookLoadAll(){
+    try {
+      if (typeof window.loadAll === 'function' && !window.loadAll._ccHooked) {
+        const old = window.loadAll;
+        window.loadAll = async function(){
+          const r = await old.apply(this, arguments);
+          try { fill(); } catch(_) {}
+          return r;
+        };
+        window.loadAll._ccHooked = true;
+      }
+    } catch(_) {}
+  })();
+
+  // Expose fill if needed elsewhere
+  try { window.fillCcFixedFields = fill; } catch(_) {}
 })();
