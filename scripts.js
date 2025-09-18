@@ -552,7 +552,7 @@ const selPag = qs('#mPagamento');
 
     }
 const chkRepetir = qs("#mRepetir");
-    if (S.editingId || !chkRepetir?.checked) {
+    if (!chkRepetir?.checked) {  // patched: allow creating recurrence even when editing
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
@@ -563,6 +563,9 @@ const chkRepetir = qs("#mRepetir");
     // Criar recorrência
     const perEl = qs("#mPeriodicidade");
     const per = perEl ? perEl.value : "Mensal";
+    // normalize periodicidade para valores aceitos pelo banco
+    const perNorm = (per||"").toLowerCase();
+    const perTitle = perNorm === "mensal" ? "Mensal" : perNorm === "semanal" ? "Semanal" : perNorm === "anual" ? "Anual" : per;
     const diaMes = Number(qs("#mDiaMes")?.value) || new Date().getDate();
     const dow    = Number(qs("#mDiaSemana")?.value || 1);
     const mes    = Number(qs("#mMes")?.value || (new Date().getMonth() + 1));
@@ -572,14 +575,14 @@ const chkRepetir = qs("#mRepetir");
 
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
-    if (per === "Mensal") {
+    if ((perTitle || per) === "Mensal") {
       const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
       const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
       proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
-    } else if (per === "Semanal") {
+    } else if ((perTitle || per) === "Semanal") {
       proxima = incWeekly(inicio);
-    } else if (per === "Anual") {
+    } else if ((perTitle || per) === "Anual") {
       const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
       const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
@@ -593,7 +596,7 @@ const chkRepetir = qs("#mRepetir");
       descricao: t.descricao,
       valor: t.valor,
       obs: t.obs,
-      periodicidade: per,
+      periodicidade: (perTitle || per),
       proxima_data: proxima,
       fim_em: fim,
       ativo: true,
@@ -612,7 +615,7 @@ const chkRepetir = qs("#mRepetir");
     // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
     if (t.data === saved.proxima_data) {
       await materializeOne(saved, saved.proxima_data);
-      if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
+      if ((perTitle || per) === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
       else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
       else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
       await supabaseClient.from("recurrences").update({ proxima_data: saved.proxima_data }).eq("id", saved.id);
