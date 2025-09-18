@@ -1268,7 +1268,6 @@ h3.textContent = 'Lançamentos — ' + label;
           byCatMonth[k] = byCatMonth[k] || {};
           byCatMonth[k][m] = (byCatMonth[k][m]||0) + (Number(x.valor)||0);
         });
-    });
     const medias = Object.entries(byCatMonth).map(([cat, map])=>{
       const tot = months.reduce((a,m)=>a+(map[m]||0),0);
       return [cat, tot/windowMonths];
@@ -1420,7 +1419,7 @@ function renderHeatmap() {
     cont.appendChild(legend);
   } catch (e) { console.error("renderHeatmap:", e); }
 }
-);
+;
     }
     // Somas P1/P2 e listas
     const p1 = sumInOutByWallet("Marido");
@@ -1487,7 +1486,6 @@ function render() {
         btn.addEventListener('click', function(){
           mobileMenu.classList.remove('open');
         });
-      });
     }
   })();
 
@@ -1647,14 +1645,12 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
           const len = valorInput.value.length;
           valorInput.setSelectionRange(len,len);
         });
-      });
       valorInput.addEventListener('focus', () => {
         if (!valorInput.value) setAmount();
         requestAnimationFrame(() => {
           const len = valorInput.value.length;
           valorInput.setSelectionRange(len,len);
         });
-      });
     }
 
     function validateModal(){
