@@ -1717,3 +1717,213 @@ body.dark .heatmap-cell {
 @media (max-width: 768px){
   .wallets-grid{ grid-template-columns: 1fr; } /* empilha no mobile */
 }
+
+/* ===== ELEGANT THEME ADD-ON ===== */
+/* =======================================================
+   ELEGANT THEME ADD-ON (safe overrides)
+   Cole este bloco no FINAL do styles.css
+   ======================================================= */
+
+/* 1) Tokens e transições suaves */
+:root {
+  --radius: 20px;                /* cards mais “premium” */
+  --shadow: 0 10px 26px rgba(2, 6, 23, .08);
+}
+* { transition: background .20s ease, color .20s ease, border-color .20s ease, box-shadow .20s ease, transform .12s ease; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* 2) Topbar mais limpa e vítrea */
+.nav {
+  background:
+    linear-gradient(180deg, rgba(124,58,237,.12), transparent 70%),
+    var(--bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: saturate(1.25) blur(8px);
+}
+.nav .wrap { gap: 18px; padding: 14px 20px; }
+.badge {
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-weight: 700;
+  background: linear-gradient(90deg, rgba(124,58,237,.10), rgba(124,58,237,.06));
+}
+.badge img.logo { height: 24px; }
+
+/* 3) Abas (tabs) com foco/hover mais elegantes */
+.tabs { gap: 10px; }
+.tab {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: var(--muted);
+}
+.tab:hover { border-color: transparent; background: var(--bg-soft); color: var(--text); }
+.tab.active {
+  color: var(--text);
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--chip), transparent 140%);
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(124,58,237,.12);
+}
+.tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* 4) Botões principais e ícones */
+button.btn {
+  border: 0;
+  color: #fff;
+  font-size: 14px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  box-shadow: 0 8px 20px rgba(124,58,237,.25);
+  transform: translateZ(0);
+}
+button.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(124,58,237,.28); }
+button.btn:active { transform: translateY(-1px); }
+button.btn.secondary {
+  background: var(--chip);
+  color: var(--text);
+  box-shadow: 0 6px 16px rgba(2,6,23,.08);
+}
+
+button.icon {
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+button.icon:hover { background: var(--bg-soft); }
+
+/* 5) Cards com “levitação” sutil */
+.card {
+  background: var(--card);
+  border: 1px solid rgba(2,6,23,.06);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(2,6,23,.12);
+}
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+/* 6) KPIs com tipografia mais forte */
+.kpi .value { font-size: 26px; font-weight: 800; letter-spacing: .2px; }
+
+/* 7) Chips “pill” premium */
+.chip,
+.tag {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: linear-gradient(90deg, #f5f3ff, #ede9fe);
+  color: var(--brand);
+  border: 1px solid var(--border);
+}
+.kpi .chip { border: 0; } /* mantém as cores dinâmicas das KPIs */
+
+/* 8) Listas e cards de lançamentos (grid) mais táteis */
+.item {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+}
+.item:hover { background: var(--bg-soft); }
+#listaLanc.lanc-grid > li.item,
+#listaRecentes.lanc-grid > li.item {
+  transition: transform .12s ease, box-shadow .20s ease, background .20s ease;
+}
+#listaLanc.lanc-grid > li.item:hover,
+#listaRecentes.lanc-grid > li.item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+
+/* 9) Barra de progresso (metas) com gradiente */
+.metas-card .progress { border: 1px solid var(--border); background: var(--bg-soft); }
+.metas-card .progress .bar {
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+}
+
+/* 10) Tabelas mais limpas */
+table { border-collapse: collapse; width: 100%; }
+th, td {
+  padding: 10px 8px;
+  border-bottom: 1px dashed var(--border);
+  font-size: 14px;
+}
+th {
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 11) Modal polido */
+.modal { background: rgba(3, 6, 23, .55); backdrop-filter: blur(8px); }
+.modal .content {
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(2,6,23,.35);
+}
+.modal .title { position: sticky; top: 0; background: var(--card); padding-bottom: 8px; }
+.modal .amount {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  border: 1px dashed var(--border);
+  background: linear-gradient(0deg, var(--bg-soft), var(--bg-soft));
+}
+
+/* 12) Focus visível consistente (a11y) */
+button:focus-visible,
+.select:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* 13) Dark mode refinado */
+.dark {
+  --bg: #0d1117;
+  --bg-soft: #161b22;
+  --card: #1c2129;
+  --border: #2d333b;
+  --chip: #2b2f3a;
+}
+body.dark .card { border-color: rgba(255,255,255,.05); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+body.dark .tab:hover { background: #141922; }
+body.dark .chip, body.dark .tag {
+  background: linear-gradient(90deg, rgba(139,92,246,.15), rgba(124,58,237,.10));
+  color: #e9e9f2;
+  border-color: #2d333b;
+}
+body.dark .modal { background: rgba(0,0,0,.55); }
+body.dark .modal .content { background: var(--card); }
+body.dark .metas-card .progress { background: #12161c; }
+
+/* 14) Pequenos refinamentos responsivos */
+@media (max-width: 834px) {
+  .card h3 { font-size: 16px; }
+  button.btn { padding: 9px 12px; }
+  .kpi .value { font-size: 24px; }
+}
+@media (max-width: 520px) {
+  .tabs { display: none; } /* você já tem menu mobile no HTML */
+  .badge { padding: 6px 10px; }
+}
