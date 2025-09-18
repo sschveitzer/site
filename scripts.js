@@ -2849,7 +2849,7 @@ document.addEventListener("DOMContentLoaded", function(){
       const el = document.getElementById(id);
       if (el && !el._wiredSave) {
         el.addEventListener('change', onChange);
-        el._wiredSave = true;
+        el._wiredSave = True;
       }
     });
   });
@@ -2874,110 +2874,100 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
-
-// === [PATCH-RUNTIME] Recorrências: garantir gravação e carregamento ===
+/* === [REC] Lista no Config → Transações recorrentes (fetch direto do Supabase) === */
 (function(){
-  // Helpers
-  function toISO(d){
-    if (!d) return new Date().toISOString().slice(0,10);
-    if (d instanceof Date && !isNaN(d.getTime())) return d.toISOString().slice(0,10);
-    if (typeof d === 'string') {
-      const s = d.trim();
-      if (!s) return new Date().toISOString().slice(0,10);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-        const [dd,mm,yy] = s.split('/').map(Number);
-        return new Date(yy, mm-1, dd).toISOString().slice(0,10);
-      }
-      const t = Date.parse(s); if (!isNaN(t)) return new Date(t).toISOString().slice(0,10);
-    }
-    try {
-      const dt = new Date(d);
-      return isNaN(dt.getTime()) ? new Date().toISOString().slice(0,10) : dt.toISOString().slice(0,10);
-    } catch(_) { return new Date().toISOString().slice(0,10); }
-  }
-  function titlePeriodicidade(per){
-    const p = String(per||'').toLowerCase();
-    return p === 'mensal' ? 'Mensal' : p === 'semanal' ? 'Semanal' : p === 'anual' ? 'Anual' : per;
+  function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
+  function iso(d){ try { return d ? new Date(d).toLocaleDateString() : '-'; } catch(_) { return d||'-'; } }
+
+  async function fetchRecs(){
+    if (!window.supabaseClient?.from) { console.warn('[rec] supabaseClient indisponível'); return []; }
+    const { data, error } = await supabaseClient
+      .from('recurrences')
+      .select('*')
+      .order('id', { ascending: false });
+    if (error) { console.error('[rec] fetch error', error); return []; }
+    return Array.isArray(data) ? data : [];
   }
 
-  async function fetchRecurrences(){
-    if (!window.supabaseClient?.from) return [];
-    try {
-      const { data, error } = await supabaseClient.from('recurrences').select('*').order('id', { ascending: false });
-      if (error) { console.warn('[recurrences] fetch error', error); return []; }
-      return Array.isArray(data) ? data : [];
-    } catch(e){ console.warn('[recurrences] fetch exception', e); return []; }
+  function ensureToolbar(ul){
+    if (!ul) return;
+    if (document.getElementById('btn-reclist-refresh')) return;
+    const parent = ul.parentElement || ul;
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin:6px 0 8px;';
+    bar.innerHTML = '<button id="btn-reclist-refresh" class="btn btn-light" type="button">Recarregar</button>';
+    parent.insertBefore(bar, ul);
+    document.getElementById('btn-reclist-refresh').addEventListener('click', async ()=>{
+      await renderRecListDirect(true);
+    });
   }
 
-  // Wrap loadAll to also refresh S.recs
-  (function wrapLoadAll(){
-    const orig = window.loadAll;
-    if (typeof orig === 'function' && !orig.__recWrapped2) {
-      window.loadAll = async function(){
-        const r = await orig.apply(this, arguments);
-        try {
-          const recs = await fetchRecurrences();
-          window.S = window.S || {};
-          S.recs = recs;
-          if (window.renderRecListSimple) { try { await renderRecListSimple(true); } catch(_) {} }
-        } catch(_) {}
-        return r;
-      };
-      window.loadAll.__recWrapped2 = true;
-    } else if (!orig) {
-      // if not defined yet, try again later
-      setTimeout(wrapLoadAll, 500);
-    }
-  })();
+  async function renderRecListDirect(force=false){
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul) return;
+    ensureToolbar(ul);
+    ul.innerHTML = '<li style="opacity:.7">Carregando recorrências...</li>';
+    const recs = await fetchRecs();
+    if (!recs.length) { ul.innerHTML = '<li style="opacity:.7">Nenhuma recorrência cadastrada ainda.</li>'; return; }
+    ul.innerHTML = recs.map(r => {
+      const tagAtivo = r.ativo ? '<span class="tag success">Ativa</span>' : '<span class="tag">Pausada</span>';
+      return `<li class="rec-item" data-id="${r.id}">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:240px">
+            <div><strong>${r.descricao || '(sem descrição)'}</strong></div>
+            <div style="font-size:12px;opacity:.8">${r.categoria || '-'} • ${r.periodicidade || '-'} • Próx: ${iso(r.proxima_data)} • Valor: ${fmtBRL(r.valor)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${tagAtivo}
+            <button class="btn btn-light" data-action="rec-apply">Aplicar agora</button>
+            <button class="btn btn-light" data-action="rec-toggle">${r.ativo ? 'Pausar' : 'Retomar'}</button>
+            <button class="btn btn-danger" data-action="rec-del">Excluir</button>
+          </div>
+        </div>
+      </li>`;
+    }).join('');
+  }
 
-  // Wrap or define saveRec so it always inserts into 'recurrences'
-  (function wrapSaveRec(){
-    const tryWrap = () => {
-      const hasClient = !!window.supabaseClient?.from;
-      const orig = window.saveRec;
-      if (orig && !orig.__recWrapped2) {
-        window.saveRec = async function(rec){
-          // normalize payload
-          const payload = { ...rec };
-          payload.periodicidade = titlePeriodicidade(payload.periodicidade);
-          payload.proxima_data = toISO(payload.proxima_data || payload.inicio || new Date());
-          if (typeof payload.ativo === 'undefined') payload.ativo = true;
-          // let original try first
-          try {
-            const res = await orig.call(this, payload);
-            // If original didn't really insert, fallback
-            if (res && (res.id || (res.data?.id))) return res;
-          } catch(e){
-            console.warn('[saveRec orig] falhou, tentando fallback direto no Supabase', e);
-          }
-          if (!hasClient) throw new Error('Supabase client indisponível');
-          const { data, error } = await supabaseClient.from('recurrences').insert([payload]).select('*');
-          if (error) { console.error('[saveRec fallback] erro:', error); throw error; }
-          try { if (window.loadAll) await loadAll(); } catch(_) {}
-          try { if (window.renderRecListSimple) await renderRecListSimple(true); } catch(_) {}
-          return data?.[0] || data;
-        };
-        window.saveRec.__recWrapped2 = true;
-      } else if (!orig && hasClient) {
-        // define a basic saveRec if not present
-        window.saveRec = async function(rec){
-          const payload = { ...rec };
-          payload.periodicidade = titlePeriodicidade(payload.periodicidade);
-          payload.proxima_data = toISO(payload.proxima_data || payload.inicio || new Date());
-          if (typeof payload.ativo === 'undefined') payload.ativo = true;
-          const { data, error } = await supabaseClient.from('recurrences').insert([payload]).select('*');
-          if (error) { console.error('[saveRec basic] erro:', error); throw error; }
-          try { if (window.loadAll) await loadAll(); } catch(_) {}
-          try { if (window.renderRecListSimple) await renderRecListSimple(true); } catch(_) {}
-          return data?.[0] || data;
-        };
-        window.saveRec.__recWrapped2 = true;
-      } else {
-        setTimeout(tryWrap, 400);
-      }
-    };
-    tryWrap();
-  })();
+  function bindRecListDirect(){
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul || ul.__recBoundDirect) return;
+    ul.__recBoundDirect = true;
+    ul.addEventListener('click', async (ev) => {
+      const li = ev.target.closest('.rec-item'); if (!li) return;
+      const id = li.dataset.id;
+      const action = ev.target.getAttribute('data-action');
+      try {
+        if (action === 'rec-apply' && window.applyRecurrences) {
+          await applyRecurrences(); await renderRecListDirect(true);
+        }
+        if (action === 'rec-toggle') {
+          const ativo = ev.target.textContent.includes('Retomar');
+          const { error } = await supabaseClient.from('recurrences').update({ ativo }).eq('id', id);
+          if (error) { alert('Erro ao atualizar'); console.error(error); }
+          await renderRecListDirect(true);
+        }
+        if (action === 'rec-del') {
+          if (!confirm('Excluir esta recorrência?')) return;
+          const { error } = await supabaseClient.from('recurrences').delete().eq('id', id);
+          if (error) { alert('Erro ao excluir'); console.error(error); }
+          await renderRecListDirect(true);
+        }
+      } catch(e){ console.error('[rec] ação falhou', e); alert('Algo deu errado.'); }
+    });
+  }
+
+  // Render inicial e quando a aba Config for ativada
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ()=>{ renderRecListDirect(); bindRecListDirect(); });
+  } else {
+    renderRecListDirect(); bindRecListDirect();
+  }
+  document.addEventListener('click', (e)=>{
+    const tab = e.target.closest('[href="#config"], [data-target="#config"], [data-tab="#config"], [data-tab="config"]');
+    if (tab) setTimeout(()=> renderRecListDirect(true), 50);
+  });
+
+  // Expor p/ debug
+  window.renderRecListDirect = renderRecListDirect;
 })();
 
