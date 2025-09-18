@@ -1927,3 +1927,23 @@ body.dark .metas-card .progress { background: #12161c; }
   .tabs { display: none; } /* você já tem menu mobile no HTML */
   .badge { padding: 6px 10px; }
 }
+
+
+/* ==== PATCH: Remover efeito de "levantar" nos hovers ==== */
+.card:hover,
+button.btn:hover,
+#listaLanc.lanc-grid > li.item:hover,
+#listaRecentes.lanc-grid > li.item:hover {
+  transform: none !important;
+  box-shadow: 0 6px 14px rgba(2,6,23,.10);
+}
+
+/* ==== PATCH: Últimos lançamentos com cores por tipo (matching Lançamentos) ==== */
+#listaRecentes li[data-tipo="Despesa"] .valor { color: var(--warn); }
+#listaRecentes li[data-tipo="Receita"] .valor { color: var(--ok); }
+#listaRecentes li[data-tipo="Transferência"] .valor { color: var(--brand); }
+
+/* As chips já têm regras por tipo; garantir consistência visual */
+#listaRecentes li[data-tipo="Despesa"] .chip { background: rgba(220,38,38,.10); color:#dc2626; }
+#listaRecentes li[data-tipo="Receita"] .chip { background: rgba(34,197,94,.10);  color:#16a34a; }
+#listaRecentes li[data-tipo="Transferência"] .chip { background: rgba(124,58,237,.10); color:#7c3aed; }
