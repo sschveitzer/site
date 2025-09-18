@@ -2874,19 +2874,69 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
-/* === [REC] Lista simples no Config → Transações recorrentes (#listaRecorrentes) === */
+/* === [REC] Lista simples no Config → Transações recorrentes (#listaRecorrentes) — v2 robust === */
 (function(){
   function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
   function isoToBR(d){ try { return d ? new Date(d).toLocaleDateString() : '-'; } catch(_) { return d||'-'; } }
 
-  function renderRecListSimple(){
+  async function fetchRecsFallback(){
+    try {
+      if (window.supabase && supabase.from) {
+        const { data, error } = await supabase.from('recurrences').select('*').order('id', { ascending: false });
+        if (!error && Array.isArray(data)) return data;
+      }
+    } catch(e){ console.warn('[Recorrências] Supabase fallback falhou', e); }
+    return [];
+  }
+
+  function getRecsSync(){
+    if (window.S) {
+      if (Array.isArray(S.recs) && S.recs.length) return S.recs;
+      if (Array.isArray(S.recorrencias) && S.recorrencias.length) return S.recorrencias;
+      if (Array.isArray(S.recurrences) && S.recurrences.length) return S.recurrences;
+    }
+    return null; // sinaliza que talvez ainda não carregou
+  }
+
+  async function resolveRecs(){
+    const fromS = getRecsSync();
+    if (fromS) return fromS;
+    // tenta supabase se S ainda não tem
+    const fb = await fetchRecsFallback();
+    return fb;
+  }
+
+  function ensureButtons(){
     const ul = document.getElementById('listaRecorrentes');
     if (!ul) return;
-    const recs = (window.S && Array.isArray(S.recs)) ? S.recs : [];
-    if (!recs.length) {
+    if (document.getElementById('btn-reclist-refresh')) return;
+    const parent = ul.parentElement || ul;
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin:6px 0 8px;';
+    bar.innerHTML = '<button id="btn-reclist-refresh" class="btn btn-light" type="button">Recarregar</button>';
+    parent.insertBefore(bar, ul);
+    document.getElementById('btn-reclist-refresh').addEventListener('click', async ()=>{
+      try { if (window.loadAll) await loadAll(); } catch(_){}
+      await renderRecListSimple(true);
+    });
+  }
+
+  async function renderRecListSimple(force=false){
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul) return;
+    ensureButtons();
+
+    // Sinal de carregamento quando não for force
+    if (!force) ul.innerHTML = '<li style="opacity:.7">Carregando recorrências...</li>';
+
+    let recs = getRecsSync();
+    if (!recs || force) recs = await resolveRecs();
+
+    if (!recs || !recs.length) {
       ul.innerHTML = '<li style="opacity:.7">Nenhuma recorrência cadastrada ainda.</li>';
       return;
     }
+
     ul.innerHTML = recs.map(r => {
       const prox = isoToBR(r.proxima_data);
       const tagAtivo = r.ativo ? '<span class="tag success">Ativa</span>' : '<span class="tag">Pausada</span>';
@@ -2915,47 +2965,73 @@ document.addEventListener("DOMContentLoaded", function(){
     ul.addEventListener('click', async (ev) => {
       const li = ev.target.closest('.rec-item'); if (!li) return;
       const id = li.dataset.id;
-      const rec = (window.S?.recs||[]).find(r => String(r.id) === String(id)); if (!rec) return;
+      const recs = (getRecsSync() || []);
+      const rec = recs.find(r => String(r.id) === String(id)); if (!rec) return;
       const action = ev.target.getAttribute('data-action');
       try {
         if (action === 'rec-apply' && window.applyRecurrences) {
           await applyRecurrences();
-          if (window.loadAll) await loadAll();
-          renderRecListSimple();
+          try { if (window.loadAll) await loadAll(); } catch(_){}
+          await renderRecListSimple(true);
         }
         if (action === 'rec-toggle' && window.toggleRecAtivo) {
           await toggleRecAtivo(rec.id, !rec.ativo);
-          if (window.loadAll) await loadAll();
-          renderRecListSimple();
+          try { if (window.loadAll) await loadAll(); } catch(_){}
+          await renderRecListSimple(true);
         }
         if (action === 'rec-del' && window.deleteRec) {
           if (confirm('Excluir esta recorrência? Esta ação não remove transações já geradas.')) {
             await deleteRec(rec.id);
-            if (window.loadAll) await loadAll();
-            renderRecListSimple();
+            try { if (window.loadAll) await loadAll(); } catch(_){}
+            await renderRecListSimple(true);
           }
         }
       } catch(e){ console.error('[Recorrências] ação falhou', e); alert('Algo deu errado. Veja o console.'); }
     });
   }
 
-  // Hooka após loadAll (se existir) para render sempre com dados frescos
-  if (window.loadAll) {
-    const _orig = window.loadAll;
+  // 1) Render inicial (pode vir vazio se dados não carregaram ainda)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ()=>{ renderRecListSimple(); bindRecListSimple(); });
+  } else {
+    renderRecListSimple(); bindRecListSimple();
+  }
+
+  // 2) Se loadAll existir agora ou for atribuído depois, garantimos render pós-carregamento
+  const _desc = Object.getOwnPropertyDescriptor(window, 'loadAll');
+  if (_desc && typeof _desc.value === 'function') {
+    const _orig = _desc.value;
     window.loadAll = async function(){
       const r = await _orig.apply(this, arguments);
-      try { renderRecListSimple(); bindRecListSimple(); } catch(_) {}
+      await renderRecListSimple(true);
+      bindRecListSimple();
       return r;
     };
-  }
-
-  // Render inicial
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ()=>{ try { renderRecListSimple(); bindRecListSimple(); } catch(_) {} });
   } else {
-    try { renderRecListSimple(); bindRecListSimple(); } catch(_) {}
+    // polling para aguardar loadAll surgir e/ou S.recs encher
+    let attempts = 0;
+    const iv = setInterval(async ()=>{
+      attempts++;
+      if (window.loadAll && !window.loadAll.__recWrapped) {
+        const orig = window.loadAll;
+        window.loadAll = async function(){
+          const r = await orig.apply(this, arguments);
+          await renderRecListSimple(true);
+          bindRecListSimple();
+          return r;
+        };
+        window.loadAll.__recWrapped = true; // usa 'true' válido
+      }
+      if (getRecsSync()) {
+        clearInterval(iv);
+        await renderRecListSimple(true);
+        bindRecListSimple();
+      }
+      if (attempts > 40) { clearInterval(iv); } // ~20s máx
+    }, 500);
   }
 
+  // expor para debug manual
   window.renderRecListSimple = renderRecListSimple;
 })();
 
