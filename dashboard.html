@@ -20,9 +20,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<!-- [PATCH Recorrencias] Botão para abrir painel de recorrências -->
-<button id="btn-open-recurrences" class="btn btn-secondary" style="margin:8px 0;">Recorrências</button>
-
   <div class="nav">
     <div class="wrap">
       <div class="badge">
@@ -661,31 +658,31 @@ document.addEventListener('change', function(e){
 <script src="scripts.js"></script>
 <!-- Botão flutuante -->
 <button class="fab" id="btnNovoFab" title="Novo lançamento"><i class="ph ph-plus"></i></button>
-<!-- [PATCH Recorrencias] Painel lateral de recorrências -->
-<aside id="recurrences-panel" class="drawer hidden">
-  <div class="drawer-header">
+<!-- [REC] Painel lateral de recorrências (classes com prefixo rec- para evitar conflitos) -->
+<aside id="recurrences-panel" class="rec-drawer rec-hidden" aria-hidden="true">
+  <div class="rec-drawer-header">
     <h3>Recorrências</h3>
-    <button id="btn-close-recurrences" class="icon-btn" aria-label="Fechar">×</button>
+    <button id="btn-close-recurrences" class="rec-icon-btn" aria-label="Fechar">×</button>
   </div>
-  <div class="drawer-content">
-    <div class="toolbar">
+  <div class="rec-drawer-content">
+    <div class="rec-toolbar">
       <input type="text" id="rec-search" placeholder="Buscar por descrição ou categoria" />
-      <label><input type="checkbox" id="rec-only-active" checked> Somente ativas</label>
+      <label class="rec-inline"><input type="checkbox" id="rec-only-active" checked> Somente ativas</label>
     </div>
     <div id="rec-list" class="rec-list"></div>
   </div>
 </aside>
 
-<!-- [PATCH Recorrencias] Modal de edição de recorrência -->
-<div id="modal-edit-recurrence" class="modal hidden" role="dialog" aria-modal="true">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Editar recorrência</h3>
-      <button class="icon-btn" data-action="close-edit-rec">×</button>
+<!-- [REC] Modal de edição de recorrência (escopado) -->
+<div id="modal-edit-recurrence" class="rec-modal rec-hidden" role="dialog" aria-modal="true" aria-labelledby="rec-modal-title">
+  <div class="rec-modal-content">
+    <div class="rec-modal-header">
+      <h3 id="rec-modal-title">Editar recorrência</h3>
+      <button class="rec-icon-btn" data-action="close-edit-rec" aria-label="Fechar">×</button>
     </div>
-    <div class="modal-body">
+    <div class="rec-modal-body">
       <form id="form-edit-rec">
-        <div class="grid-2">
+        <div class="rec-grid-2">
           <label>Descrição
             <input type="text" name="descricao" required />
           </label>
@@ -693,7 +690,7 @@ document.addEventListener('change', function(e){
             <select name="categoria" required></select>
           </label>
         </div>
-        <div class="grid-3">
+        <div class="rec-grid-3">
           <label>Tipo
             <select name="tipo" required>
               <option value="despesa">Despesa</option>
@@ -703,11 +700,11 @@ document.addEventListener('change', function(e){
           <label>Valor
             <input type="number" step="0.01" name="valor" required />
           </label>
-          <label>Ativa
+          <label class="rec-inline">Ativa
             <input type="checkbox" name="ativo" />
           </label>
         </div>
-        <div class="grid-3">
+        <div class="rec-grid-3">
           <label>Periodicidade
             <select name="periodicidade" required>
               <option value="mensal">Mensal</option>
@@ -730,7 +727,7 @@ document.addEventListener('change', function(e){
             </select>
           </label>
         </div>
-        <div class="grid-3">
+        <div class="rec-grid-3">
           <label>Mês (anual)
             <select name="mes">
               <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
@@ -746,18 +743,18 @@ document.addEventListener('change', function(e){
             <input type="date" name="fim_em" />
           </label>
         </div>
-        <label class="inline">
+        <label class="rec-inline">
           <input type="checkbox" name="ajuste_fim_mes" checked /> Ajustar para último dia do mês
         </label>
-        <div class="preview">
+        <div class="rec-preview">
           <strong>Próximas ocorrências (preview):</strong>
-          <ul id="edit-rec-preview" class="preview-list"></ul>
+          <ul id="edit-rec-preview" class="rec-preview-list"></ul>
         </div>
       </form>
     </div>
-    <div class="modal-footer">
+    <div class="rec-modal-footer">
       <button class="btn btn-danger" id="btn-delete-rec">Excluir</button>
-      <div class="spacer"></div>
+      <div class="rec-spacer"></div>
       <button class="btn" data-action="close-edit-rec">Cancelar</button>
       <button class="btn btn-primary" id="btn-save-edit-rec">Salvar alterações</button>
     </div>
