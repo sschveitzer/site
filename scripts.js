@@ -251,7 +251,7 @@ function ensureMonthSelectLabels(){
     ensureMonthSelectLabels();
     monthSel._wiredLanc = true;
   }
-
+    try { window.fillCcFixedFields && window.fillCcFixedFields(); } catch(_) {}
   }
 
   // ========= SAVE =========
