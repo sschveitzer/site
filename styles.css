@@ -1948,10 +1948,9 @@ button.btn:hover,
 #listaRecentes li[data-tipo="Receita"] .chip { background: rgba(34,197,94,.10);  color:#16a34a; }
 #listaRecentes li[data-tipo="Transferência"] .chip { background: rgba(124,58,237,.10); color:#7c3aed; }
 
+
 /* [REC] estilos escopados para recorrências */
 .rec-hidden { display: none !important; }
-
-/* Drawer */
 .rec-drawer { position: fixed; top: 0; right: 0; width: 420px; height: 100vh; background: #fff; box-shadow: -2px 0 12px rgba(0,0,0,.08); z-index: 1060; display: flex; flex-direction: column; }
 .rec-drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #eee; }
 .rec-drawer-content { padding: 12px 16px; overflow-y: auto; }
@@ -1960,8 +1959,6 @@ button.btn:hover,
 .rec-card { border: 1px solid #eee; border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
 .rec-card .meta { font-size: 12px; color: #555; }
 .rec-card .actions { display: flex; gap: 8px; justify-content: flex-end; }
-
-/* Modal (escopado) */
 .rec-modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.4); z-index: 1070; }
 .rec-modal.rec-hidden { display: none !important; }
 .rec-modal-content { background: #fff; border-radius: 12px; width: min(720px, 96vw); max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
@@ -1974,6 +1971,3 @@ button.btn:hover,
 .rec-preview-list { margin: 6px 0 0; padding-left: 18px; }
 .rec-icon-btn { background: transparent; border: 0; font-size: 18px; cursor: pointer; }
 .rec-spacer { flex: 1; }
-
-/* Fallback FAB quando não achamos âncora */
-#btn-open-recurrences-fab { position: fixed; bottom: 16px; right: 16px; z-index: 1050; }

@@ -2874,7 +2874,8 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
-// [REC] Recorências — versão com CSS/JS escopados para evitar conflitos
+
+// [REC] Recorrências — integração pelo menu Config > "Transações recorrentes"
 (function(){
   const toISODate = (d) => d.toISOString().slice(0,10);
   const parseISO = (s) => { const [y,m,da] = s.split('-').map(Number); return new Date(y, m-1, da); };
@@ -2891,9 +2892,7 @@ document.addEventListener("DOMContentLoaded", function(){
   function alignToWeekday(fromISO, dow) {
     const d = parseISO(fromISO); const diff = (7 + dow - d.getDay()) % 7; d.setDate(d.getDate() + diff); return toISODate(d);
   }
-  function nextWeekly(fromISO, dow) {
-    const d = parseISO(fromISO); d.setDate(d.getDate() + 7); return alignToWeekday(toISODate(d), dow);
-  }
+  function nextWeekly(fromISO, dow) { const d = parseISO(fromISO); d.setDate(d.getDate() + 7); return alignToWeekday(toISODate(d), dow); }
   function nextAnnual(fromISO, mes, diaMes, ajusteFimMes=true) {
     const d = parseISO(fromISO); let y = d.getFullYear();
     const thisYearDay = clampDay(y, mes-1, diaMes, ajusteFimMes);
@@ -3016,32 +3015,10 @@ document.addEventListener("DOMContentLoaded", function(){
     fillEditForm(rec);
     document.getElementById('modal-edit-recurrence')?.classList.remove('rec-hidden');
   }
-  function closeEditRecurrence(){
-    document.getElementById('modal-edit-recurrence')?.classList.add('rec-hidden'); EDITING_REC = null;
-  }
+  function closeEditRecurrence(){ document.getElementById('modal-edit-recurrence')?.classList.add('rec-hidden'); EDITING_REC = null; }
 
-  function bindRecurrencesUI(){
-    // Smart placement: tenta anexar o botão perto do botão de novo lançamento
-    const anchors = [
-      '#btn-novo-lancamento', '#btn-new-transaction', '#btn-open-new',
-      '[data-action="open-new"]', '.toolbar .btn-primary', '.header .btn-primary'
-    ];
-    let anchor = null;
-    for (const sel of anchors) { const el = document.querySelector(sel); if (el) { anchor = el; break; } }
-
-    const btn = document.createElement('button');
-    btn.id = anchor ? 'btn-open-recurrences' : 'btn-open-recurrences-fab';
-    btn.textContent = 'Recorrências';
-    btn.className = 'btn btn-secondary';
-    btn.addEventListener('click', openRecurrencesPanel);
-
-    if (anchor && anchor.parentElement) {
-      anchor.parentElement.insertBefore(btn, anchor.nextSibling);
-    } else {
-      // Fallback: FAB discreto no canto
-      document.body.appendChild(btn);
-    }
-
+  function bindRecurrencesToConfig(){
+    // Fecha painel
     document.getElementById('btn-close-recurrences')?.addEventListener('click', closeRecurrencesPanel);
     document.getElementById('rec-search')?.addEventListener('input', renderRecurrencesPanel);
     document.getElementById('rec-only-active')?.addEventListener('change', renderRecurrencesPanel);
@@ -3067,22 +3044,33 @@ document.addEventListener("DOMContentLoaded", function(){
       } catch(e){ console.error('[Recorrências] ação falhou', e); alert('Algo deu errado. Veja o console.'); }
     });
 
-    document.querySelectorAll('[data-action="close-edit-rec"]').forEach(el => el.addEventListener('click', closeEditRecurrence));
-    document.getElementById('form-edit-rec')?.addEventListener('input', (e)=>{ if (e.target.closest('input,select')) renderEditPreview(); });
-    document.getElementById('btn-save-edit-rec')?.addEventListener('click', async ()=>{
-      if (!window.saveRec) return alert('saveRec indisponível');
-      const updated = collectEditForm(); await saveRec(updated); if (window.loadAll) await loadAll(); renderRecurrencesPanel(); closeEditRecurrence();
+    // Procura item do Config com texto "Transações recorrentes"
+    const candidates = Array.from(document.querySelectorAll('#config, #settings, .config, .settings, [data-section="config"] *'));
+    function hasText(el, text){ return (el.textContent||'').trim().toLowerCase().includes(text); }
+    let entry = candidates.find(el => hasText(el, 'transações recorrentes'));
+
+    // Fallbacks por seletor semântico
+    if (!entry) entry = document.querySelector('#config-recurrences, [data-config="recurrences"], [data-setting="recurrences"]');
+
+    if (entry && !entry.__recBound) {
+      entry.__recBound = true;
+      entry.addEventListener('click', (e)=>{ e.preventDefault(); openRecurrencesPanel(); });
+    }
+
+    // Observa mudanças no DOM caso o item de Config seja carregado depois
+    const obs = new MutationObserver(() => {
+      let el = Array.from(document.querySelectorAll('#config, #settings, .config, .settings, [data-section="config"] *'))
+        .find(n => hasText(n, 'transações recorrentes'));
+      if (!el) el = document.querySelector('#config-recurrences, [data-config="recurrences"], [data-setting="recurrences"]');
+      if (el && !el.__recBound) { el.__recBound = true; el.addEventListener('click', (e)=>{ e.preventDefault(); openRecurrencesPanel(); }); }
     });
-    document.getElementById('btn-delete-rec')?.addEventListener('click', async ()=>{
-      if (!window.deleteRec || !EDITING_REC) return;
-      if (confirm('Excluir esta recorrência?')) { await deleteRec(EDITING_REC.id); if (window.loadAll) await loadAll(); renderRecurrencesPanel(); closeEditRecurrence(); }
-    });
+    obs.observe(document.body, { childList: true, subtree: true });
   }
 
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', bindRecurrencesUI); }
-  else { bindRecurrencesUI(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindRecurrencesToConfig);
+  else bindRecurrencesToConfig();
 
-  // Utilitário opcional para avançar semanal com DOW específico
+  // Utilitário opcional: avanço semanal seguindo `dia_semana`
   window.__advanceWeeklyWithDow = function(rec){
     const dow = Number(rec.dia_semana ?? __recUtils.parseISO(rec.proxima_data).getDay());
     rec.proxima_data = __recUtils.nextWeekly(rec.proxima_data, dow);
