@@ -1608,21 +1608,6 @@ body.dark #modalLanc .actions {
   }
 }
 
-/* === KPIs em 3 colunas + responsivo (substitui .grid.cards antiga) === */
-
-
-/* Tablet (até 1024px): 2 colunas */
-@media (max-width: 1024px) {
-  
-}
-
-/* Mobile (até 640px): 1 coluna */
-@media (max-width: 640px) {
-  
-}
-
-
-
 .fab {
   z-index: 10000;
   position: fixed;
@@ -1640,8 +1625,3 @@ body.dark #modalLanc .actions {
   box-shadow: 0 10px 24px rgba(239, 68, 68, .4);
   cursor: pointer;
 }
-
-/* KPIs em 3 colunas + responsivo */
-.grid.cards { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 1024px){ .grid.cards { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px){ .grid.cards { grid-template-columns: 1fr; } }

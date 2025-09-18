@@ -1,4 +1,5 @@
-console.log('scripts.js loaded (fixed)');
+console.log('scripts.js loaded (clean)');
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1102,9 +1103,7 @@ h3.textContent = 'Lançamentos — ' + label;
     setChip("#kpiSaldoDelta", formatDeltaPct(saldo, saldoPrev));
 
     // Aplica "blurred" só nos valores principais
-['#kpiReceitas','#kpiDespesas','#kpiSaldo'].forEach(id=>{ const el = qs ? qs(id) : document.querySelector(id); if (el) el.classList.toggle('blurred', S && S.hide); });
-    const kpiDespesasPct = qs("#kpiDespesasPct");
-    let pctDespesas = "—";
+['#kpiReceitas','#kpiDespesas','#kpiSaldo'].forEach(id=>{ const el = (typeof qs==='function'?qs(id):document.querySelector(id)); if (el) el.classList.toggle('blurred', S && S.hide); });
     if (receitas > 0) {
       const d = (despesas / receitas) * 100;
       pctDespesas = d.toFixed(1).replace(".", ",") + "%";
@@ -2414,13 +2413,8 @@ function renderPessoas() {
     var totOutAll = listAll.filter(function(x){ return x.tipo === "Despesa"; })
                            .reduce(function(a,b){ return a + (Number(b.valor)||0); }, 0);
 
-    // aplica filtro de tipo para a lista mostrada
-    var list = listAll.slice();
-    if (tipo !== "todos") {
-      list = list.filter(function(x){ return x.tipo === tipo; });
-    }
-
-    // ordena por data desc
+    // Aplica "blurred" só nos valores principais
+['#kpiReceitas','#kpiDespesas','#kpiSaldo'].forEach(id=>{ const el = (typeof qs==='function'?qs(id):document.querySelector(id)); if (el) el.classList.toggle('blurred', S && S.hide); });
     list.sort(function(a,b){ return String(b.data||"").localeCompare(String(a.data||"")); });
 
     // renderiza
@@ -2786,15 +2780,6 @@ document.addEventListener("DOMContentLoaded", function(){
     wire();
   }
 })();
-
-// Integração do botão FAB com o modal de novos lançamentos
-document.addEventListener('DOMContentLoaded', () => {
-  const fab = document.getElementById('btnNovoFab');
-  const btnNovo = document.getElementById('btnNovo');
-  if (fab && btnNovo) {
-    fab.addEventListener('click', () => btnNovo.click());
-  }
-});
 
 
 // FAB wiring (robusto e idempotente)
