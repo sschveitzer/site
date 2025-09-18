@@ -1342,218 +1342,85 @@ h3.textContent = 'Lançamentos — ' + label;
   }
 
   // Heatmap de gastos por dia do mês
-  function renderHeatmap(){
-    const wrap = document.getElementById('heatmap');
-    if (!wrap) return;
-    const ym = S.month;
-    const days = monthDays(ym);
-    const gastosPorDia = Array.from({length: days}, ()=>0);
-
-    (S.tx || []).forEach(x=>{
-      if (!x.data || x.tipo!=="Despesa") return;
-      if (!String(x.data).startsWith(ym)) return;
-      const d = Number(String(x.data).slice(8,10));
-      gastosPorDia[d-1] += Number(x.valor)||0;
-    });
-
-    const max = Math.max(...gastosPorDia, 0);
-    wrap.innerHTML = '';
-
-    // Cabeçalho com iniciais (S T Q Q S S D)
-    ['S','T','Q','Q','S','S','D'].forEach(lbl=>{
-      const h = document.createElement('div');
-      h.className = 'cell';
-      h.textContent = lbl;
-      h.style.fontWeight = '700';
-      wrap.appendChild(h);
-    });
-
-    // Células
-    for (let d=1; d<=days; d++){
-      const v = gastosPorDia[d-1];
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.textContent = d;
-      if (v>0){
-        const intensity = max ? v/max : 0;
-        const bg = `hsl(0, 85%, ${90 - 50*intensity}%)`; // tons de vermelho
-        cell.style.background = bg;
-        cell.setAttribute('data-val', String(v));
-        cell.title = `Despesas em ${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoney(v)}`;
-      }
-      wrap.appendChild(cell);
-    }
-
-    // Legenda
-    const legend = document.createElement('div');
-    legend.className = 'legend';
-    const sw1 = document.createElement('span'); sw1.className='swatch'; sw1.style.background='hsl(0,85%,90%)';
-    const sw2 = document.createElement('span'); sw2.className='swatch'; sw2.style.background='hsl(0,85%,65%)';
-    const sw3 = document.createElement('span'); sw3.className='swatch'; sw3.style.background='hsl(0,85%,40%)';
-    legend.append('Menor', sw1, sw2, sw3, 'Maior');
-    wrap.appendChild(legend);
-  }
-
-  // ========= RENDER PRINCIPAL =========
-  function buildLancCatFilter(){
-    const sel = document.querySelector('#lancCat');
-    if (!sel) return;
-    const current = sel.value || 'todas';
-    sel.innerHTML = '';
-    const optAll = document.createElement('option');
-    optAll.value = 'todas';
-    optAll.textContent = 'Todas as categorias';
-    sel.append(optAll);
-    (S.cats||[]).slice().sort((a,b)=> (a.nome||'').localeCompare(b.nome||'')).forEach(c=>{
-      const o = document.createElement('option');
-      o.value = c.nome; o.textContent = c.nome;
-      sel.append(o);
-    });
-    sel.value = current;
-  }
-
   
-  // ===== Carteiras helpers =====
-  function computeSaldosPorCarteira(){
-    const map = Object.fromEntries((S.walletList||["Casa"]).map(w=>[w,0]));
-    txSelected().forEach(x=>{
-      const v = money(x.valor);
-      if (x.tipo === "Receita" && x.carteira) map[x.carteira]+=v;
-      if (x.tipo === "Despesa" && x.carteira) map[x.carteira]-=v;
-      if (x.tipo === "Transferência"){
-        if (x.carteira_origem)  map[x.carteira_origem]-=v;
-        if (x.carteira_destino) map[x.carteira_destino]+=v;
-      }
-    });
-    return map;
-  }
-  
-  // ===== Carteiras — cálculos auxiliares =====
-  // Usa o mês selecionado (ou ciclo de fatura se ativado)
-  function txSelected(){
-    const all = Array.isArray(S.tx) ? S.tx : [];
-    return all.filter(x => x && x.data && inSelectedMonth(x));
-  }
-
-  function sumInOutByWallet(wallet){
-    const tx = txSelected().filter(x => (x.carteira === wallet && (x.tipo==="Receita" || x.tipo==="Despesa")));
-    const entradas = tx.filter(x => x.tipo==="Receita").reduce((a,b)=>a+money(b.valor),0);
-    const saidas   = tx.filter(x => x.tipo==="Despesa").reduce((a,b)=>a+money(b.valor),0);
-    // Transferências não entram em entradas/saídas (apenas mudam saldo entre carteiras)
-    return { entradas, saidas, items: tx.slice().sort((a,b)=> (b.data||'').localeCompare(a.data||'')).slice(0,10) };
-  }
-  function sumFamily(){
-    const p1 = sumInOutByWallet("Marido");
-    const p2 = sumInOutByWallet("Esposa");
-    // Entradas totais = receitas P1+P2 (não contamos transferências entre carteiras)
-    const entradas = (p1.entradas||0) + (p2.entradas||0);
-    // Saídas totais = despesas Casa (da aba Carteiras) + Pessoais (P1+P2)
-    const casa = sumInOutByWallet("Casa");
-    const casaOut = (casa && typeof casa.saidas==='number') ? casa.saidas : 0;
-    const saidas = casaOut + (p1.saidas||0) + (p2.saidas||0);
-    const diff = entradas - saidas;
-    return { entradas, saidas, diff };
-  }
-  function renderMiniList(elId, items){
-    const ul = document.getElementById(elId);
-    if (!ul) return;
-    ul.innerHTML = "";
-    if (!items.length){
-      const li = document.createElement('li');
-      li.innerHTML = '<div class="left"><strong>Nenhum lançamento</strong><div class="muted">Cadastre no +</div></div>';
-      ul.appendChild(li);
-      return;
-    }
-    items.forEach(x=>{
-      const li = document.createElement('li');
-      li.dataset.tipo = x && x.tipo ? x.tipo : ''; 
-      const sinal = x.tipo==="Despesa" ? "-" : "+";
-      li.innerHTML = '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong><div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
-                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
-                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
-      ul.appendChild(li);
-    });
-  }
-
-
-// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
-// === Deltas do split (Dinheiro/Pix) por carteira pessoal ===
-// Regra: só quem NÃO pagou recebe ajuste (cobrança de 50%).
-function computeSplitDeltas(items){
-  var delta = { Marido: 0, Esposa: 0 };
-  if (!Array.isArray(items)) { items = (typeof txSelected==='function' ? txSelected() : []); }
+// === HEATMAP: Despesas do período ativo (mês ou ciclo) ===
+function renderHeatmap() {
   try {
-    items.forEach(function(x){
-      if (!x || x.tipo !== "Despesa") return;
-      var car = x.carteira || "";
-      if (car !== "Marido" && car !== "Esposa") return;
+    const cont = document.getElementById("heatmap2");
+    if (!cont || !window.S) return;
+    const { tx = [], month } = S || {};
+    if (!month) return;
 
-      // Considera somente despesas pessoais pagas em "Outros"
-      var fp = String(x.forma_pagamento || "").toLowerCase();
-      if (fp !== "outros") return;
+    cont.innerHTML = "";
 
-      var v = Number(x.valor) || 0;
-      if (!(v > 0)) return;
+    // Usa o range ativo (respeita ciclo de fatura se habilitado)
+    const range = (typeof getActiveRangeForYM === 'function')
+      ? getActiveRangeForYM(month)
+      : { start: month + "-01", end: month + "-31" };
 
-      var metade = v * 0.5;
-      var other = (car === "Marido") ? "Esposa" : "Marido";
+    // Cria lista de dias do range (inclusive)
+    const start = new Date(range.start + "T00:00:00");
+    const end   = new Date(range.end   + "T00:00:00");
+    const days = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      days.push(new Date(d.getTime()));
+    }
 
-      // ✅ Novo: não dá reembolso ao pagador; só lança a cobrança no outro
-      delta[other] -= metade;
+    // Seleciona apenas despesas dentro do range
+    const despesas = (Array.isArray(tx) ? tx : []).filter(t => {
+      if (!t || t.tipo !== "Despesa" || !t.data) return false;
+      const ymd = String(t.data);
+      return (typeof ymdInRange === 'function') ? ymdInRange(ymd, range.start, range.end) : ymd.startsWith(month);
     });
-  } catch(e) {
-    console.error("computeSplitDeltas:", e);
-  }
-  return delta;
+
+    // Soma por dia
+    const somaDia = new Map(days.map(d => [d.toISOString().slice(0,10), 0]));
+    despesas.forEach(t => {
+      const k = String(t.data).slice(0,10);
+      if (somaDia.has(k)) somaDia.set(k, (somaDia.get(k) || 0) + (Number(t.valor) || 0));
+    });
+
+    const valores = Array.from(somaDia.values());
+    const max = Math.max(0, ...valores);
+
+    // Gera células (7 colunas)
+    days.forEach(d => {
+      const key = d.toISOString().slice(0,10);
+      const val = somaDia.get(key) || 0;
+      const pct = max > 0 ? (val / max) : 0;
+      const alpha = (max > 0) ? Math.max(0.10, pct) : 0.10; // leve destaque mesmo sem dados
+
+      const cell = document.createElement("div");
+      cell.className = "heatmap-cell";
+      cell.style.background = `rgba(220, 38, 38, ${alpha})`;
+      const label = String(key.slice(8,10));
+      cell.textContent = label;
+      cell.title = `Dia ${label}/${key.slice(5,7)}: ${val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      cont.appendChild(cell);
+    });
+
+    // Mensagem quando não há despesas
+    if (max === 0) {
+      const note = document.createElement("div");
+      note.style.gridColumn = "1 / -1";
+      note.className = "muted";
+      note.textContent = "Sem despesas no período.";
+      cont.appendChild(note);
+    }
+
+    // legenda
+    const legend = document.createElement("div");
+    legend.className = "heatmap-legend";
+    legend.innerHTML = `
+      <span class="muted">Baixo</span>
+      <div class="heatbar">
+        <div></div><div></div><div></div><div></div><div></div>
+      </div>
+      <span class="muted">Alto</span>`;
+    cont.appendChild(legend);
+  } catch (e) { console.error("renderHeatmap:", e); }
 }
-function renderCarteiras(){
-    // Grid de saldos
-    const el = document.getElementById('walletsGrid');
-    if (el){
-      const saldos = computeSaldosPorCarteira();
-      el.innerHTML = '';
-      (S.walletList||["Casa"]).forEach(w=>{
-        const card = document.createElement('div');
-        card.className = 'wallet-card';
-        card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
-                         '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
-        el.appendChild(card);
-      
-  // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
-  try {
-    var section = document.getElementById('carteiras');
-if (section) {
-  var grid = section.querySelector('.grid-carteiras');
-  var host = document.getElementById('splitInfoCard');
-  if (!host) {
-    host = document.createElement('div');
-    host.id = 'splitInfoCard';
-    host.className = 'card span-2';
-    if (grid) {
-      // Inserir AO FINAL do grid para ficar abaixo dos cards Marido/Esposa
-      grid.appendChild(host);
-    } else {
-      section.appendChild(host);
-    }
-  }
-var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSelected()) : { Marido:0, Esposa:0 };
-      var mDelta = Number(deltas.Marido)||0;
-      var eDelta = Number(deltas.Esposa)||0;
-      var sign = function(x){ return x>=0?'+':''; };
-      var fmt = function(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
-      var ym = (window.S && S.month) ? S.month : new Date().toISOString().slice(0,7);
-      var labelMes = (function(){ try { return abbrevLabelFromYM(ym); } catch(_){ return ym; } })();
-
-      host.innerHTML = ''
-        + '<h3><i class="ph ph-arrows-left-right"></i> Ajustes de split (Outros) <span class="muted" style="font-weight:400">— período: '+labelMes+'</span></h3>'
-        + '<div class="resumo-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
-        +   '<div class="sum-box"><div class="muted">Marido</div><div class="sum-value">'+ sign(mDelta) + fmt(mDelta) +'</div></div>'
-        +   '<div class="sum-box"><div class="muted">Esposa</div><div class="sum-value">'+ sign(eDelta) + fmt(eDelta) +'</div></div>'
-        + '</div>'
-        + '<div class="helper">Mostra o impacto do split 50/50 em despesas pessoais pagas em Outros (sem alterar lançamentos).</div>';
-    }
-  } catch(err) { console.error('split card render', err); }
-});
+);
     }
     // Somas P1/P2 e listas
     const p1 = sumInOutByWallet("Marido");
