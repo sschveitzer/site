@@ -20,6 +20,16 @@ function getYM(d){
   return iso ? iso.slice(0,7) : '';
 }
 
+function normTipo(v){
+  const s = String(v||'').toLowerCase();
+  if (s.startsWith('d')) return 'Despesa';
+  if (s.startsWith('r')) return 'Receita';
+  return s ? (s[0].toUpperCase()+s.slice(1)) : '';
+}
+function num(v){ const n = Number(v||0); return isFinite(n) ? n : 0; }
+
+
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -853,8 +863,8 @@ h3.textContent = 'Lançamentos — ' + label;
     list.sort(by[sort] || by.data_desc);
 
     const fmt = v=> (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-    const totDesp = list.filter(x=>x.tipo==='Despesa').reduce((a,b)=>a+(Number(b.valor)||0),0);
-    const totRec  = list.filter(x=>x.tipo==='Receita').reduce((a,b)=>a+(Number(b.valor)||0),0);
+    const totDesp = list.filter(x=>normTipo(x.tipo)==='Despesa').reduce((a,b)=>a+(Number(b.valor)||0),0);
+    const totRec  = list.filter(x=>normTipo(x.tipo)==='Receita').reduce((a,b)=>a+(Number(b.valor)||0),0);
     const saldo   = totRec - totDesp;
 
     if (sumEl){
@@ -1188,7 +1198,7 @@ h3.textContent = 'Lançamentos — ' + label;
     }
       const porCat = {};
       txMonth.filter(x => x.tipo === "Despesa" && x.carteira === "Casa").forEach(x => {
-        porCat[x.categoria] = (porCat[x.categoria] || 0) + Number(x.valor);
+        porCat[(x.categoria||'Sem categoria')] = (porCat[(x.categoria||'Sem categoria')] || 0) + Number(x.valor);
       });
       chartPie = new Chart(ctxPie, {
         type: "pie",
@@ -1279,7 +1289,7 @@ h3.textContent = 'Lançamentos — ' + label;
       if (!x.data || x.tipo!=="Despesa") return;
       const dt = new Date(x.data);
       if (dt >= from && dt <= cutoff) {
-        sum[x.categoria] = (sum[x.categoria]||0) + (Number(x.valor)||0);
+        sum[(x.categoria||'Sem categoria')] = (sum[(x.categoria||'Sem categoria')]||0) + (Number(x.valor)||0);
       }
     });
     const rows = Object.entries(sum).sort((a,b)=>b[1]-a[1]).slice(0,limit);
@@ -1910,7 +1920,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const bar = document.getElementById('metaProgBar');
     const obs = document.getElementById('metaObs');
 
-    const gastosMes = Array.isArray(S.tx) ? S.tx.filter(x => x.data && x.tipo==='Despesa' && inSelectedMonth(x)).reduce((a,b)=> a + (Number(b.valor)||0), 0) : 0;
+    const gastosMes = Array.isArray(S.tx) ? S.tx.filter(x => x.data && normTipo(x.tipo)==='Despesa' && inSelectedMonth(x)).reduce((a,b)=> a + (Number(b.valor)||0), 0) : 0;
 
     if (kTotal) kTotal.textContent = totalMeta ? fmtBRL(totalMeta) : '—';
     if (kGasto) kGasto.textContent = fmtBRL(gastosMes);
@@ -2055,6 +2065,25 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   }
 
   function renderReports(){
+// Guard: if list is empty, show placeholders and return early
+if (!Array.isArray(list) || list.length === 0){
+  const placeholders = [
+    ['chartFluxo2','<div class="muted">Sem dados</div>'],
+    ['chartPie2','<div class="muted">Sem dados</div>'],
+    ['forecast','<div class="muted">Sem dados</div>'],
+    ['heatmap2','<div class="muted">Sem dados</div>'],
+    ['chartYoY','<div class="muted">Sem dados</div>'],
+    ['chartRxV','<div class="muted">Sem dados</div>']
+  ];
+  placeholders.forEach(([id,html])=>{
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+  var t1 = document.querySelector('#tblTop2 tbody'); if (t1) t1.innerHTML = '';
+  var t2 = document.querySelector('#tblMediaCats2 tbody'); if (t2) t2.innerHTML = '';
+  return;
+}
+
     const { list } = getReportFilters();
     const theme = chartTheme();
     if (window.Chart){
@@ -2065,7 +2094,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Fluxo por mês (bar)
     {
       const byYM = {};
-      list.forEach(x=>{ const ym = getYM(x.data); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      list.forEach(x=>{ const ym = getYM(x.data); byYM[ym] = (byYM[ym]||0) + (normTipo(x.tipo)==='Despesa'?-1:1)*num(x.valor); });
       const labels = Object.keys(byYM).sort();
       ensureChart('chartFluxo2', {
         type:'bar',
@@ -2077,7 +2106,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Pie categorias (despesas)
     {
       const byCat = {};
-      list.filter(x=>x.tipo==='Despesa').forEach(x=>{ byCat[x.categoria] = (byCat[x.categoria]||0)+Number(x.valor||0); });
+      list.filter(x=>normTipo(x.tipo)==='Despesa').forEach(x=>{ byCat[(x.categoria||'Sem categoria')] = (byCat[(x.categoria||'Sem categoria')]||0)+num(x.valor); });
       const labels = Object.keys(byCat);
       const data = labels.map(l=>byCat[l]);
       ensureChart('chartPie2', { type:'pie', data:{ labels, datasets:[{ data }] } });
@@ -2090,7 +2119,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Previsão simples (média móvel) & média por categoria
     {
       const byYM = {};
-      list.forEach(x=>{ const ym=getYM(x.data); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      list.forEach(x=>{ const ym=getYM(x.data); byYM[ym] = (byYM[ym]||0) + (normTipo(x.tipo)==='Despesa'?-1:1)*num(x.valor); });
       const labels = Object.keys(byYM).sort();
       const vals = labels.map(l=>byYM[l]);
       const ma = vals.map((_,i)=>{ const a=vals[Math.max(0,i-2)]||0, b=vals[Math.max(0,i-1)]||0, c=vals[i]||0; const n = i<2? (i+1):3; return (a+b+c)/n; });
@@ -2103,7 +2132,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
       // média por categoria (despesa)
       const byCat = {};
-      list.filter(x=>x.tipo==='Despesa').forEach(x=>{ const ym=getYM(x.data); byCat[x.categoria] = byCat[x.categoria]||{}; byCat[x.categoria][ym]=(byCat[x.categoria][ym]||0)+Number(x.valor||0); });
+      list.filter(x=>normTipo(x.tipo)==='Despesa').forEach(x=>{ const ym=getYM(x.data); byCat[(x.categoria||'Sem categoria')] = byCat[(x.categoria||'Sem categoria')]||{}; byCat[(x.categoria||'Sem categoria')][ym]=(byCat[(x.categoria||'Sem categoria')][ym]||0)+num(x.valor); });
       const tb = document.querySelector('#tblMediaCats2 tbody'); if (tb){
         const cats = Object.keys(byCat);
         const lines = cats.map(c=>{
@@ -2118,7 +2147,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== YoY (barras lado a lado)
     {
       const byYearMonth = {};
-      list.forEach(x=>{ const y = String(x.data).slice(0, 8); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      list.forEach(x=>{ const y = String(x.data).slice(0, 8); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (normTipo(x.tipo)==='Despesa'?-1:1)*num(x.valor); });
       const years = Array.from(new Set(list.map(x=> String(x.data).slice(0, 8)))).sort().slice(-2);
       const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
       const labels = months.map(m=>m);
@@ -2129,7 +2158,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Receitas x Despesas (stacked)
     {
       const byYM = {};
-      list.forEach(x=>{ const ym = getYM(x.data); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
+      list.forEach(x=>{ const ym = getYM(x.data); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (normTipo(x.tipo)==='Receita') byYM[ym].R += num(x.valor); if (normTipo(x.tipo)==='Despesa') byYM[ym].D += num(x.valor); });
       const labels = Object.keys(byYM).sort();
       const rec = labels.map(l=> byYM[l].R);
       const des = labels.map(l=> -byYM[l].D);
@@ -2358,8 +2387,8 @@ if (typeof window.setUseCycleForReports !== 'function' && window.S) {
   }
   function renderPessoa(owner, ids){
     const listAll = getTxByCarteira(owner);
-    const totalIn  = listAll.filter(x=>x.tipo==='Receita').reduce((a,b)=>a+(Number(b.valor)||0),0);
-    const totalOut = listAll.filter(x=>x.tipo==='Despesa').reduce((a,b)=>a+(Number(b.valor)||0),0);
+    const totalIn  = listAll.filter(x=>normTipo(x.tipo)==='Receita').reduce((a,b)=>a+(Number(b.valor)||0),0);
+    const totalOut = listAll.filter(x=>normTipo(x.tipo)==='Despesa').reduce((a,b)=>a+(Number(b.valor)||0),0);
     const elIn  = document.getElementById(ids.in);
     const elOut = document.getElementById(ids.out);
     if (elIn)  elIn.textContent  = fmtBR(totalIn);
