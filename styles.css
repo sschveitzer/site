@@ -1947,7 +1947,3 @@ button.btn:hover,
 #listaRecentes li[data-tipo="Despesa"] .chip { background: rgba(220,38,38,.10); color:#dc2626; }
 #listaRecentes li[data-tipo="Receita"] .chip { background: rgba(34,197,94,.10);  color:#16a34a; }
 #listaRecentes li[data-tipo="Transferência"] .chip { background: rgba(124,58,237,.10); color:#7c3aed; }
-
-
-/* Carteiras & Pagamentos charts height */
-#chartCarteiras, #chartPagamentos { min-height: 260px; }

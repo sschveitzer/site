@@ -154,7 +154,6 @@
           <div class="sep"></div>
           <button class="rtab" data-rtab="yoy"><i class="ph ph-calendar"></i> Comparativo YoY</button>
           <button class="rtab" data-rtab="rxv"><i class="ph ph-chart-line-up"></i> Receitas x Despesas</button>
-          <button class="rtab" data-rtab="carteiraspgto"><i class="ph ph-wallet"></i> Carteiras &amp; Pagamentos</button>
         </aside>
 
         <div class="reports-main">
@@ -277,41 +276,6 @@
 
         </div>
       </div>
-
-      
-          <!-- Carteiras & Pagamentos -->
-          <div class="rpanel" data-rtab="carteiraspgto">
-            <div class="grid two">
-              <div class="card header-actions">
-                <div class="head">
-                  <h3><i class="ph ph-wallet"></i> Gastos por carteira</h3>
-                  <div class="actions">
-                    <button class="icon" data-fs="carteiras" title="Tela cheia"><i class="ph ph-corners-out"></i></button>
-                    <button class="icon" data-export="carteiras" title="Exportar PNG"><i class="ph ph-download-simple"></i></button>
-                  </div>
-                </div>
-                <canvas id="chartCarteiras"></canvas>
-              </div>
-              <div class="card header-actions">
-                <div class="head">
-                  <h3><i class="ph ph-credit-card"></i> Gastos por forma de pagamento</h3>
-                  <div class="actions">
-                    <button class="icon" data-fs="pagamentos" title="Tela cheia"><i class="ph ph-corners-out"></i></button>
-                    <button class="icon" data-export="pagamentos" title="Exportar PNG"><i class="ph ph-download-simple"></i></button>
-                  </div>
-                </div>
-                <canvas id="chartPagamentos"></canvas>
-              </div>
-              <div class="card" style="grid-column: 1 / -1">
-                <h3>Totais do período</h3>
-                <table id="tblCarteirasPagamentos">
-                  <thead><tr><th>Grupo</th><th>Item</th><th>Total</th><th>%</th></tr></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
 
       <!-- Contêiner para tela cheia de gráficos -->
       <div class="chart-fs" id="chartFs" hidden>
@@ -691,6 +655,30 @@ document.addEventListener('change', function(e){
 });
 </script>
 
+<!-- Supabase Client (auto-injected) -->
+<script>
+  (function() {
+    var url = "https://ppoufxezqmbxzflijmpx.supabase.co";
+    var key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwb3VmeGV6cW1ieHpmbGlqbXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NzY1MTgsImV4cCI6MjA3MjE1MjUxOH0.7wntt2EbXsb16Zob9F81XFUKognKHKn0jxP6UdfF_ZY";
+    if (!window.supabase || !window.supabase.createClient) {
+      console.error("Supabase SDK não encontrado. Verifique a tag do script UMD.");
+      return;
+    }
+    // Cria cliente e expõe globalmente
+    var client = window.supabase.createClient(url, key);
+    window.supabaseClient = client;         // padrão recomendado
+    window.supabase_client = client;        // alias defensivo
+    window.SUPABASE_URL = url;              // util
+    window.SUPABASE_ANON_KEY = key;         // util
+    // Também cria variável global para código legado que espera 'supabaseClient'
+    if (typeof supabaseClient === "undefined") {
+      window.supabaseClient = client;
+      window.supabase_client = client;
+      window.supabaseClientAlias = client;
+    }
+    console.log("[Supabase] client inicializado:", !!window.supabaseClient);
+  })();
+</script>
 <script src="scripts.js"></script>
 <!-- Botão flutuante -->
 <button class="fab" id="btnNovoFab" title="Novo lançamento"><i class="ph ph-plus"></i></button>
