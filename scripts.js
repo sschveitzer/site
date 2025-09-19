@@ -6,6 +6,26 @@ function pickVal(selector, def){
   return el && 'value' in el ? el.value : def;
 }
 
+/** Parse a date string as ISO 'YYYY-MM-DD' even if it comes as 'DD/MM/YYYY' */
+function getISO(d){
+  if (!d) return '';
+  const s = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  // fallback: try Date()
+  const dt = new Date(s);
+  if (!isNaN(dt)) return dt.toISOString().slice(0,10);
+  return '';
+}
+/** Extract 'YYYY-MM' from date string in either format */
+function getYM(d){
+  const iso = getISO(d);
+  return iso ? iso.slice(0,7) : '';
+}
+
+
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1056,7 +1076,7 @@ h3.textContent = 'Lançamentos — ' + label;
     let txMonth = (S.tx || []).filter(x => x.data && inSelectedMonth(x));
     if (!txMonth.length) {
       const ym = (S && S.month) || '';
-      txMonth = (S.tx || []).filter(x => x.data && String(x.data).slice(0,7) === ym);
+      txMonth = (S.tx || []).filter(x => x.data && getYM(x.data) === ym);
     }
     // Receitas = P1 + P2 ; Despesas = Casa + P1 + P2 ; Saldo = entradas - saídas
     const receitas = txMonth
@@ -1079,7 +1099,7 @@ h3.textContent = 'Lançamentos — ' + label;
     }
     const _ymSel = (S && S.month) ? S.month : (new Date()).toISOString().slice(0,7);
     const _ymPrevSel = _ymPrev(_ymSel);
-    const prevTx = (S.tx||[]).filter(x => x.data && String(x.data).slice(0,7) === _ymPrevSel);
+    const prevTx = (S.tx||[]).filter(x => x.data && getYM(x.data) === _ymPrevSel);
     const kpiReceitas = qs("#kpiReceitas");
     const kpiDespesas = qs("#kpiDespesas");
     const kpiSaldo = qs("#kpiSaldo");
@@ -1167,7 +1187,7 @@ h3.textContent = 'Lançamentos — ' + label;
       let txMonth = (S.tx || []).filter(x => x.data && inSelectedMonth(x));
     if (!txMonth.length) {
       const ym = (S && S.month) || '';
-      txMonth = (S.tx || []).filter(x => x.data && String(x.data).slice(0,7) === ym);
+      txMonth = (S.tx || []).filter(x => x.data && getYM(x.data) === ym);
     }
       const porCat = {};
       txMonth.filter(x => x.tipo === "Despesa" && x.carteira === "Casa").forEach(x => {
@@ -1961,7 +1981,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   let R = { tab: 'fluxo', charts: {} };
 
   function initReportsUI(){
-  // Wire filter selects across all copies
   ['rPeriodo','rTipo','rCategoria'].forEach(id => {
     document.querySelectorAll('#'+id).forEach(el => {
       if (!el._wired) {
@@ -1970,38 +1989,6 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       }
     });
   });
-
-  // Wire sub-tabs: .rtab -> show .rpanel[data-rtab]
-  document.querySelectorAll('.reports-nav .rtab').forEach(btn => {
-    if (btn._wired) return;
-    btn.addEventListener('click', () => {
-      const key = btn.getAttribute('data-rtab');
-      // active state on buttons
-      document.querySelectorAll('.reports-nav .rtab').forEach(b => b.classList.toggle('active', b === btn));
-      // show matching panel, hide others
-      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
-        const match = p.getAttribute('data-rtab') === key;
-        p.style.display = match ? '' : 'none';
-      });
-      // Redraw after becoming visible
-      try { renderReports(); } catch(e) { console.error(e); }
-    });
-    btn._wired = true;
-  });
-
-  // Ensure only the active button's panel is visible on init
-  (function syncInitialRtab(){
-    const activeBtn = document.querySelector('.reports-nav .rtab.active') || document.querySelector('.reports-nav .rtab');
-    if (activeBtn) {
-      const key = activeBtn.getAttribute('data-rtab');
-      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
-        const match = p.getAttribute('data-rtab') === key;
-        p.style.display = match ? '' : 'none';
-      });
-    }
-  })();
-
-  // initial render
   try { renderReports(); } catch(e) { console.error(e); }
 }
 
@@ -2023,7 +2010,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
   // filtra transações
   let list = Array.isArray(S.tx)? S.tx.slice(): [];
-  list = list.filter(x=> x.data && x.data >= startISO);
+  list = list.filter(x=> x.data && getISO(x.data) >= startISO);
   if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
   if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
 
@@ -2053,7 +2040,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Fluxo por mês (bar)
     {
       const byYM = {};
-      list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      list.forEach(x=>{ const ym = getYM(x.data); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
       const labels = Object.keys(byYM).sort();
       ensureChart('chartFluxo2', {
         type:'bar',
@@ -2078,7 +2065,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Previsão simples (média móvel) & média por categoria
     {
       const byYM = {};
-      list.forEach(x=>{ const ym=String(x.data).slice(0,7); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      list.forEach(x=>{ const ym=getYM(x.data); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
       const labels = Object.keys(byYM).sort();
       const vals = labels.map(l=>byYM[l]);
       const ma = vals.map((_,i)=>{ const a=vals[Math.max(0,i-2)]||0, b=vals[Math.max(0,i-1)]||0, c=vals[i]||0; const n = i<2? (i+1):3; return (a+b+c)/n; });
@@ -2091,7 +2078,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
       // média por categoria (despesa)
       const byCat = {};
-      list.filter(x=>x.tipo==='Despesa').forEach(x=>{ const ym=String(x.data).slice(0,7); byCat[x.categoria] = byCat[x.categoria]||{}; byCat[x.categoria][ym]=(byCat[x.categoria][ym]||0)+Number(x.valor||0); });
+      list.filter(x=>x.tipo==='Despesa').forEach(x=>{ const ym=getYM(x.data); byCat[x.categoria] = byCat[x.categoria]||{}; byCat[x.categoria][ym]=(byCat[x.categoria][ym]||0)+Number(x.valor||0); });
       const tb = document.querySelector('#tblMediaCats2 tbody'); if (tb){
         const cats = Object.keys(byCat);
         const lines = cats.map(c=>{
@@ -2106,8 +2093,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== YoY (barras lado a lado)
     {
       const byYearMonth = {};
-      list.forEach(x=>{ const y = String(x.data).slice(0, 8); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
-      const years = Array.from(new Set(list.map(x=> String(x.data).slice(0, 8)))).sort().slice(-2);
+      list.forEach(x=>{ const y = getYM(x.data).slice(0, 5); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      const years = Array.from(new Set(list.map(x=> getYM(x.data).slice(0, 5)))).sort().slice(-2);
       const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
       const labels = months.map(m=>m);
       const ds = years.map(y=>({ label:y, data: months.map(m=> byYearMonth[`${y}-${m}`]||0) }));
@@ -2117,7 +2104,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== Receitas x Despesas (stacked)
     {
       const byYM = {};
-      list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
+      list.forEach(x=>{ const ym = getYM(x.data); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
       const labels = Object.keys(byYM).sort();
       const rec = labels.map(l=> byYM[l].R);
       const des = labels.map(l=> -byYM[l].D);
