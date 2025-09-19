@@ -280,11 +280,12 @@ function ensureMonthSelectLabels(){
   // ========= SAVE =========
   
 async function saveTx(t){
+  console.debug('[saveTx] payload', JSON.parse(JSON.stringify(t)));
   const doUpsert = async (obj) => await supabaseClient.from("transactions").upsert([obj]).select();
   try {
     const { data, error } = await doUpsert(t);
-    if (!error) return { data, error: null };
-    console.error("[tx] upsert failed:", error);
+    if (!error) console.debug('[saveTx] success', data); return { data, error: null };
+    console.error('[tx] upsert failed:', error);
     const fallbackKeys = [
       "id","tipo","categoria","data","descricao","valor","obs",
       "carteira","carteira_origem","carteira_destino","recurrence_id","occurrence_date"
@@ -293,12 +294,12 @@ async function saveTx(t){
     for (const k of fallbackKeys) if (k in t) clean[k] = t[k];
     const { data: d2, error: e2 } = await doUpsert(clean);
     if (e2) {
-      console.error("[tx] fallback upsert failed:", e2, "payload:", clean);
+      console.error('[tx] fallback upsert failed:', e2, 'payload:', clean);
       return { data: null, error: e2 };
     }
-    return { data: d2, error: null };
+    console.debug('[saveTx] fallback success', d2); console.debug('[saveTx] fallback success', d2); return { data: d2, error: null };
   } catch (e) {
-    console.error("[tx] upsert exception:", e);
+    console.error('[tx] upsert exception:', e);
     return { data: null, error: e };
   }
 }
@@ -562,6 +563,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
 async function addOrUpdate(keepOpen=false) {
+  console.debug('[addOrUpdate] start', { keepOpen });
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
@@ -600,7 +602,9 @@ const selPag = qs('#mPagamento');
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
+      console.debug('[addOrUpdate] calling saveTx');
       const res = await saveTx(t);
+      console.debug('[addOrUpdate] saveTx result', res);
       if (res && res.error) { alert('Não foi possível salvar o lançamento: ' + (res.error.message || res.error)); console.error(res.error); __savingAddOrUpdate = false; return; }
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
