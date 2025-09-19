@@ -1988,7 +1988,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
   }
 
-  // filtra transações (mantém o comportamento original)
+  // filtra transações
   let list = Array.isArray(S.tx)? S.tx.slice(): [];
   list = list.filter(x=> x.data && x.data >= startISO);
   if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
@@ -2565,8 +2565,7 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
       '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
-    ].join('
-');
+    ].join('\n');
     document.head.appendChild(css);
   }
 
