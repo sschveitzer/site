@@ -2916,3 +2916,55 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 /* === Fim do Patch v2 === */
 }
+
+
+// === Reports filters helper (added) ===
+function pickVal(selector, def){
+  const els = Array.from(document.querySelectorAll(selector));
+  if (!els.length) return def;
+  const vis = els.filter(e => e.offsetParent !== null);
+  const el = (vis[vis.length-1] || els[els.length-1]);
+  return el && 'value' in el ? el.value : def;
+}
+function getReportFilters(){
+  const period = pickVal('#rPeriodo', '6m');
+  const tipo   = pickVal('#rTipo',    'todos');
+  const cat    = pickVal('#rCategoria','todas');
+
+  const today = new Date();
+  let startISO = '0000-01-01';
+  if (period==='3m' || period==='6m' || period==='12m'){
+    const back = period==='3m'?3: period==='6m'?6:12;
+    const d = new Date(today.getFullYear(), today.getMonth()-back+1, 1);
+    startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  } else if (period==='ytd') {
+    const d = new Date(today.getFullYear(),0,1);
+    startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  }
+  return { period, tipo, cat, startISO };
+}
+
+
+// === Reports re-render (added) ===
+function renderReports(){
+  try {
+    window.R = window.R || { tab: 'fluxo', charts: {} };
+    const f = (typeof getReportFilters === 'function') ? getReportFilters() : { period:'6m', tipo:'todos', cat:'todas', startISO:'0000-01-01' };
+    R.filters = f;
+
+    if (typeof updateKpis === 'function') updateKpis();
+    if (typeof renderCharts === 'function') renderCharts();
+    if (typeof renderTopCategorias12m === 'function') renderTopCategorias12m(5);
+    if (typeof renderMediaPorCategoria === 'function') renderMediaPorCategoria(6);
+    if (typeof renderTendenciaSaldo === 'function') renderTendenciaSaldo();
+    if (typeof renderForecastChart === 'function') renderForecastChart();
+    if (typeof renderHeatmap === 'function') renderHeatmap();
+    if (typeof renderLancamentos === 'function') renderLancamentos();
+    if (typeof renderRecentes === 'function') renderRecentes();
+    if (typeof renderCategorias === 'function') renderCategorias();
+    if (typeof renderCarteiras === 'function') renderCarteiras();
+  } catch (e) {
+    console.error('renderReports failed:', e);
+  }
+}
+
