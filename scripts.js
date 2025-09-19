@@ -1,3 +1,4 @@
+/* === Helpers adicionados: datas & selects === */
 function pickVal(selector, def){
   const els = Array.from(document.querySelectorAll(selector));
   if (!els.length) return def;
@@ -5,26 +6,19 @@ function pickVal(selector, def){
   const el = (vis[vis.length-1] || els[els.length-1]);
   return el && 'value' in el ? el.value : def;
 }
-
-/** Parse a date string as ISO 'YYYY-MM-DD' even if it comes as 'DD/MM/YYYY' */
 function getISO(d){
   if (!d) return '';
   const s = String(d).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-  // fallback: try Date()
   const dt = new Date(s);
-  if (!isNaN(dt)) return dt.toISOString().slice(0,10);
-  return '';
+  return isNaN(dt) ? '' : dt.toISOString().slice(0,10);
 }
-/** Extract 'YYYY-MM' from date string in either format */
 function getYM(d){
   const iso = getISO(d);
   return iso ? iso.slice(0,7) : '';
 }
-
-
 
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
@@ -289,7 +283,10 @@ function ensureMonthSelectLabels(){
     monthSel._wiredLanc = true;
   }
     try { window.fillCcFixedFields && window.fillCcFixedFields(); } catch(_) {}
-  }
+  
+  try { initReportsUI(); } catch(e) { console.error(e); }
+  try { renderReports(); } catch(e) { console.error(e); }
+}
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
@@ -1981,6 +1978,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   let R = { tab: 'fluxo', charts: {} };
 
   function initReportsUI(){
+  // Filtros
   ['rPeriodo','rTipo','rCategoria'].forEach(id => {
     document.querySelectorAll('#'+id).forEach(el => {
       if (!el._wired) {
@@ -1989,6 +1987,32 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       }
     });
   });
+  // Sub-abas
+  document.querySelectorAll('.reports-nav .rtab').forEach(btn => {
+    if (btn._wired) return;
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-rtab');
+      document.querySelectorAll('.reports-nav .rtab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
+        const match = p.getAttribute('data-rtab') === key;
+        p.style.display = match ? '' : 'none';
+      });
+      try { renderReports(); } catch(e) { console.error(e); }
+    });
+    btn._wired = true;
+  });
+  // Estado inicial visível
+  (function syncInitial(){
+    const active = document.querySelector('.reports-nav .rtab.active') || document.querySelector('.reports-nav .rtab');
+    if (active){
+      const key = active.getAttribute('data-rtab');
+      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
+        const match = p.getAttribute('data-rtab') === key;
+        p.style.display = match ? '' : 'none';
+      });
+    }
+  })();
+  // Render inicial
   try { renderReports(); } catch(e) { console.error(e); }
 }
 
@@ -2006,11 +2030,12 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   } else if (period==='ytd') {
     const d = new Date(today.getFullYear(),0,1);
     startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  } else if (period==='all') {
+    startISO = '0000-01-01';
   }
 
-  // filtra transações
   let list = Array.isArray(S.tx)? S.tx.slice(): [];
-  list = list.filter(x=> x.data && getISO(x.data) >= startISO);
+  list = list.filter(x=> x && x.data && getISO(x.data) && getISO(x.data) >= startISO);
   if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
   if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
 
@@ -2093,8 +2118,8 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     // ==== YoY (barras lado a lado)
     {
       const byYearMonth = {};
-      list.forEach(x=>{ const y = getYM(x.data).slice(0, 5); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
-      const years = Array.from(new Set(list.map(x=> getYM(x.data).slice(0, 5)))).sort().slice(-2);
+      list.forEach(x=>{ const y = String(x.data).slice(0, 8); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
+      const years = Array.from(new Set(list.map(x=> String(x.data).slice(0, 8)))).sort().slice(-2);
       const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
       const labels = months.map(m=>m);
       const ds = years.map(y=>({ label:y, data: months.map(m=> byYearMonth[`${y}-${m}`]||0) }));
