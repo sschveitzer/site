@@ -1,3 +1,11 @@
+function pickVal(selector, def){
+  const els = Array.from(document.querySelectorAll(selector));
+  if (!els.length) return def;
+  const vis = els.filter(e => e.offsetParent !== null);
+  const el = (vis[vis.length-1] || els[els.length-1]);
+  return el && 'value' in el ? el.value : def;
+}
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1953,61 +1961,41 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   let R = { tab: 'fluxo', charts: {} };
 
   function initReportsUI(){
-    const navBtns = document.querySelectorAll('.reports-nav .rtab');
-    const panels = document.querySelectorAll('.rpanel');
-    navBtns.forEach(btn=>{
-      btn.onclick = ()=>{
-        R.tab = btn.dataset.rtab;
-        navBtns.forEach(b=>b.classList.toggle('active', b===btn));
-        panels.forEach(p=>p.classList.toggle('active', p.dataset.rtab===R.tab));
-        renderReports();
-      };
+  ['rPeriodo','rTipo','rCategoria'].forEach(id => {
+    document.querySelectorAll('#'+id).forEach(el => {
+      if (!el._wired) {
+        el.addEventListener('change', function(){ try { renderReports(); } catch(e) { console.error(e); } });
+        el._wired = true;
+      }
     });
-
-    const selPeriodo = document.getElementById('rPeriodo');
-    const selTipo = document.getElementById('rTipo');
-    const selCat = document.getElementById('rCategoria');
-    if (selPeriodo) selPeriodo.onchange = renderReports;
-    if (selTipo) selTipo.onchange = renderReports;
-    if (selCat) selCat.onchange = renderReports;
-
-    // popular categorias
-    if (selCat){
-      selCat.innerHTML = '<option value="todas" selected>Todas</option>' +
-        (Array.isArray(S.cats)? S.cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('') : '');
-    }
-
-    // ações de export e fullscreen
-    document.querySelectorAll('[data-fs]').forEach(b=> b.onclick = ()=> openChartFullscreen(b.dataset.fs));
-    document.querySelectorAll('[data-export]').forEach(b=> b.onclick = ()=> exportChartPNG(b.dataset.export));
-    const fsClose = document.getElementById('fsClose');
-    if (fsClose) fsClose.onclick = ()=> closeChartFullscreen();
-  }
+  });
+  try { renderReports(); } catch(e) { console.error(e); }
+}
 
   function getReportFilters(){
-    const period = (document.getElementById('rPeriodo')||{}).value || '6m';
-    const tipo = (document.getElementById('rTipo')||{}).value || 'todos';
-    const cat = (document.getElementById('rCategoria')||{}).value || 'todas';
+  const period = pickVal('#rPeriodo', '6m');
+  const tipo   = pickVal('#rTipo',    'todos');
+  const cat    = pickVal('#rCategoria','todas');
 
-    const today = new Date();
-    let startISO = '0000-01-01';
-    if (period==='3m' || period==='6m' || period==='12m'){
-      const back = period==='3m'?3: period==='6m'?6:12;
-      const d = new Date(today.getFullYear(), today.getMonth()-back+1, 1);
-      startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    } else if (period==='ytd') {
-      const d = new Date(today.getFullYear(),0,1);
-      startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    }
-
-    // filtra transações
-    let list = Array.isArray(S.tx)? S.tx.slice(): [];
-    list = list.filter(x=> x.data && x.data >= startISO);
-    if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
-    if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
-
-    return { period, tipo, cat, list };
+  const today = new Date();
+  let startISO = '0000-01-01';
+  if (period==='3m' || period==='6m' || period==='12m'){
+    const back = period==='3m'?3: period==='6m'?6:12;
+    const d = new Date(today.getFullYear(), today.getMonth()-back+1, 1);
+    startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  } else if (period==='ytd') {
+    const d = new Date(today.getFullYear(),0,1);
+    startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
   }
+
+  // filtra transações (mantém o comportamento original)
+  let list = Array.isArray(S.tx)? S.tx.slice(): [];
+  list = list.filter(x=> x.data && x.data >= startISO);
+  if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
+  if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
+
+  return { period, tipo, cat, list };
+}
 
   function chartTheme(){
     const dark = !!document.body.classList.contains('dark');
@@ -2577,7 +2565,8 @@ try { window.toggleModal = toggleModal; } catch(e) {}
       '#gastosTotalTiles .sum-box .sum-value{font-weight:800;font-size:26px;letter-spacing:.2px;}',
       '#resumoFamiliarHeader{display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;}',
       '#resumoFamiliarHeader .title{font-weight:700;font-size:18px;}'
-    ].join('\n');
+    ].join('
+');
     document.head.appendChild(css);
   }
 
