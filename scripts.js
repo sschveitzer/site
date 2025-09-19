@@ -1,27 +1,3 @@
-/* === Helpers (não invasivos) === */
-function pickVal(selector, def){
-  const els = Array.from(document.querySelectorAll(selector));
-  if (!els.length) return def;
-  const vis = els.filter(e => e.offsetParent !== null);
-  const el = (vis[vis.length-1] || els[els.length-1]);
-  return el && 'value' in el ? el.value : def;
-}
-function getISO(d){
-  if (!d) return '';
-  const s = String(d).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-  const dt = new Date(s);
-  return isNaN(dt) ? '' : dt.toISOString().slice(0,10);
-}
-function normalizeTipo(v){
-  const s = String(v||'').trim().toLowerCase();
-  if (s.startsWith('d')) return 'Despesa';
-  if (s.startsWith('r')) return 'Receita';
-  return v || '';
-}
-
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -285,10 +261,7 @@ function ensureMonthSelectLabels(){
     monthSel._wiredLanc = true;
   }
     try { window.fillCcFixedFields && window.fillCcFixedFields(); } catch(_) {}
-  
-  try { initReportsUI(); } catch(e) {}
-  try { renderReports(); } catch(e) {}
-}
+  }
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
@@ -1980,75 +1953,61 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   let R = { tab: 'fluxo', charts: {} };
 
   function initReportsUI(){
-  // Filtros (todas as cópias)
-  ['rPeriodo','rTipo','rCategoria'].forEach(id => {
-    document.querySelectorAll('#'+id).forEach(el => {
-      if (!el._wired) {
-        el.addEventListener('change', function(){ try { renderReports(); } catch(e) { console.error(e); } });
-        el._wired = true;
-      }
+    const navBtns = document.querySelectorAll('.reports-nav .rtab');
+    const panels = document.querySelectorAll('.rpanel');
+    navBtns.forEach(btn=>{
+      btn.onclick = ()=>{
+        R.tab = btn.dataset.rtab;
+        navBtns.forEach(b=>b.classList.toggle('active', b===btn));
+        panels.forEach(p=>p.classList.toggle('active', p.dataset.rtab===R.tab));
+        renderReports();
+      };
     });
-  });
-  // Sub-abas (rtab -> rpanel)
-  document.querySelectorAll('.reports-nav .rtab').forEach(btn => {
-    if (btn._wired) return;
-    btn.addEventListener('click', () => {
-      const key = btn.getAttribute('data-rtab');
-      document.querySelectorAll('.reports-nav .rtab').forEach(b => b.classList.toggle('active', b === btn));
-      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
-        const match = p.getAttribute('data-rtab') === key;
-        p.style.display = match ? '' : 'none';
-      });
-      try { renderReports(); } catch(e) { console.error(e); }
-    });
-    btn._wired = true;
-  });
-  // Estado inicial do painel
-  (function syncInitial(){
-    const active = document.querySelector('.reports-nav .rtab.active') || document.querySelector('.reports-nav .rtab');
-    if (active){
-      const key = active.getAttribute('data-rtab');
-      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
-        const match = p.getAttribute('data-rtab') === key;
-        p.style.display = match ? '' : 'none';
-      });
+
+    const selPeriodo = document.getElementById('rPeriodo');
+    const selTipo = document.getElementById('rTipo');
+    const selCat = document.getElementById('rCategoria');
+    if (selPeriodo) selPeriodo.onchange = renderReports;
+    if (selTipo) selTipo.onchange = renderReports;
+    if (selCat) selCat.onchange = renderReports;
+
+    // popular categorias
+    if (selCat){
+      selCat.innerHTML = '<option value="todas" selected>Todas</option>' +
+        (Array.isArray(S.cats)? S.cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('') : '');
     }
-  })();
-}
 
-  function getReportFilters(){
-  const period = pickVal('#rPeriodo', '6m');
-  const tipo   = pickVal('#rTipo',    'todos');
-  const cat    = pickVal('#rCategoria','todas');
-
-  const today = new Date();
-  let startISO = '0000-01-01';
-  if (period==='3m' || period==='6m' || period==='12m'){
-    const back = period==='3m'?3: period==='6m'?6:12;
-    const d = new Date(today.getFullYear(), today.getMonth()-back+1, 1);
-    startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-  } else if (period==='ytd') {
-    const d = new Date(today.getFullYear(),0,1);
-    startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-  } else if (period==='all') {
-    startISO = '0000-01-01';
+    // ações de export e fullscreen
+    document.querySelectorAll('[data-fs]').forEach(b=> b.onclick = ()=> openChartFullscreen(b.dataset.fs));
+    document.querySelectorAll('[data-export]').forEach(b=> b.onclick = ()=> exportChartPNG(b.dataset.export));
+    const fsClose = document.getElementById('fsClose');
+    if (fsClose) fsClose.onclick = ()=> closeChartFullscreen();
   }
 
-  let base = Array.isArray(S.tx) ? S.tx : [];
-  // Clona e normaliza campos usados nos relatórios (sem tocar S.tx)
-  let list = base.map(x => {
-    const iso = getISO(x && x.data);
-    return Object.assign({}, x, {
-      data: iso || (x ? x.data : ''),
-      tipo: normalizeTipo(x && x.tipo)
-    });
-  });
-  list = list.filter(x=> x.data && x.data >= startISO);
-  if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
-  if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
+  function getReportFilters(){
+    const period = (document.getElementById('rPeriodo')||{}).value || '6m';
+    const tipo = (document.getElementById('rTipo')||{}).value || 'todos';
+    const cat = (document.getElementById('rCategoria')||{}).value || 'todas';
 
-  return { period, tipo, cat, list };
-}
+    const today = new Date();
+    let startISO = '0000-01-01';
+    if (period==='3m' || period==='6m' || period==='12m'){
+      const back = period==='3m'?3: period==='6m'?6:12;
+      const d = new Date(today.getFullYear(), today.getMonth()-back+1, 1);
+      startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    } else if (period==='ytd') {
+      const d = new Date(today.getFullYear(),0,1);
+      startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    }
+
+    // filtra transações
+    let list = Array.isArray(S.tx)? S.tx.slice(): [];
+    list = list.filter(x=> x.data && x.data >= startISO);
+    if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
+    if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
+
+    return { period, tipo, cat, list };
+  }
 
   function chartTheme(){
     const dark = !!document.body.classList.contains('dark');
