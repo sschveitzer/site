@@ -585,16 +585,16 @@ const chkRepetir = qs("#mRepetir");
     const y0 = Number(inicio.slice(0,4));
 const m0 = Number(inicio.slice(5,7));
 if (per === "Mensal") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
+      const ld = lastDayOfMonth(Number(inicio.slice(0,4)), Number(inicio.slice(5,7)));
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
+      const candidate = toYMD(new Date(Number(inicio.slice(0,4)), Number(inicio.slice(5,7)) - 1, day));
       proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
     } else if (per === "Semanal") {
       proxima = incWeekly(inicio);
     } else if (per === "Anual") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
+      const ld = lastDayOfMonth(Number(inicio.slice(0,4)), mes);
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
+      const candidate = toYMD(new Date(Number(inicio.slice(0,4)), mes - 1, day));
       proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
     }
 
