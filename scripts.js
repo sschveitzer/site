@@ -88,6 +88,18 @@ try {
   function toYMD(input) {
   function fmt(d) { return d.toISOString().slice(0,10); }
   if (input === undefined || input === null || input === '') return fmt(new Date());
+  if (typeof input === 'string') {
+    const s = input.trim();
+    if (!s) return fmt(new Date());
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // já está em Y-M-D
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/').map(Number); const dt=new Date(y,m-1,d); return fmt(dt); }
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) { const t=Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t)); }
+    const t = Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t));
+  }
+  if (input instanceof Date) return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
+  try { const dt = new Date(input); return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt); } catch(_) { return fmt(new Date()); }
+}
+  if (input === undefined || input === null || input === '') return fmt(new Date());
   if (input instanceof Date) return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
   if (typeof input === 'string') {
     const s = input.trim();
@@ -613,7 +625,9 @@ const chkRepetir = qs("#mRepetir");
     };
 
     const { data: saved, error } = await saveRec(rec);
-    if (error) {
+    
+    try { if (typeof applyRecurrences === 'function') { await applyRecurrences(); } } catch(e) { console.warn('[rec] applyRecurrences pós-criação falhou', e); }
+if (error) {
       console.error(error);
       return alert("Erro ao salvar recorrência.");
     }
@@ -2886,7 +2900,18 @@ document.addEventListener("DOMContentLoaded", function(){
 /* === [REC] Lista no Config → Transações recorrentes (fetch direto do Supabase) === */
 (function(){
   function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
-  function iso(d){ try { return d ? new Date(d).toLocaleDateString() : '-'; } catch(_) { return d||'-'; } }
+  function iso(d){
+  try {
+    if (!d) return '-';
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const [y,m,day] = d.split('-').map(Number);
+      const dt = new Date(y, m-1, day); // local midnight
+      return dt.toLocaleDateString();
+    }
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString();
+  } catch(_) { return d||'-'; }
+} catch(_) { return d||'-'; } }
 
   async function fetchRecs(){
     if (!window.supabaseClient?.from) { console.warn('[rec] supabaseClient indisponível'); return []; }
@@ -2978,3 +3003,4 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.renderRecListDirect = renderRecListDirect;
 })();
+
