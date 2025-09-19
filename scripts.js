@@ -582,8 +582,8 @@ const chkRepetir = qs("#mRepetir");
 
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
-    const y0 = Number(inicio[:4]);
-const m0 = Number(inicio[5:7]);
+    const y0 = Number(inicio.slice(0,4));
+const m0 = Number(inicio.slice(5,7));
 if (per === "Mensal") {
       const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
@@ -2981,4 +2981,3 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.renderRecListDirect = renderRecListDirect;
 })();
-
