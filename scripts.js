@@ -3087,3 +3087,38 @@ document.addEventListener("DOMContentLoaded", function(){
   try { applyHideMode(); } catch(_){}
 })();
 /* === Fim do patch === */
+
+
+/* === Patch v2: foco direto nos elementos de metas === */
+(function(){
+  function blurMetaIds(){
+    var hide = !!(window.S && window.S.hide);
+    ['#metaTotalLabel','#metaGastoMes'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if (el) el.classList.toggle('blurred', hide);
+    });
+    // Também tenta valores por categoria na tabela de metas, se existirem
+    var tbl = document.querySelector('#tblMetasCat');
+    if (tbl){
+      tbl.querySelectorAll('td, input').forEach(function(el){
+        // Se for input de valor, aplica blur no container pai
+        var node = el;
+        if (el.tagName === 'INPUT') node = el.parentElement || el;
+        if (node) node.classList.toggle('blurred', hide);
+      });
+    }
+  }
+  // Observa mudanças de texto nesses nós para reaplicar blur
+  try {
+    var targets = ['metaTotalLabel','metaGastoMes'].map(function(id){ return document.getElementById(id); }).filter(Boolean);
+    var mo = new MutationObserver(function(){ blurMetaIds(); });
+    targets.forEach(function(t){ mo.observe(t, { childList: true, characterData: true, subtree: true }); });
+  } catch(_){}
+  // Chamada inicial e ligação ao applyHideMode se existir
+  blurMetaIds();
+  if (typeof window.applyHideMode === 'function'){
+    var old = window.applyHideMode;
+    window.applyHideMode = function(){ old(); blurMetaIds(); };
+  }
+})();
+/* === Fim do Patch v2 === */
