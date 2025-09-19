@@ -2981,3 +2981,109 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.renderRecListDirect = renderRecListDirect;
 })();
+
+
+/* === Patch: aplicar blur nas metas quando "Esconder valores" estiver ativo === */
+(function(){
+  // Classe usada pelo app para esconder números
+  var BLUR_CLASS = 'blurred';
+
+  function isCurrencyLike(text){
+    if (!text) return false;
+    // Detecta formatos como "R$ 1.234,56" ou números com vírgula
+    return /R\$\s*\d|\d{1,3}(\.\d{3})*,\d{2}/.test(String(text));
+  }
+
+  function markInside(container){
+    if (!container) return;
+    // Candidatos comuns nas metas
+    var candidates = container.querySelectorAll([
+      '.meta-valor',
+      '.metaValor',
+      '.meta-progress',
+      '.valorMeta',
+      '.total-meta',
+      '.kpi-meta',
+      '[data-meta-valor]',
+      '[data-valor]',
+      '.valor'
+    ].join(','));
+    // Se nenhum seletor conhecido for encontrado, faz uma varredura leve por textos com formato de moeda
+    if (!candidates.length) {
+      candidates = container.querySelectorAll('*');
+    }
+    candidates.forEach(function(el){
+      try {
+        var text = (el.textContent || '').trim();
+        if (!text) return;
+        if (el.matches('.valor, .meta-valor, .metaValor, .valorMeta, [data-meta-valor], [data-valor]') || isCurrencyLike(text)){
+          el.classList.toggle(BLUR_CLASS, !!(window.S && window.S.hide));
+        }
+      } catch(_){}
+    });
+  }
+
+  function applyHideMode(){
+    try {
+      var hide = !!(window.S && window.S.hide);
+      // Containers prováveis da área de metas
+      var containers = [
+        document.getElementById('metas'),
+        document.getElementById('metasGrid'),
+        document.getElementById('metasResumo'),
+        document.getElementById('metasBox'),
+        document.querySelector('section#metas'),
+        document.querySelector('[data-section="metas"]')
+      ].filter(Boolean);
+
+      // Se não achar, tenta a página toda (limitado para evitar custo alto)
+      if (!containers.length) containers = [document.body];
+
+      containers.forEach(function(c){
+        markInside(c);
+      });
+
+      // Também mantém o comportamento para KPIs existentes (não interfere no que já funciona)
+      ['#kpiReceitas','#kpiDespesas','#kpiSaldo','#kpiReceitasDelta','#kpiDespesasDelta','#kpiSaldoDelta']
+        .forEach(function(sel){
+          var el = document.querySelector(sel);
+          if (el) el.classList.toggle(BLUR_CLASS, hide);
+        });
+    } catch(e){
+      try { console.error('applyHideMode:', e); } catch(_){}
+    }
+  }
+
+  // Expõe globalmente para uso manual se necessário
+  try { window.applyHideMode = applyHideMode; } catch(_){}
+
+  // Envelopa render() para aplicar blur após cada renderização, sem alterar outras lógicas
+  try {
+    if (typeof window.render === 'function' && !window.render.__wrapHideApplied){
+      var __origRender = window.render;
+      window.render = function(){
+        var ret = __origRender.apply(this, arguments);
+        try { applyHideMode(); } catch(_){}
+        return ret;
+      };
+      window.render.__wrapHideApplied = true;
+    }
+  } catch(_){}
+
+  // Envelopa fetchMetas() (se existir) para garantir blur após popular metas
+  try {
+    if (typeof window.fetchMetas === 'function' && !window.fetchMetas.__wrapHideApplied){
+      var __origFetchMetas = window.fetchMetas;
+      window.fetchMetas = async function(){
+        var ret = await __origFetchMetas.apply(this, arguments);
+        try { applyHideMode(); } catch(_){}
+        return ret;
+      };
+      window.fetchMetas.__wrapHideApplied = true;
+    }
+  } catch(_){}
+
+  // Chamada inicial (caso a página inicialize com S.hide=true)
+  try { applyHideMode(); } catch(_){}
+})();
+/* === Fim do patch === */
