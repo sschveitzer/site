@@ -2903,8 +2903,7 @@ document.addEventListener("DOMContentLoaded", function(){
 /* === [REC] Lista no Config → Transações recorrentes (fetch direto do Supabase) === */
 (function(){
   function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
-  function iso(d){
-  try {
+  function iso(d){ try {
     if (!d) return '-';
     if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
       const [y,m,day] = d.split('-').map(Number);
@@ -2913,8 +2912,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
     const dt = new Date(d);
     return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString();
-  } catch(_) { return d||'-'; }
-} catch(_) { return d||'-'; } }
+  } catch(_) { return d||'-'; } }
 
   async function fetchRecs(){
     if (!window.supabaseClient?.from) { console.warn('[rec] supabaseClient indisponível'); return []; }
@@ -3006,4 +3004,3 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.renderRecListDirect = renderRecListDirect;
 })();
-
