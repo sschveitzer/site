@@ -525,7 +525,36 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     });
     document._wiredEscClose = true;
   }
+})()
+
+
+// ===== Global delegated save handler (robust) =====
+(function ensureGlobalSaveHandler(){
+  if (document._saveHandlerWired) return;
+  document.addEventListener('click', function(ev){
+    try {
+      var t = ev.target;
+      if (t.closest && t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo, [name="salvarENovo"], .save-new, .btn-save-new')) {
+        ev.preventDefault();
+        console.debug('[saveHandler] Save click captured (global)');
+        try {
+          if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
+            if (window.addOrUpdate) window.addOrUpdate(true);
+          } else {
+            if (window.addOrUpdate) window.addOrUpdate(false);
+          }
+        } catch(e){
+          console.error('[saveHandler] addOrUpdate threw', e);
+          alert('Falha ao salvar: ' + (e && e.message || e));
+        }
+      }
+    } catch(e){ console.warn('[saveHandler] delegate failed', e); }
+  }, true);
+  document._saveHandlerWired = true;
+  console.debug('[saveHandler] global handler wired');
 })();
+
+;
 
   let modalTipo = "Despesa";
   function syncTipoTabs() {
