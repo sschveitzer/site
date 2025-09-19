@@ -1,3 +1,11 @@
+function pickVal(selector, def){
+  const els = Array.from(document.querySelectorAll(selector));
+  if (!els.length) return def;
+  const vis = els.filter(e => e.offsetParent !== null);
+  const el = (vis[vis.length-1] || els[els.length-1]);
+  return el && 'value' in el ? el.value : def;
+}
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1953,231 +1961,16 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   let R = { tab: 'fluxo', charts: {} };
 
   function initReportsUI(){
-    const navBtns = document.querySelectorAll('.reports-nav .rtab');
-    const panels = document.querySelectorAll('.rpanel');
-    navBtns.forEach(btn=>{
-      btn.onclick = ()=>{
-        R.tab = btn.dataset.rtab;
-        navBtns.forEach(b=>b.classList.toggle('active', b===btn));
-        panels.forEach(p=>p.classList.toggle('active', p.dataset.rtab===R.tab));
-        renderReports();
-      };
+  ['rPeriodo','rTipo','rCategoria'].forEach(id => {
+    document.querySelectorAll('#'+id).forEach(el => {
+      if (!el._wired) {
+        el.addEventListener('change', renderReports);
+        el._wired = true;
+      }
     });
-
-    const selPeriodo = document.getElementById('rPeriodo');
-    const selTipo = document.getElementById('rTipo');
-    const selCat = document.getElementById('rCategoria');
-    if (selPeriodo) selPeriodo.onchange = renderReports;
-    if (selTipo) selTipo.onchange = renderReports;
-    if (selCat) selCat.onchange = renderReports;
-
-    // popular categorias
-    if (selCat){
-      selCat.innerHTML = '<option value="todas" selected>Todas</option>' +
-        (Array.isArray(S.cats)? S.cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('') : '');
-    }
-
-    // ações de export e fullscreen
-    document.querySelectorAll('[data-fs]').forEach(b=> b.onclick = ()=> openChartFullscreen(b.dataset.fs));
-    document.querySelectorAll('[data-export]').forEach(b=> b.onclick = ()=> exportChartPNG(b.dataset.export));
-    const fsClose = document.getElementById('fsClose');
-    if (fsClose) fsClose.onclick = ()=> closeChartFullscreen();
-  }
-
-  function getReportFilters(){
-    const period = (document.getElementById('rPeriodo')||{}).value || '6m';
-    const tipo = (document.getElementById('rTipo')||{}).value || 'todos';
-    const cat = (document.getElementById('rCategoria')||{}).value || 'todas';
-
-    const today = new Date();
-    let startISO = '0000-01-01';
-    if (period==='3m' || period==='6m' || period==='12m'){
-      const back = period==='3m'?3: period==='6m'?6:12;
-      const d = new Date(today.getFullYear(), today.getMonth()-back+1, 1);
-      startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    } else if (period==='ytd') {
-      const d = new Date(today.getFullYear(),0,1);
-      startISO = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    }
-
-    // filtra transações
-    let list = Array.isArray(S.tx)? S.tx.slice(): [];
-    list = list.filter(x=> x.data && x.data >= startISO);
-    if (tipo!=='todos') list = list.filter(x=> x.tipo===tipo);
-    if (cat!=='todas') list = list.filter(x=> x.categoria===cat);
-
-    return { period, tipo, cat, list };
-  }
-
-  function chartTheme(){
-    const dark = !!document.body.classList.contains('dark');
-    return { color: dark? '#e5e7eb':'#0f172a', grid: dark? 'rgba(255,255,255,.08)':'rgba(2,6,23,.08)' };
-  }
-
-  function ensureChart(id, cfg){
-    if (R.charts[id]){ R.charts[id].destroy(); }
-    const ctx = document.getElementById(id);
-    if (!ctx || !window.Chart) return;
-    R.charts[id] = new Chart(ctx, cfg);
-  }
-
-  function renderReports(){
-    const { list } = getReportFilters();
-    const theme = chartTheme();
-    if (window.Chart){
-      Chart.defaults.color = theme.color;
-      Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-    }
-
-    // ==== Fluxo por mês (bar)
-    {
-      const byYM = {};
-      list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
-      const labels = Object.keys(byYM).sort();
-      ensureChart('chartFluxo2', {
-        type:'bar',
-        data:{ labels, datasets:[{ label:'Fluxo', data: labels.map(l=>byYM[l]) }] },
-        options:{ scales:{ x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } }
-      });
-    }
-
-    // ==== Pie categorias (despesas)
-    {
-      const byCat = {};
-      list.filter(x=>x.tipo==='Despesa').forEach(x=>{ byCat[x.categoria] = (byCat[x.categoria]||0)+Number(x.valor||0); });
-      const labels = Object.keys(byCat);
-      const data = labels.map(l=>byCat[l]);
-      ensureChart('chartPie2', { type:'pie', data:{ labels, datasets:[{ data }] } });
-      // tabela top
-      const tb = document.querySelector('#tblTop2 tbody'); if (tb){
-        tb.innerHTML = labels.map((l,i)=>`<tr><td>${l||'-'}</td><td>${(Number(data[i])||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
-      }
-    }
-
-    // ==== Previsão simples (média móvel) & média por categoria
-    {
-      const byYM = {};
-      list.forEach(x=>{ const ym=String(x.data).slice(0,7); byYM[ym] = (byYM[ym]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
-      const labels = Object.keys(byYM).sort();
-      const vals = labels.map(l=>byYM[l]);
-      const ma = vals.map((_,i)=>{ const a=vals[Math.max(0,i-2)]||0, b=vals[Math.max(0,i-1)]||0, c=vals[i]||0; const n = i<2? (i+1):3; return (a+b+c)/n; });
-      ensureChart('chartForecast2', { type:'line', data:{ labels, datasets:[
-        { label:'Fluxo', data: vals }, { label:'Tendência (MM3)', data: ma }
-      ] }, options:{ scales:{ x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
-      const kpi = document.getElementById('kpiForecastFinal2'); if (kpi){
-        const last = vals.at(-1)||0; kpi.textContent = last.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-      }
-
-      // média por categoria (despesa)
-      const byCat = {};
-      list.filter(x=>x.tipo==='Despesa').forEach(x=>{ const ym=String(x.data).slice(0,7); byCat[x.categoria] = byCat[x.categoria]||{}; byCat[x.categoria][ym]=(byCat[x.categoria][ym]||0)+Number(x.valor||0); });
-      const tb = document.querySelector('#tblMediaCats2 tbody'); if (tb){
-        const cats = Object.keys(byCat);
-        const lines = cats.map(c=>{
-          const vals = Object.values(byCat[c]);
-          const m = vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length):0;
-          return `<tr><td>${c}</td><td>${m.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`;
-        }).join('');
-        tb.innerHTML = lines;
-      }
-    }
-
-    // ==== YoY (barras lado a lado)
-    {
-      const byYearMonth = {};
-      list.forEach(x=>{ const y = String(x.data).slice(0, 8); const m = String(x.data).slice(5,7); const key = `${y}-${m}`; byYearMonth[key]=(byYearMonth[key]||0) + (x.tipo==='Despesa'?-1:1)*Number(x.valor||0); });
-      const years = Array.from(new Set(list.map(x=> String(x.data).slice(0, 8)))).sort().slice(-2);
-      const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-      const labels = months.map(m=>m);
-      const ds = years.map(y=>({ label:y, data: months.map(m=> byYearMonth[`${y}-${m}`]||0) }));
-      ensureChart('chartYoY', { type:'bar', data:{ labels, datasets: ds }, options:{ scales:{ x:{ stacked:false, grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } } });
-    }
-
-    // ==== Receitas x Despesas (stacked)
-    {
-      const byYM = {};
-      list.forEach(x=>{ const ym = String(x.data).slice(0,7); byYM[ym] = byYM[ym] || { R:0, D:0 }; if (x.tipo==='Receita') byYM[ym].R += Number(x.valor||0); if (x.tipo==='Despesa') byYM[ym].D += Number(x.valor||0); });
-      const labels = Object.keys(byYM).sort();
-      const rec = labels.map(l=> byYM[l].R);
-      const des = labels.map(l=> -byYM[l].D);
-      ensureChart('chartRxV', { type:'bar', data:{ labels, datasets:[ {label:'Receitas', data:rec}, {label:'Despesas', data:des} ] }, options:{ scales:{ x:{ stacked:true, grid:{ color: theme.grid } }, y:{ stacked:true, grid:{ color: theme.grid } } } } });
-    }
-
-    // ==== Heatmap reaproveitado
-    const hm = document.getElementById('heatmap2');
-    const hmOld = document.getElementById('heatmap');
-    if (hm){ hm.innerHTML = hmOld ? hmOld.innerHTML : '<div class="muted">Sem dados</div>'; }
-  }
-
-  // ===== Exportar gráfico para PNG =====
-  function exportChartPNG(id){
-    const map = { 'fluxo':'chartFluxo2','pie':'chartPie2','forecast':'chartForecast2','yoy':'chartYoY','rxv':'chartRxV' };
-    const c = document.getElementById(map[id]);
-    if (!c) return;
-    const link = document.createElement('a');
-    link.download = `${id}.png`;
-    link.href = c.toDataURL('image/png');
-    link.click();
-  }
-
-  // ===== Tela cheia =====
-  function openChartFullscreen(id){
-    const map = { 'fluxo':'chartFluxo2','pie':'chartPie2','forecast':'chartForecast2','yoy':'chartYoY','rxv':'chartRxV' };
-    const srcCanvas = document.getElementById(map[id]);
-    if (!srcCanvas) return;
-    const fs = document.getElementById('chartFs');
-    const dest = document.getElementById('chartFsCanvas');
-    fs.hidden = false;
-    if (R.charts._fs) { R.charts._fs.destroy(); }
-    const cfg = R.charts[map[id]]?.config? JSON.parse(JSON.stringify(R.charts[map[id]].config)) : null;
-    if (cfg){ R.charts._fs = new Chart(dest, cfg); }
-  }
-  function closeChartFullscreen(){
-    const fs = document.getElementById('chartFs');
-    fs.hidden = true;
-    if (R.charts._fs){ R.charts._fs.destroy(); R.charts._fs = null; }
-  }
-
-  // ===== Hook no render existente =====
-  const _origRender = typeof render === 'function' ? render : null;
-  render = function(){
-    if (_origRender) _origRender();
-    if (!initReportsUI._done){ initReportsUI(); initReportsUI._done = true; }
-    renderReports();
-  };
-
-  // ========= Billing config =========
-  function wireBillingConfig() {
-    const inpDue = qs("#ccDueDay");
-    const inpClose = qs("#ccClosingDay");
-    if (inpDue)  inpDue.value  = S.ccDueDay ?? "";
-    if (inpClose) inpClose.value = S.ccClosingDay ?? "";
-
-    const btn = qs("#saveCardPrefs");
-    if (btn && !btn._wired) {
-      btn._wired = true;
-      btn.addEventListener("click", async () => {
-        const rawDue = (qs("#ccDueDay")?.value || "").trim();
-        const rawClose = (qs("#ccClosingDay")?.value || "").trim();
-        const d = Number(rawDue);
-        const c = Number(rawClose);
-        S.ccDueDay = (Number.isFinite(d) && d >= 1 && d <= 31) ? d : null;
-        S.ccClosingDay = (Number.isFinite(c) && c >= 1 && c <= 31) ? c : null;
-        await savePrefs();
-        alert("Fatura salva com sucesso!");
-      });
-    }
-  }
-  wireBillingConfig();
-// Start!
-  loadAll();
-
-  // Expose some functions for out-of-onload modules
-  try {
-    window.saveCat = saveCat;
-    window.deleteCat = deleteCat;
-    window.loadAll = loadAll;
-  } catch (e) {}
+  });
+  // initial render
+  if (typeof renderReports === 'function') renderReports();
 }
 
   // === Helpers de ciclo da fatura ===
