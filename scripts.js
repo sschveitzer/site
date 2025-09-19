@@ -562,7 +562,7 @@ const selPag = qs('#mPagamento');
 
     }
 const chkRepetir = qs("#mRepetir");
-    if (S.editingId || !chkRepetir?.checked) {
+    if (!chkRepetir?.checked) {
       await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
