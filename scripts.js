@@ -102,11 +102,6 @@ try {
   if (input instanceof Date) return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
   try { const dt = new Date(input); return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt); } catch(_) { return fmt(new Date()); }
 }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt.getTime())?fmt(new Date()):fmt(dt); }
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt.getTime())?fmt(new Date()):fmt(dt); }
-    const t = Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t));
-  }
-  try { const dt = new Date(input); return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt); } catch(_) { return fmt(new Date()); }
 }
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
