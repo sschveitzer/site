@@ -278,7 +278,31 @@ function ensureMonthSelectLabels(){
   }
 
   // ========= SAVE =========
-  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
+  
+async function saveTx(t){
+  const doUpsert = async (obj) => await supabaseClient.from("transactions").upsert([obj]).select();
+  try {
+    const { data, error } = await doUpsert(t);
+    if (!error) return { data, error: null };
+    console.error("[tx] upsert failed:", error);
+    const fallbackKeys = [
+      "id","tipo","categoria","data","descricao","valor","obs",
+      "carteira","carteira_origem","carteira_destino","recurrence_id","occurrence_date"
+    ];
+    const clean = {};
+    for (const k of fallbackKeys) if (k in t) clean[k] = t[k];
+    const { data: d2, error: e2 } = await doUpsert(clean);
+    if (e2) {
+      console.error("[tx] fallback upsert failed:", e2, "payload:", clean);
+      return { data: null, error: e2 };
+    }
+    return { data: d2, error: null };
+  } catch (e) {
+    console.error("[tx] upsert exception:", e);
+    return { data: null, error: e };
+  }
+}
+
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
@@ -576,7 +600,8 @@ const selPag = qs('#mPagamento');
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
-      await saveTx(t);
+      const res = await saveTx(t);
+      if (res && res.error) { alert('Não foi possível salvar o lançamento: ' + (res.error.message || res.error)); console.error(res.error); __savingAddOrUpdate = false; return; }
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
     if (!keepOpen) { toggleModal(false); }
@@ -636,7 +661,7 @@ if (error) {
 
     // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
     if (t.data === saved.proxima_data) {
-      await materializeOne(saved, saved.proxima_data);
+      const _mat = await materializeOne(saved, saved.proxima_data);
       if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
       else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
       else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
@@ -647,7 +672,7 @@ if (error) {
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
-  }
+}
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
