@@ -79,6 +79,16 @@ try {
 
 
   // ========= HELPERS GERAIS =========
+// --- Safe global nowYMD (guard) ---
+try {
+  if (typeof window !== 'undefined' && typeof window.nowYMD !== 'function') {
+    window.nowYMD = function(){
+      const d = new Date();
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+    };
+  }
+} catch(_) {}
+
   function gid() {
     return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
   }
