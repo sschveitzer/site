@@ -2880,7 +2880,7 @@ document.addEventListener("DOMContentLoaded", function(){
       const el = document.getElementById(id);
       if (el && !el._wiredSave) {
         el.addEventListener('change', onChange);
-        el._wiredSave = True;
+        el._wiredSave = true;
       }
     });
   });
