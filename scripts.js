@@ -66,12 +66,9 @@ try {
     window.setUseCycleForReports = function(v){
       S.useCycleForReports = !!v;
       try { savePrefs(); } catch(e) {}
-      try {
-  render();
-  ensureMonthSelectLabels();
-  try { renderPessoas(); } catch(_) {}
-} catch(e) {}
-
+      try { render();
+    ensureMonthSelectLabels();
+    try { renderPessoas(); } catch(_) {} } catch(e) {}
     };
   }
 } catch (e) {}
@@ -79,16 +76,6 @@ try {
 
 
   // ========= HELPERS GERAIS =========
-// --- Safe global nowYMD (guard) ---
-try {
-  if (typeof window !== 'undefined' && typeof window.nowYMD !== 'function') {
-    window.nowYMD = function(){
-      const d = new Date();
-      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
-    };
-  }
-} catch(_) {}
-
   function gid() {
     return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
   }
@@ -101,17 +88,16 @@ try {
   function toYMD(input) {
   function fmt(d) { return d.toISOString().slice(0,10); }
   if (input === undefined || input === null || input === '') return fmt(new Date());
+  if (input instanceof Date) return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
   if (typeof input === 'string') {
     const s = input.trim();
     if (!s) return fmt(new Date());
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // já está em Y-M-D
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/').map(Number); const dt=new Date(y,m-1,d); return fmt(dt); }
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) { const t=Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t)); }
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) { const t = Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t)); }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt.getTime())?fmt(new Date()):fmt(dt); }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt.getTime())?fmt(new Date()):fmt(dt); }
     const t = Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t));
   }
-  if (input instanceof Date) return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
   try { const dt = new Date(input); return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt); } catch(_) { return fmt(new Date()); }
-}
 }
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -278,32 +264,7 @@ function ensureMonthSelectLabels(){
   }
 
   // ========= SAVE =========
-  
-async function saveTx(t){
-  console.debug('[saveTx] payload', JSON.parse(JSON.stringify(t)));
-  const doUpsert = async (obj) => await supabaseClient.from("transactions").upsert([obj]).select();
-  try {
-    const { data, error } = await doUpsert(t);
-    if (!error) console.debug('[saveTx] success', data); return { data, error: null };
-    console.error('[tx] upsert failed:', error);
-    const fallbackKeys = [
-      "id","tipo","categoria","data","descricao","valor","obs",
-      "carteira","carteira_origem","carteira_destino","recurrence_id","occurrence_date"
-    ];
-    const clean = {};
-    for (const k of fallbackKeys) if (k in t) clean[k] = t[k];
-    const { data: d2, error: e2 } = await doUpsert(clean);
-    if (e2) {
-      console.error('[tx] fallback upsert failed:', e2, 'payload:', clean);
-      return { data: null, error: e2 };
-    }
-    console.debug('[saveTx] fallback success', d2); console.debug('[saveTx] fallback success', d2); return { data: d2, error: null };
-  } catch (e) {
-    console.error('[tx] upsert exception:', e);
-    return { data: null, error: e };
-  }
-}
-
+  async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
   async function deleteTx(id) { return await supabaseClient.from("transactions").delete().eq("id", id); }
   async function saveCat(c)   { return await supabaseClient.from("categories").upsert([c]); }
   async function deleteCat(nome){ return await supabaseClient.from("categories").delete().eq("nome", nome); }
@@ -369,7 +330,7 @@ try { window.savePrefs = savePrefs; } catch(e) {}
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    await saveTx(t);
+    /* removed stray save */
 }
 
   async function applyRecurrences() {
@@ -525,36 +486,7 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
     });
     document._wiredEscClose = true;
   }
-})()
-
-
-// ===== Global delegated save handler (robust) =====
-(function ensureGlobalSaveHandler(){
-  if (document._saveHandlerWired) return;
-  document.addEventListener('click', function(ev){
-    try {
-      var t = ev.target;
-      if (t.closest && t.closest('[data-action="save"], .btn-save, #btnSalvar, #salvar, #salvarENovo, [name="salvarENovo"], .save-new, .btn-save-new')) {
-        ev.preventDefault();
-        console.debug('[saveHandler] Save click captured (global)');
-        try {
-          if (t.closest('#salvarENovo, [data-action="save-novo"], [data-action="save-new"], .salvar-novo, .save-new, .btn-save-new, [name="salvarENovo"]')) {
-            if (window.addOrUpdate) window.addOrUpdate(true);
-          } else {
-            if (window.addOrUpdate) window.addOrUpdate(false);
-          }
-        } catch(e){
-          console.error('[saveHandler] addOrUpdate threw', e);
-          alert('Falha ao salvar: ' + (e && e.message || e));
-        }
-      }
-    } catch(e){ console.warn('[saveHandler] delegate failed', e); }
-  }, true);
-  document._saveHandlerWired = true;
-  console.debug('[saveHandler] global handler wired');
 })();
-
-;
 
   let modalTipo = "Despesa";
   function syncTipoTabs() {
@@ -592,7 +524,6 @@ const vData = qs("#mData"); if (vData) vData.value = nowYMD();
   // ========= TRANSAÇÕES =========
   let __savingAddOrUpdate = false;
 async function addOrUpdate(keepOpen=false) {
-  console.debug('[addOrUpdate] start', { keepOpen });
   
     if (__savingAddOrUpdate) { return; }
     __savingAddOrUpdate = true;
@@ -631,10 +562,7 @@ const selPag = qs('#mPagamento');
     }
 const chkRepetir = qs("#mRepetir");
     if (S.editingId || !chkRepetir?.checked) {
-      console.debug('[addOrUpdate] calling saveTx');
-      const res = await saveTx(t);
-      console.debug('[addOrUpdate] saveTx result', res);
-      if (res && res.error) { alert('Não foi possível salvar o lançamento: ' + (res.error.message || res.error)); console.error(res.error); __savingAddOrUpdate = false; return; }
+      await saveTx(t);
       await loadAll();
     if (window.resetValorInput) window.resetValorInput();
     if (!keepOpen) { toggleModal(false); }
@@ -654,16 +582,16 @@ const chkRepetir = qs("#mRepetir");
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
     if (per === "Mensal") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0,4)), Number(inicio.slice(5,7)));
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0,4)), Number(inicio.slice(5,7)) - 1, day));
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
       proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
     } else if (per === "Semanal") {
       proxima = incWeekly(inicio);
     } else if (per === "Anual") {
-      const ld = lastDayOfMonth(Number(inicio.slice(0,4)), mes);
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
-      const candidate = toYMD(new Date(Number(inicio.slice(0,4)), mes - 1, day));
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
       proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
     }
 
@@ -685,16 +613,14 @@ const chkRepetir = qs("#mRepetir");
     };
 
     const { data: saved, error } = await saveRec(rec);
-    
-    try { if (typeof applyRecurrences === 'function') { await applyRecurrences(); } } catch(e) { console.warn('[rec] applyRecurrences pós-criação falhou', e); }
-if (error) {
+    if (error) {
       console.error(error);
       return alert("Erro ao salvar recorrência.");
     }
 
     // Se o lançamento original é para a mesma data da próxima ocorrência, já materializa a primeira
     if (t.data === saved.proxima_data) {
-      const _mat = await materializeOne(saved, saved.proxima_data);
+      await materializeOne(saved, saved.proxima_data);
       if (per === "Mensal") saved.proxima_data = incMonthly(saved.proxima_data, diaMes, ajuste);
       else if (per === "Semanal") saved.proxima_data = incWeekly(saved.proxima_data);
       else if (per === "Anual") saved.proxima_data = incYearly(saved.proxima_data, diaMes, mes, ajuste);
@@ -705,7 +631,7 @@ if (error) {
     if (!keepOpen) { toggleModal(false); }
     return;
     } finally { __savingAddOrUpdate = false; }
-}
+  }
 try { window.addOrUpdate = addOrUpdate; } catch(e){}
 
 
@@ -2249,7 +2175,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     window.deleteCat = deleteCat;
     window.loadAll = loadAll;
   } catch (e) {}
-
+}
 
   // === Helpers de ciclo da fatura ===
   // txBucketYM: com S.ccClosingDay (1..31), d <= closing => fica no mês da data; d > closing => vai para mês seguinte.
@@ -2960,16 +2886,7 @@ document.addEventListener("DOMContentLoaded", function(){
 /* === [REC] Lista no Config → Transações recorrentes (fetch direto do Supabase) === */
 (function(){
   function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
-  function iso(d){ try {
-    if (!d) return '-';
-    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      const [y,m,day] = d.split('-').map(Number);
-      const dt = new Date(y, m-1, day); // local midnight
-      return dt.toLocaleDateString();
-    }
-    const dt = new Date(d);
-    return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString();
-  } catch(_) { return d||'-'; } }
+  function iso(d){ try { return d ? new Date(d).toLocaleDateString() : '-'; } catch(_) { return d||'-'; } }
 
   async function fetchRecs(){
     if (!window.supabaseClient?.from) { console.warn('[rec] supabaseClient indisponível'); return []; }
@@ -3061,3 +2978,4 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.renderRecListDirect = renderRecListDirect;
 })();
+
