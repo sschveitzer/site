@@ -2065,6 +2065,11 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   }
 
   function renderReports(){
+}
+
+    const { list } = getReportFilters();
+
+
 // Guard: if list is empty, show placeholders and return early
 if (!Array.isArray(list) || list.length === 0){
   const placeholders = [
@@ -2082,9 +2087,6 @@ if (!Array.isArray(list) || list.length === 0){
   var t1 = document.querySelector('#tblTop2 tbody'); if (t1) t1.innerHTML = '';
   var t2 = document.querySelector('#tblMediaCats2 tbody'); if (t2) t2.innerHTML = '';
   return;
-}
-
-    const { list } = getReportFilters();
     const theme = chartTheme();
     if (window.Chart){
       Chart.defaults.color = theme.color;
