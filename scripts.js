@@ -2915,3 +2915,4 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 })();
 /* === Fim do Patch v2 === */
+}
