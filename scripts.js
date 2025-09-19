@@ -330,8 +330,9 @@ try { window.savePrefs = savePrefs; } catch(e) {}
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-    /* removed stray save */
+      await saveTx(t);
 }
+
 
   async function applyRecurrences() {
   const selPag = qs('#mPagamento');
@@ -581,7 +582,9 @@ const chkRepetir = qs("#mRepetir");
 
     // define próxima data inicial baseada no "início"
     let proxima = inicio;
-    if (per === "Mensal") {
+    const y0 = Number(inicio[:4]);
+const m0 = Number(inicio[5:7]);
+if (per === "Mensal") {
       const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
       const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
       const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
