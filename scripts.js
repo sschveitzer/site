@@ -236,9 +236,6 @@ function ensureMonthSelectLabels(){
     if (recErr) { console.error("Erro ao carregar recorrências:", recErr); S.recs = []; }
     else { S.recs = recs || []; }
 
-    // Normaliza proxima_data para dia exato (sem antecipar fds)
-    await __fixMonthlyNextDates(S.recs);
-
     // Materializa recorrências vencidas
     await (window.applyRecurrences ? window.applyRecurrences() : applyRecurrences());
     // Carrega metas do Supabase
@@ -307,25 +304,6 @@ try { window.savePrefs = savePrefs; } catch(e) {}
   async function toggleRecAtivo(id, ativo) {
     return await supabaseClient.from("recurrences").update({ ativo }).eq("id", id);
   }
-
-  // Normaliza proxima_data de recorrências Mensais para cair exatamente no dia configurado (ou no fim do mês se ajuste_fim_mes)
-  async function __fixMonthlyNextDates(recs){
-    try {
-      if (!Array.isArray(recs)) return;
-      for (const r of recs) {
-        if (!r || r.periodicidade !== "Mensal" || !r.proxima_data) continue;
-        const y = Number(r.proxima_data.slice(0,4));
-        const m = Number(r.proxima_data.slice(5,7));
-        const expectedDay = (r.ajuste_fim_mes ? Math.min(Number(r.dia_mes||1), lastDayOfMonth(y, m)) : Number(r.dia_mes||1));
-        const currentDay = Number(r.proxima_data.slice(8,10));
-        if (expectedDay !== currentDay) {
-          const corrected = toYMD(new Date(y, m-1, expectedDay));
-          await supabaseClient.from("recurrences").update({ proxima_data: corrected }).eq("id", r.id);
-        }
-      }
-    } catch (e) { console.error("__fixMonthlyNextDates:", e); }
-  }
-
 
   async function materializeOne(rec, occDate) {
   const selPag = qs('#mPagamento');
@@ -606,21 +584,20 @@ const chkRepetir = qs("#mRepetir");
     let proxima = inicio;
     const y0 = Number(inicio.slice(0,4));
 const m0 = Number(inicio.slice(5,7));
-const y0 = Number(inicio.slice(0,4));
-const m0 = Number(inicio.slice(5,7));
 if (per === "Mensal") {
-  const ld = lastDayOfMonth(y0, m0);
-  const day = ajuste ? Math.min(diaMes, ld) : diaMes;
-  const candidate = toYMD(new Date(y0, m0 - 1, day));
-  proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
-} else if (per === "Semanal") {
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)));
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), Number(inicio.slice(5,7)) - 1, day));
+      proxima = (candidate < inicio) ? incMonthly(candidate, diaMes, ajuste) : candidate;
+    } else if (per === "Semanal") {
       proxima = incWeekly(inicio);
     } else if (per === "Anual") {
-  const ld = lastDayOfMonth(y0, mes);
-  const day = ajuste ? Math.min(diaMes, ld) : diaMes;
-  const candidate = toYMD(new Date(y0, mes - 1, day));
-  proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
-}
+      const ld = lastDayOfMonth(Number(inicio.slice(0, 8)), mes);
+      const day = (ajuste ? Math.min(diaMes, ld) : diaMes);
+      const candidate = toYMD(new Date(Number(inicio.slice(0, 8)), mes - 1, day));
+      proxima = (candidate < inicio) ? incYearly(candidate, diaMes, mes, ajuste) : candidate;
+    }
+
     const rec = {
       id: undefined,
       tipo: t.tipo,
