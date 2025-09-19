@@ -87,39 +87,17 @@ try {
   }
   function toYMD(input) {
   function fmt(d) { return d.toISOString().slice(0,10); }
-
-  if (input === undefined || input === null || input === '') {
-    return fmt(new Date());
-  }
-  if (input instanceof Date) {
-    return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
-  }
+  if (input === undefined || input === null || input === '') return fmt(new Date());
+  if (input instanceof Date) return isNaN(input.getTime()) ? fmt(new Date()) : fmt(input);
   if (typeof input === 'string') {
     const s = input.trim();
     if (!s) return fmt(new Date());
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
-      const t = Date.parse(s);
-      return isNaN(t) ? fmt(new Date()) : fmt(new Date(t));
-    }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      const [y,m,d] = s.split('-').map(Number);
-      const dt = new Date(y, m-1, d);
-      return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt);
-    }
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-      const [d,m,y] = s.split('/').map(Number);
-      const dt = new Date(y, m-1, d);
-      return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt);
-    }
-    const t = Date.parse(s);
-    return isNaN(t) ? fmt(new Date()) : fmt(new Date(t));
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) { const t = Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t)); }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt.getTime())?fmt(new Date()):fmt(dt); }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt.getTime())?fmt(new Date()):fmt(dt); }
+    const t = Date.parse(s); return isNaN(t) ? fmt(new Date()) : fmt(new Date(t));
   }
-  try {
-    const dt = new Date(input);
-    return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt);
-  } catch (_) {
-    return fmt(new Date());
-  }
+  try { const dt = new Date(input); return isNaN(dt.getTime()) ? fmt(new Date()) : fmt(dt); } catch(_) { return fmt(new Date()); }
 }
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -2902,4 +2880,101 @@ document.addEventListener("DOMContentLoaded", function(){
 
   // Expose fill if needed elsewhere
   try { window.fillCcFixedFields = fill; } catch(_) {}
+})();
+
+
+/* === [REC] Lista no Config → Transações recorrentes (fetch direto do Supabase) === */
+(function(){
+  function fmtBRL(v){ try { return (Number(v)||0).toLocaleString(undefined,{style:'currency',currency:'BRL'}); } catch(_) { return v; } }
+  function iso(d){ try { return d ? new Date(d).toLocaleDateString() : '-'; } catch(_) { return d||'-'; } }
+
+  async function fetchRecs(){
+    if (!window.supabaseClient?.from) { console.warn('[rec] supabaseClient indisponível'); return []; }
+    const { data, error } = await supabaseClient
+      .from('recurrences')
+      .select('*')
+      .order('id', { ascending: false });
+    if (error) { console.error('[rec] fetch error', error); return []; }
+    return Array.isArray(data) ? data : [];
+  }
+
+  function ensureToolbar(ul){
+    if (!ul) return;
+    if (document.getElementById('btn-reclist-refresh')) return;
+    const parent = ul.parentElement || ul;
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin:6px 0 8px;';
+    bar.innerHTML = '<button id="btn-reclist-refresh" class="btn btn-light" type="button">Recarregar</button>';
+    parent.insertBefore(bar, ul);
+    document.getElementById('btn-reclist-refresh').addEventListener('click', async ()=>{
+      await renderRecListDirect(true);
+    });
+  }
+
+  async function renderRecListDirect(force=false){
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul) return;
+    ensureToolbar(ul);
+    ul.innerHTML = '<li style="opacity:.7">Carregando recorrências...</li>';
+    const recs = await fetchRecs();
+    if (!recs.length) { ul.innerHTML = '<li style="opacity:.7">Nenhuma recorrência cadastrada ainda.</li>'; return; }
+    ul.innerHTML = recs.map(r => {
+      const tagAtivo = r.ativo ? '<span class="tag success">Ativa</span>' : '<span class="tag">Pausada</span>';
+      return `<li class="rec-item" data-id="${r.id}">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:240px">
+            <div><strong>${r.descricao || '(sem descrição)'}</strong></div>
+            <div style="font-size:12px;opacity:.8">${r.categoria || '-'} • ${r.periodicidade || '-'} • Próx: ${iso(r.proxima_data)} • Valor: ${fmtBRL(r.valor)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${tagAtivo}
+            <button class="btn btn-light" data-action="rec-apply">Aplicar agora</button>
+            <button class="btn btn-light" data-action="rec-toggle">${r.ativo ? 'Pausar' : 'Retomar'}</button>
+            <button class="btn btn-danger" data-action="rec-del">Excluir</button>
+          </div>
+        </div>
+      </li>`;
+    }).join('');
+  }
+
+  function bindRecListDirect(){
+    const ul = document.getElementById('listaRecorrentes');
+    if (!ul || ul.__recBoundDirect) return;
+    ul.__recBoundDirect = true;
+    ul.addEventListener('click', async (ev) => {
+      const li = ev.target.closest('.rec-item'); if (!li) return;
+      const id = li.dataset.id;
+      const action = ev.target.getAttribute('data-action');
+      try {
+        if (action === 'rec-apply' && window.applyRecurrences) {
+          await applyRecurrences(); await renderRecListDirect(true);
+        }
+        if (action === 'rec-toggle') {
+          const willActivate = ev.target.textContent.includes('Retomar');
+          const { error } = await supabaseClient.from('recurrences').update({ ativo: willActivate }).eq('id', id);
+          if (error) { alert('Erro ao atualizar'); console.error(error); }
+          await renderRecListDirect(true);
+        }
+        if (action === 'rec-del') {
+          if (!confirm('Excluir esta recorrência?')) return;
+          const { error } = await supabaseClient.from('recurrences').delete().eq('id', id);
+          if (error) { alert('Erro ao excluir'); console.error(error); }
+          await renderRecListDirect(true);
+        }
+      } catch(e){ console.error('[rec] ação falhou', e); alert('Algo deu errado.'); }
+    });
+  }
+
+  // Render inicial e quando a aba Config for ativada
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ()=>{ renderRecListDirect(); bindRecListDirect(); });
+  } else {
+    renderRecListDirect(); bindRecListDirect();
+  }
+  document.addEventListener('click', (e)=>{
+    const tab = e.target.closest('[href="#config"], [data-target="#config"], [data-tab="#config"], [data-tab="config"]');
+    if (tab) setTimeout(()=> renderRecListDirect(true), 50);
+  });
+
+  window.renderRecListDirect = renderRecListDirect;
 })();
