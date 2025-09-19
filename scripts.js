@@ -269,9 +269,7 @@ function ensureMonthSelectLabels(){
     monthSel._wiredLanc = true;
   }
     try { window.fillCcFixedFields && window.fillCcFixedFields(); } catch(_) {}
-  
-  try { renderReports(); } catch(e) { console.error(e); }
-}
+  }
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
@@ -1963,6 +1961,7 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   let R = { tab: 'fluxo', charts: {} };
 
   function initReportsUI(){
+  // Wire filter selects across all copies
   ['rPeriodo','rTipo','rCategoria'].forEach(id => {
     document.querySelectorAll('#'+id).forEach(el => {
       if (!el._wired) {
@@ -1971,6 +1970,38 @@ const br = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
       }
     });
   });
+
+  // Wire sub-tabs: .rtab -> show .rpanel[data-rtab]
+  document.querySelectorAll('.reports-nav .rtab').forEach(btn => {
+    if (btn._wired) return;
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-rtab');
+      // active state on buttons
+      document.querySelectorAll('.reports-nav .rtab').forEach(b => b.classList.toggle('active', b === btn));
+      // show matching panel, hide others
+      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
+        const match = p.getAttribute('data-rtab') === key;
+        p.style.display = match ? '' : 'none';
+      });
+      // Redraw after becoming visible
+      try { renderReports(); } catch(e) { console.error(e); }
+    });
+    btn._wired = true;
+  });
+
+  // Ensure only the active button's panel is visible on init
+  (function syncInitialRtab(){
+    const activeBtn = document.querySelector('.reports-nav .rtab.active') || document.querySelector('.reports-nav .rtab');
+    if (activeBtn) {
+      const key = activeBtn.getAttribute('data-rtab');
+      document.querySelectorAll('.reports-main .rpanel').forEach(p => {
+        const match = p.getAttribute('data-rtab') === key;
+        p.style.display = match ? '' : 'none';
+      });
+    }
+  })();
+
+  // initial render
   try { renderReports(); } catch(e) { console.error(e); }
 }
 
