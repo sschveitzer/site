@@ -269,7 +269,9 @@ function ensureMonthSelectLabels(){
     monthSel._wiredLanc = true;
   }
     try { window.fillCcFixedFields && window.fillCcFixedFields(); } catch(_) {}
-  }
+  
+  try { renderReports(); } catch(e) { console.error(e); }
+}
 
   // ========= SAVE =========
   async function saveTx(t)    { return await supabaseClient.from("transactions").upsert([t]); }
