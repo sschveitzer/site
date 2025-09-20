@@ -3271,3 +3271,113 @@ document.addEventListener("DOMContentLoaded", function(){
   window.addEventListener('load', function(){ try { setupMetasModal(); } catch(_) {} });
   try { window.renderMetasAcompanhamento = renderMetasAcompanhamento; } catch(_){}
 })();
+
+
+// === Heatmap de despesas (mês atual) ===
+(function(){
+  function renderHeatmap(){
+    try {
+      var el = document.getElementById('heatmap2');
+      if (!el) return;
+
+      // limpa
+      el.innerHTML = '';
+
+      // precisa de S.month e S.tx
+      if (!window.S || !S.month || !Array.isArray(S.tx)) {
+        el.textContent = 'Sem dados';
+        return;
+      }
+
+      // filtra despesas do mês ativo (YYYY-MM)
+      var ym = String(S.month);
+      var txs = (S.tx || []).filter(function(x){
+        return x && x.tipo === 'Despesa' && x.data && String(x.data).startsWith(ym);
+      });
+
+      if (!txs.length) { el.textContent = 'Sem dados'; return; }
+
+      // soma por dia
+      var daily = Object.create(null);
+      var max = 0;
+      txs.forEach(function(t){
+        var k = String(t.data).slice(0,10);
+        var v = Number(t.valor)||0;
+        daily[k] = (daily[k]||0) + v;
+        if (daily[k] > max) max = daily[k];
+      });
+
+      // total de dias no mês
+      var y = Number(ym.slice(0,4));
+      var m = Number(ym.slice(5,7));
+      var daysInMonth = new Date(y, m, 0).getDate();
+
+      for (var i=1; i<=daysInMonth; i++){
+        var day = String(i).padStart(2,'0');
+        var key = ym + '-' + day;
+        var val = daily[key] || 0;
+
+        // nível 0..4 baseado no valor relativo ao máximo
+        var lvl = 0;
+        if (max > 0){
+          var pct = val / max;
+          if (pct > 0    && pct <= 0.25) lvl = 1;
+          else if (pct <= 0.50) lvl = 2;
+          else if (pct <= 0.75) lvl = 3;
+          else if (pct  > 0.75) lvl = 4;
+        }
+
+        var div = document.createElement('div');
+        div.className = 'heat-cell';
+        div.dataset.level = String(lvl);
+        div.textContent = i;
+        div.title = day + '/' + String(m).padStart(2,'0') + '/' + y + ' — ' + (Number(val)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+        el.appendChild(div);
+      }
+    } catch (e) {
+      try { console.error('Falha ao renderizar heatmap:', e); } catch(_){}
+      var el2 = document.getElementById('heatmap2');
+      if (el2) el2.textContent = 'Sem dados';
+    }
+  }
+
+  // expõe de forma segura
+  try { window.renderHeatmap = renderHeatmap; } catch(_){}
+
+  // tenta desenhar quando os dados estiverem prontos (pós-loadAll)
+  function tryRenderHeatmapWhenReady(){
+    var tries = 0;
+    var timer = setInterval(function(){
+      tries++;
+      if (window.S && Array.isArray(S.tx)) {
+        try { renderHeatmap(); } catch(_){}
+        clearInterval(timer);
+      }
+      if (tries > 30) clearInterval(timer);
+    }, 200);
+  }
+
+  // 1) primeira carga
+  tryRenderHeatmapWhenReady();
+
+  // 2) ao trocar o mês
+  try {
+    var monthSel = document.getElementById('monthSelect');
+    if (monthSel && !monthSel._wiredHeatmap){
+      monthSel.addEventListener('change', function(){ try { renderHeatmap(); } catch(_){ } });
+      monthSel._wiredHeatmap = true;
+    }
+  } catch(_){}
+
+  // 3) quando navegar para a aba Relatórios (se já houver uma navegação por tabs)
+  try {
+    document.addEventListener('click', function(ev){
+      var t = ev.target.closest('.tab, .rtab');
+      if (!t) return;
+      var tab = t.dataset.tab || t.dataset.rtab || '';
+      if (tab === 'relatorios' || tab === 'heatmap') {
+        setTimeout(function(){ try { renderHeatmap(); } catch(_){ } }, 50);
+      }
+    });
+  } catch(_){}
+})();
