@@ -1947,3 +1947,27 @@ button.btn:hover,
 #listaRecentes li[data-tipo="Despesa"] .chip { background: rgba(220,38,38,.10); color:#dc2626; }
 #listaRecentes li[data-tipo="Receita"] .chip { background: rgba(34,197,94,.10);  color:#16a34a; }
 #listaRecentes li[data-tipo="Transferência"] .chip { background: rgba(124,58,237,.10); color:#7c3aed; }
+
+
+/* === Heatmap de despesas (mês atual) === */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.heatmap .heat-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  user-select: none;
+}
+.heatmap .heat-cell[data-level="0"] { background: var(--bg-soft); }
+.heatmap .heat-cell[data-level="1"] { background: rgba(220, 38, 38, .15); }
+.heatmap .heat-cell[data-level="2"] { background: rgba(220, 38, 38, .30); }
+.heatmap .heat-cell[data-level="3"] { background: rgba(220, 38, 38, .55); color: #fff; }
+.heatmap .heat-cell[data-level="4"] { background: rgba(220, 38, 38, .80); color: #fff; }
