@@ -1610,7 +1610,7 @@ function render() {
     renderMetaCard();
     renderMetasConfig();
   
-  try { renderHeatmap(); } catch(e) { console.error(e); }
+  try { requestAnimationFrame(() => { try { renderHeatmap(); } catch(e){} }); } catch(_){ setTimeout(() => { try { renderHeatmap(); } catch(e){} }, 0); }
 }
 
   // ========= EVENTOS =========
@@ -3275,6 +3275,7 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 
 
+
 // === Heatmap de despesas (mês atual) ===
 (function(){
   function renderHeatmap(){
@@ -3285,23 +3286,50 @@ document.addEventListener("DOMContentLoaded", function(){
       // limpa
       el.innerHTML = '';
 
-      // precisa de S.month e S.tx
       if (!window.S || !S.month || !Array.isArray(S.tx)) {
         el.textContent = 'Sem dados';
         return;
       }
 
-      // filtra despesas do mês ativo (YYYY-MM)
+      // Usa o mesmo range dos relatórios (respeita ciclo de fatura, se ativo)
       var ym = String(S.month);
+      var range = (typeof getActiveRangeForYM === 'function')
+        ? getActiveRangeForYM(ym)
+        : { start: ym + '-01', end: ym + '-31' };
+
+      // Normaliza função de verificação de intervalo
+      function inRange(ymd){
+        if (typeof ymdInRange === 'function') return ymdInRange(ymd, range.start, range.end);
+        // fallback simples (inclusive)
+        return (ymd >= range.start && ymd <= range.end);
+      }
+
+      // Filtra despesas no range ativo
       var txs = (S.tx || []).filter(function(x){
-        return x && x.tipo === 'Despesa' && x.data && String(x.data).startsWith(ym);
+        var d = String(x && x.data || '').slice(0,10);
+        return x && x.tipo === 'Despesa' && d && inRange(d);
       });
 
       if (!txs.length) { el.textContent = 'Sem dados'; return; }
 
-      // soma por dia
+      // Soma por dia dentro do range
       var daily = Object.create(null);
       var max = 0;
+
+      // Função para iterar dias do range (inclusive)
+      function* eachDay(startYMD, endYMD){
+        var y = parseInt(startYMD.slice(0,4), 10);
+        var m = parseInt(startYMD.slice(5,7), 10) - 1;
+        var d = parseInt(startYMD.slice(8,10), 10);
+        var cur = new Date(y, m, d);
+        var end = new Date(parseInt(endYMD.slice(0,4),10), parseInt(endYMD.slice(5,7),10)-1, parseInt(endYMD.slice(8,10),10));
+        while (cur <= end){
+          var ymd = cur.toISOString().slice(0,10);
+          yield ymd;
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
+
       txs.forEach(function(t){
         var k = String(t.data).slice(0,10);
         var v = Number(t.valor)||0;
@@ -3309,17 +3337,16 @@ document.addEventListener("DOMContentLoaded", function(){
         if (daily[k] > max) max = daily[k];
       });
 
-      // total de dias no mês
-      var y = Number(ym.slice(0,4));
-      var m = Number(ym.slice(5,7));
-      var daysInMonth = new Date(y, m, 0).getDate();
+      // Define grid 7 colunas (semana) por quantidade de linhas necessárias
+      el.style.display = 'grid';
+      el.style.gridTemplateColumns = 'repeat(7, 1fr)';
 
-      for (var i=1; i<=daysInMonth; i++){
-        var day = String(i).padStart(2,'0');
-        var key = ym + '-' + day;
-        var val = daily[key] || 0;
+      for (var ymd of eachDay(range.start, range.end)){
+        var dt = new Date(ymd);
+        var day = dt.getDate();
+        var val = daily[ymd] || 0;
 
-        // nível 0..4 baseado no valor relativo ao máximo
+        // nível 0..4 relativo ao máximo
         var lvl = 0;
         if (max > 0){
           var pct = val / max;
@@ -3332,8 +3359,11 @@ document.addEventListener("DOMContentLoaded", function(){
         var div = document.createElement('div');
         div.className = 'heat-cell';
         div.dataset.level = String(lvl);
-        div.textContent = i;
-        div.title = day + '/' + String(m).padStart(2,'0') + '/' + y + ' — ' + (Number(val)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+        div.textContent = day;
+        var m = String(dt.getMonth()+1).padStart(2,'0');
+        var y = dt.getFullYear();
+        div.title = day.toString().padStart(2,'0') + '/' + m + '/' + y + ' — '
+          + (Number(val)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
         el.appendChild(div);
       }
     } catch (e) {
@@ -3343,10 +3373,10 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   }
 
-  // expõe de forma segura
+  // expõe
   try { window.renderHeatmap = renderHeatmap; } catch(_){}
 
-  // tenta desenhar quando os dados estiverem prontos (pós-loadAll)
+  // chama quando o S.tx estiver pronto
   function tryRenderHeatmapWhenReady(){
     var tries = 0;
     var timer = setInterval(function(){
@@ -3358,27 +3388,36 @@ document.addEventListener("DOMContentLoaded", function(){
       if (tries > 30) clearInterval(timer);
     }, 200);
   }
-
-  // 1) primeira carga
   tryRenderHeatmapWhenReady();
 
-  // 2) ao trocar o mês
+  // ao trocar mês
   try {
     var monthSel = document.getElementById('monthSelect');
     if (monthSel && !monthSel._wiredHeatmap){
-      monthSel.addEventListener('change', function(){ try { renderHeatmap(); } catch(_){ } });
+      monthSel.addEventListener('change', function(){
+        // defere para depois do render principal
+        try {
+          requestAnimationFrame(function(){ try { renderHeatmap(); } catch(_){} });
+        } catch(_) {
+          setTimeout(function(){ try { renderHeatmap(); } catch(_){} }, 0);
+        }
+      });
       monthSel._wiredHeatmap = true;
     }
   } catch(_){}
 
-  // 3) quando navegar para a aba Relatórios (se já houver uma navegação por tabs)
+  // ao abrir painel de relatórios/heatmap
   try {
     document.addEventListener('click', function(ev){
       var t = ev.target.closest('.tab, .rtab');
       if (!t) return;
       var tab = t.dataset.tab || t.dataset.rtab || '';
       if (tab === 'relatorios' || tab === 'heatmap') {
-        setTimeout(function(){ try { renderHeatmap(); } catch(_){ } }, 50);
+        try {
+          requestAnimationFrame(function(){ try { renderHeatmap(); } catch(_){} });
+        } catch(_) {
+          setTimeout(function(){ try { renderHeatmap(); } catch(_){} }, 0);
+        }
       }
     });
   } catch(_){}
