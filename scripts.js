@@ -3122,3 +3122,116 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 })();
 /* === Fim do Patch v2 === */
+
+
+// === [ADD] Modal de Metas: acompanhamento dentro de Metas ===
+// Não altera funções existentes; apenas adiciona bindings e renderização.
+(function(){
+  function gastoDaCategoriaNoMes(cat) {
+    try {
+      const ym = (window.S && S.month) ? String(S.month) : new Date().toISOString().slice(0,7);
+      return (S.tx || [])
+        .filter(x => x && x.tipo === 'Despesa' && x.categoria === cat && String(x.data||'').startsWith(ym))
+        .reduce((acc, x) => acc + (Number(x.valor)||0), 0);
+    } catch(_) { return 0; }
+  }
+  function fmtPct(n){ return isFinite(n) ? Math.round(n) + '%' : '0%'; }
+
+  function renderMetasAcompanhamento(){
+    try {
+      const metaTotal = Number((S && S.metas && S.metas.total) || 0);
+      const ym = (S && S.month) ? String(S.month) : new Date().toISOString().slice(0,7);
+      const gastoMes = (S && S.tx ? S.tx : [])
+        .filter(x => x && x.tipo === 'Despesa' && String(x.data||'').startsWith(ym))
+        .reduce((acc, x) => acc + (Number(x.valor)||0), 0);
+
+      const pctTotal = metaTotal > 0 ? Math.min((gastoMes/metaTotal)*100, 100) : 0;
+
+      var elMetaTotal = document.getElementById('mMetaTotal');
+      var elGastoMes  = document.getElementById('mGastoMes');
+      var elStatus    = document.getElementById('mStatusChip');
+      var elBar       = document.getElementById('mProgBar');
+
+      if (elMetaTotal) elMetaTotal.textContent = fmtMoney(metaTotal);
+      if (elGastoMes)  elGastoMes.textContent  = fmtMoney(gastoMes);
+      if (elBar)       elBar.style.width       = pctTotal + '%';
+      if (elStatus) {
+        var rest = Math.max(metaTotal - gastoMes, 0);
+        elStatus.textContent = metaTotal ? (gastoMes <= metaTotal ? 'Dentro da meta' : 'Estourou') : '—';
+        elStatus.className   = 'chip ' + (gastoMes <= metaTotal ? '' : 'warn');
+      }
+
+      var ul = document.getElementById('mListaMetasCat');
+      if (!ul) return;
+      ul.innerHTML = '';
+
+      var metas = (S && S.metas && S.metas.porCat) ? S.metas.porCat : {};
+      var entries = Object.entries(metas);
+      if (!entries.length) {
+        var li = document.createElement('li');
+        li.className = 'item';
+        li.innerHTML = '<div class="muted">Nenhuma meta por categoria definida.</div>';
+        ul.append(li);
+        return;
+      }
+
+      entries.forEach(function(pair){
+        var cat = pair[0];
+        var meta = pair[1];
+        var metaNum = Number(meta||0);
+        var gasto   = gastoDaCategoriaNoMes(cat);
+        var pct     = metaNum > 0 ? Math.min((gasto/metaNum)*100, 100) : 0;
+        var ok      = (gasto <= metaNum);
+
+        var li = document.createElement('li');
+        li.className = 'item';
+        li.innerHTML = ''
+          + '<div class="chip">'+cat+'</div>'
+          + '<div class="subinfo">Meta: <strong>'+fmtMoney(metaNum)+'</strong></div>'
+          + '<div class="valor">Gasto: '+fmtMoney(gasto)+'</div>'
+          + '<div class="progress" style="height:8px;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-top:6px">'
+          +   '<div style="width:'+pct+'%;height:100%;background:'+(ok ? 'var(--brand)' : 'var(--warn)')+'"></div>'
+          + '</div>'
+          + '<div class="muted" style="margin-top:6px">Uso: <strong>'+fmtPct(pct)+'</strong> • Status: <strong>'+(ok ? 'OK' : 'Estouro')+'</strong></div>';
+        ul.append(li);
+      });
+    } catch(e){ console.error(e); }
+  }
+
+  function setupMetasModal(){
+    var openBtn = document.getElementById('btnGoMetas');
+    var modal   = document.getElementById('modalMetas');
+    var closeBtn= document.getElementById('btnFecharMetas');
+    if (!modal) return;
+
+    if (openBtn && !openBtn._wiredMetas) {
+      openBtn.addEventListener('click', function(){
+        try { renderMetasAcompanhamento(); } catch(_) {}
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+      });
+      openBtn._wiredMetas = true;
+    }
+    if (closeBtn && !closeBtn._wiredMetasClose) {
+      closeBtn.addEventListener('click', function(){
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+      });
+      closeBtn._wiredMetasClose = true;
+    }
+    if (!document._wiredEscCloseMetas) {
+      document.addEventListener('keydown', function(ev){
+        if (ev.key === 'Escape' && modal && modal.style.display === 'flex') {
+          modal.style.display = 'none';
+          document.body.classList.remove('modal-open');
+        }
+      });
+      document._wiredEscCloseMetas = true;
+    }
+  }
+
+  // Garante que os elementos existam antes do binding, sem sobrescrever window.onload existente
+  window.addEventListener('load', function(){
+    try { setupMetasModal(); } catch(_) {}
+  });
+})();
