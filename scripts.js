@@ -1,3 +1,4 @@
+// heatmap-patch v7 - force calendar month by default + strong diagnostics
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -3271,3 +3272,142 @@ document.addEventListener("DOMContentLoaded", function(){
   window.addEventListener('load', function(){ try { setupMetasModal(); } catch(_) {} });
   try { window.renderMetasAcompanhamento = renderMetasAcompanhamento; } catch(_){}
 })();
+
+// === Heatmap de despesas (mês atual) ===
+(function(){
+  window.__HEATMAP_DEBUG = (window.__HEATMAP_DEBUG === undefined) ? true : !!window.__HEATMAP_DEBUG;
+  window.__HEATMAP_USE_CYCLE = !!window.__HEATMAP_USE_CYCLE;
+  function log(){ try { if (window.__HEATMAP_DEBUG) console.debug.apply(console, arguments); } catch(_){ } }
+  function renderHeatmap(){
+    try {
+      var el = document.getElementById('heatmap2');
+      if (!el) return;
+      el.innerHTML = '';
+      if (!window.S) { el.textContent = 'Sem dados'; log('[heatmap] S ausente'); return; }
+      if (!Array.isArray(S.tx)) { el.textContent = 'Sem dados'; log('[heatmap] S.tx não é array'); return; }
+      if (!S.month || !/^\d{4}-\d{2}$/.test(String(S.month))) { el.textContent = 'Sem dados'; log('[heatmap] S.month inválido:', S.month); return; }
+      var ym = String(S.month);
+      var Y = parseInt(ym.slice(0,4),10);
+      var M = parseInt(ym.slice(5,7),10);
+      var lastDay = new Date(Y, M, 0).getDate();
+      var range = { start: ym + '-01', end: ym + '-' + String(lastDay).padStart(2,'0') };
+      if (window.__HEATMAP_USE_CYCLE && (typeof getActiveRangeForYM === 'function')) {
+        try {
+          var r = getActiveRangeForYM(ym);
+          if (r && typeof r.start === 'string' && typeof r.end === 'string' &&
+              /^\d{4}-\d{2}-\d{2}$/.test(r.start) && /^\d{4}-\d{2}-\d{2}$/.test(r.end)) {
+            range = { start: r.start, end: r.end };
+            if (range.start > range.end) { var t=range.start; range.start=range.end; range.end=t; }
+          } else {
+            log('[heatmap] range do ciclo inválido, usando mês-calendário:', r);
+          }
+        } catch(e) { log('[heatmap] erro ao obter ciclo, usando mês-calendário:', e); }
+      }
+      function inRange(ymd){ return ymd >= range.start && ymd <= range.end; }
+      var txsAll = Array.isArray(S.tx) ? S.tx : [];
+      log('[heatmap] total tx=', txsAll.length, 'ym=', ym, 'range=', range);
+      if (!txsAll.length) { el.textContent = 'Sem dados'; return; }
+      var txs = txsAll.filter(function(x){
+        if (!x || x.tipo !== 'Despesa' || !x.data) return false;
+        var d = String(x.data).slice(0,10);
+        return /^\d{4}-\d{2}-\d{2}$/.test(d) && inRange(d);
+      });
+      if (!txs.length && window.__HEATMAP_USE_CYCLE) {
+        var calStart = ym + '-01';
+        var calEnd   = ym + '-' + String(lastDay).padStart(2,'0');
+        txs = txsAll.filter(function(x){
+          if (!x || x.tipo !== 'Despesa' || !x.data) return false;
+          var d = String(x.data).slice(0,10);
+          return /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= calStart && d <= calEnd;
+        });
+        log('[heatmap] fallback calendário -> tx=', txs.length);
+      }
+      if (!txs.length) { el.textContent = 'Sem dados'; log('[heatmap] nenhuma despesa no período'); return; }
+      var daily = Object.create(null);
+      var max = 0;
+      for (var i=0;i<txs.length;i++){
+        var k = String(txs[i].data).slice(0,10);
+        var v = Number(txs[i].valor)||0;
+        daily[k] = (daily[k]||0) + v;
+        if (daily[k] > max) max = daily[k];
+      }
+      log('[heatmap] dias com valor=', Object.keys(daily).length, 'max=', max);
+      el.style.display = 'grid';
+      el.style.gridTemplateColumns = 'repeat(7, 1fr)';
+      var cur = new Date(parseInt(range.start.slice(0,4),10), parseInt(range.start.slice(5,7),10)-1, parseInt(range.start.slice(8,10),10));
+      var end = new Date(parseInt(range.end.slice(0,4),10),   parseInt(range.end.slice(5,7),10)-1,   parseInt(range.end.slice(8,10),10));
+      while (cur <= end){
+        var y = cur.getFullYear();
+        var m = String(cur.getMonth()+1).padStart(2,'0');
+        var d = String(cur.getDate()).padStart(2,'0');
+        var key = y + '-' + m + '-' + d;
+        var val = daily[key] || 0;
+        var lvl = 0;
+        if (max > 0){
+          var pct = val / max;
+          if (pct > 0    && pct <= 0.25) lvl = 1;
+          else if (pct <= 0.50) lvl = 2;
+          else if (pct <= 0.75) lvl = 3;
+          else if (pct  > 0.75) lvl = 4;
+        }
+        var cell = document.createElement('div');
+        cell.className = 'heat-cell';
+        cell.dataset.level = String(lvl);
+        cell.textContent = parseInt(d,10);
+        cell.title = d + '/' + m + '/' + y + ' — ' + (Number(val)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        el.appendChild(cell);
+        cur.setDate(cur.getDate() + 1);
+      }
+    } catch (e){
+      var el2 = document.getElementById('heatmap2');
+      if (el2) el2.textContent = 'Sem dados';
+      try { console.error('[heatmap] erro:', e); } catch(_){}
+    }
+  }
+  try { window.renderHeatmap = renderHeatmap; } catch(_){}
+  function defer(fn, ms){ try { setTimeout(fn, ms||80); } catch(_){ } }
+  (function waitData(){
+    if (window.S && Array.isArray(S.tx)) { defer(function(){ try { renderHeatmap(); } catch(_){ } }, 80); }
+    else setTimeout(waitData, 120);
+  })();
+  try {
+    var monthSel = document.getElementById('monthSelect');
+    if (monthSel && !monthSel._wiredHeatmap_v7){
+      monthSel.addEventListener('change', function(){
+        defer(function(){ try { renderHeatmap(); } catch(_){ } }, 120);
+      });
+      monthSel._wiredHeatmap_v7 = true;
+    }
+  } catch(_){}
+  try {
+    document.addEventListener('click', function(ev){
+      var t = ev.target.closest('.tab, .rtab');
+      if (!t) return;
+      var tab = t.dataset.tab || t.dataset.rtab || '';
+      if (tab === 'relatorios' || tab === 'heatmap') {
+        defer(function(){ try { renderHeatmap(); } catch(_){ } }, 80);
+      }
+    });
+  } catch(_){}
+  try {
+    var obsCreated = false;
+    function ensureObserver(){
+      if (obsCreated) return;
+      var el = document.getElementById('heatmap2');
+      if (!el) { setTimeout(ensureObserver, 200); return; }
+      obsCreated = true;
+      var last = 0;
+      var mo = new MutationObserver(function(){
+        var now = Date.now();
+        if (now - last < 100) return;
+        if (el && el.children && el.children.length === 0){
+          last = now;
+          defer(function(){ try { renderHeatmap(); } catch(_){ } }, 60);
+        }
+      });
+      mo.observe(el, { childList: true, subtree: false });
+    }
+    setTimeout(ensureObserver, 0);
+  } catch(_){}
+})();
+
