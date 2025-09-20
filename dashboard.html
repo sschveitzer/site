@@ -682,5 +682,28 @@ document.addEventListener('change', function(e){
 <script src="scripts.js"></script>
 <!-- Botão flutuante -->
 <button class="fab" id="btnNovoFab" title="Novo lançamento"><i class="ph ph-plus"></i></button>
+
+<!-- Modal: Metas -->
+<div class="modal" id="modalMetas" style="display:none">
+  <div class="content">
+    <div class="title">
+      <h3><i class="ph ph-target"></i> Metas</h3>
+      <button class="icon" id="btnFecharMetas" title="Fechar"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div><span class="muted">Meta total:</span> <strong id="mMetaTotal">—</strong></div>
+      <div><span class="muted">Gasto no mês:</span> <strong id="mGastoMes">—</strong></div>
+      <div><span class="muted">Status:</span> <span id="mStatusChip" class="chip">—</span></div>
+    </div>
+    <div class="progress" style="width:100%;height:10px;border-radius:999px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--border);margin-bottom:16px">
+      <div id="mProgBar" class="bar" style="height:100%;width:0%"></div>
+    </div>
+
+    <h3 style="margin-top:8px">Metas por categoria</h3>
+    <ul id="mListaMetasCat" class="cats-grid"></ul>
+  </div>
+</div>
+
 </body>
 </html>
