@@ -3443,10 +3443,32 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   
-  function destroyChart(id){
-    const canvas = document.getElementById(id);
-    if (!canvas) { R.charts[id] = null; return; }
-    if (window.Chart && typeof Chart.getChart === 'function') {
+  
+function destroyChart(id) {
+  const canvas = document.getElementById(id);
+  if (!canvas) {
+    R.charts[id] = null;
+    return;
+  }
+  if (window.Chart && typeof Chart.getChart === 'function') {
+    const inst = Chart.getChart(canvas);
+    if (inst) {
+      try {
+        inst.destroy();
+      } catch (e) {
+        console.error('Erro ao destruir gráfico', e);
+      }
+    }
+  } else if (R.charts[id] && typeof R.charts[id].destroy === 'function') {
+    try {
+      R.charts[id].destroy();
+    } catch (e) {
+      console.error('Erro ao destruir gráfico', e);
+    }
+  }
+  R.charts[id] = null;
+}
+if (window.Chart && typeof Chart.getChart === 'function') {
       const inst = Chart.getChart(canvas);
       if (inst) { try { inst.destroy(); } catch(_){} }
     } else if (R.charts[id] && typeof R.charts[id].destroy === 'function') {
