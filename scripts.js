@@ -1,3 +1,4 @@
+// heatmap-patch v4 - observer & deferred rerender
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
@@ -1610,7 +1611,7 @@ function render() {
     renderMetaCard();
     renderMetasConfig();
   
-  try { requestAnimationFrame(() => { try { renderHeatmap(); } catch(e){} }); } catch(_){ setTimeout(() => { try { renderHeatmap(); } catch(e){} }, 0); }
+  try { setTimeout(() => { try { renderHeatmap(); } catch(e){} }, 200); } catch(_){ setTimeout(() => { try { renderHeatmap(); } catch(e){} }, 0); }
 }
 
   // ========= EVENTOS =========
@@ -3373,7 +3374,33 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   }
 
-  // expõe
+  
+  // Observa mudanças no contêiner para re-renderizar se for limpo por outras rotinas
+  try {
+    var __heatObserver;
+    function ensureObserver(){
+      var el = document.getElementById('heatmap2');
+      if (!el || __heatObserver) return;
+      var lastRenderAt = 0;
+      __heatObserver = new MutationObserver(function(){
+        // evita loop de re-render
+        var now = Date.now();
+        if (now - lastRenderAt < 100) return;
+        if (el && el.children && el.children.length === 0) {
+          lastRenderAt = now;
+          try {
+            requestAnimationFrame(function(){ try { renderHeatmap(); } catch(_){ } });
+          } catch(_){
+            setTimeout(function(){ try { renderHeatmap(); } catch(_){ } }, 0);
+          }
+        }
+      });
+      __heatObserver.observe(el, { childList: true, subtree: false });
+    }
+    // cria/garante observer após primeira renderização
+    setTimeout(ensureObserver, 0);
+  } catch(_){}
+// expõe
   try { window.renderHeatmap = renderHeatmap; } catch(_){}
 
   // chama quando o S.tx estiver pronto
@@ -3397,7 +3424,7 @@ document.addEventListener("DOMContentLoaded", function(){
       monthSel.addEventListener('change', function(){
         // defere para depois do render principal
         try {
-          requestAnimationFrame(function(){ try { renderHeatmap(); } catch(_){} });
+          setTimeout(function(){ try { renderHeatmap(); } catch(_){} }, 200);
         } catch(_) {
           setTimeout(function(){ try { renderHeatmap(); } catch(_){} }, 0);
         }
@@ -3414,7 +3441,7 @@ document.addEventListener("DOMContentLoaded", function(){
       var tab = t.dataset.tab || t.dataset.rtab || '';
       if (tab === 'relatorios' || tab === 'heatmap') {
         try {
-          requestAnimationFrame(function(){ try { renderHeatmap(); } catch(_){} });
+          setTimeout(function(){ try { renderHeatmap(); } catch(_){} }, 200);
         } catch(_) {
           setTimeout(function(){ try { renderHeatmap(); } catch(_){} }, 0);
         }
