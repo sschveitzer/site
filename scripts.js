@@ -3442,8 +3442,20 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
 
+  
   function destroyChart(id){
-    if (R.charts[id]) { try { R.charts[id].destroy(); } catch(_){}; R.charts[id]=null; }
+    const canvas = document.getElementById(id);
+    if (!canvas) { R.charts[id] = null; return; }
+    if (window.Chart && typeof Chart.getChart === 'function') {
+      const inst = Chart.getChart(canvas);
+      if (inst) { try { inst.destroy(); } catch(_){} }
+    } else if (R.charts[id] && typeof R.charts[id].destroy === 'function') {
+      try { R.charts[id].destroy(); } catch(_) {}
+    }
+    R.charts[id] = null;
+  }
+R.charts[id] = null;
+  } catch(_){}; R.charts[id]=null; }
   }
 
   // ---------- Renderizadores por subtab ----------
