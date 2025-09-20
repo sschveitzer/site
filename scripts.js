@@ -1162,7 +1162,7 @@ h3.textContent = 'Lançamentos — ' + label;
       txMonth = (S.tx || []).filter(x => x.data && String(x.data).slice(0,7) === ym);
     }
       const porCat = {};
-      txMonth.filter(x => x.tipo === "Despesa" && x.carteira === "Casa").forEach(x => {
+      txMonth.filter(x => x.tipo === "Despesa").forEach(x => {
         porCat[x.categoria] = (porCat[x.categoria] || 0) + Number(x.valor);
       });
       chartPie = new Chart(ctxPie, {
