@@ -1609,7 +1609,9 @@ function render() {
     // Metas
     renderMetaCard();
     renderMetasConfig();
-  }
+  
+  try { renderHeatmap(); } catch(e) { console.error(e); }
+}
 
   // ========= EVENTOS =========
 
