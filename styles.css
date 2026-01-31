@@ -2535,5 +2535,15 @@ body.dark .card:hover {
   line-height: 1;
   font-size: 16px;
 }
+/* Alinhar checkbox "compacto" com os filtros */
+.lanc-toolbar label.switch.sm {
+  display: flex;
+  align-items: center;   /* alinha verticalmente */
+  gap: 6px;
+  height: 36px;         /* mesma altura dos selects */
+  margin: 0;
+  padding: 0 4px;
+  white-space: nowrap;  /* evita quebrar linha */
+}
 
 
