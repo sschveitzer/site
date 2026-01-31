@@ -2514,13 +2514,13 @@ body.dark .item:hover,
 body.dark .card:hover {
   background: #222738;
 }
-/* === FIX DEFINITIVO: botões Editar/Excluir === */
-#listaLanc li.item .right button.icon,
-#listaRecentes li.item .right button.icon{
-  all: unset;               /* REMOVE todo estilo herdado */
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+/* FIX botões do topo dos cards (editar / excluir) */
+#listaLanc .header-line .actions button,
+#listaRecentes .header-line .actions button {
+  all: unset;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--card);
   cursor: pointer;
@@ -2529,10 +2529,11 @@ body.dark .card:hover {
   place-items: center;
 }
 
-#listaLanc li.item .right button.icon i,
-#listaRecentes li.item .right button.icon i{
-  font-size: 18px;          /* controla só o ícone */
-  line-height: 1;
+#listaLanc .header-line .actions button i,
+#listaRecentes .header-line .actions button i {
   display: block;
+  line-height: 1;
+  font-size: 16px;
 }
+
 
