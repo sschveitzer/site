@@ -161,6 +161,35 @@ function money(v){
   const qs  = (s) => document.querySelector(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
 
+// === Auto categoria por descrição (baseado nas suas categorias) ===
+const autoCategorias = [
+  { match: /supermercado|mercado|atacadao|atacadão|assai|carrefour|extra/i, cat: "Mercado" },
+  { match: /ifood|delivery|lanchonete|pizza|burger|hamburguer/i, cat: "Lanches" },
+  { match: /almoco|almoço|self service|buffet/i, cat: "Almoços" },
+  { match: /netflix|spotify|prime video|disney|hbo/i, cat: "Assinaturas" },
+  { match: /aluguel|condominio|condomínio|casa/i, cat: "Moradia" },
+  { match: /energia|luz|cpfl|enel/i, cat: "Energia" },
+  { match: /internet|fibra|oi|vivo|claro|tim/i, cat: "Internet" },
+  { match: /telefone|celular|chip|recarga/i, cat: "Telefone" },
+  { match: /posto|gasolina|etanol|diesel/i, cat: "Gasolina" },
+  { match: /farmacia|drogaria|droga|raia|pacheco/i, cat: "Farmácia" },
+  { match: /medico|dentista|consulta|exame/i, cat: "Saúde" },
+  { match: /cinema|show|bar|viagem/i, cat: "Lazer" },
+  { match: /salario|salário|pagamento|holerite/i, cat: "Salário" },
+  { match: /previdencia|previdência|inss/i, cat: "Previdência" },
+  { match: /cartao|cartão|fatura/i, cat: "Cartão de Crédito" },
+  { match: /crediario|crediário|parcelado/i, cat: "Crediário" }
+];
+
+function guessCategoriaByDesc(desc){
+  if (!desc) return null;
+  const d = desc.toLowerCase();
+  for (const r of autoCategorias){
+    if (r.match.test(d)) return r.cat;
+  }
+  return null;
+}
+
 // === Helpers de abreviação de mês/ano ===
 function abbrevLabelFromYM(ym){
   try {
@@ -402,6 +431,23 @@ if (window.resetValorInput) window.resetValorInput();
 const vData = qs("#mData"); if (vData) vData.value = nowYMD();
       rebuildCatSelect();
       const vDesc = qs("#mDesc"); if (vDesc) vDesc.value = "";
+      // Auto selecionar categoria ao digitar descrição
+const descInput = qs("#mDesc");
+const catSelect = qs("#mCategoria");
+
+if (descInput && catSelect && !descInput._autoCat) {
+  descInput.addEventListener("input", () => {
+    const sugestao = guessCategoriaByDesc(descInput.value);
+    if (!sugestao) return;
+
+    // só define se o usuário ainda não escolheu manualmente
+    if (!catSelect.value) {
+      const opt = Array.from(catSelect.options).find(o => o.value === sugestao);
+      if (opt) catSelect.value = sugestao;
+    }
+  });
+  descInput._autoCat = true;
+}
       const vObs  = qs("#mObs");  if (vObs)  vObs.value  = "";
       const vVal  = qs("#mValorBig"); if (vVal) vVal.value = "";
       if (selPag) selPag.value = "";
@@ -671,7 +717,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
       <div class="left">
         <div class="tag chip">${x.tipo}</div>
         <div>
-          <div><strong>${x.descricao || "-"}</strong></div>
+          <div><strong>${x.descricao || "-"}</strong>${(x.parcela_atual && x.total_parcelas) ? ` <span class="parcel-badge">${x.parcela_atual}/${x.total_parcelas}</span>` : ""}</div>
           <div class="muted" style="font-size:12px">${x.categoria || "-"} • ${x.data || "-"}</div>
         </div>
       </div>
@@ -866,6 +912,7 @@ h3.textContent = 'Lançamentos — ' + label;
       li.dataset.tipo = x.tipo;
       const v = Number(x.valor)||0;
       const valor = fmt(v);
+	  console.log(x.descricao, x.carteira);
       li.innerHTML = `
         <div class="header-line">
           <div class="chip">${x.tipo||'-'}</div>
@@ -876,7 +923,7 @@ h3.textContent = 'Lançamentos — ' + label;
         </div>
         <div class="titulo"><strong>${x.descricao||'-'}</strong></div>
         <div class="subinfo muted">${x.categoria||'-'} • ${x.data||'-'}</div>
-        <div class="muted">Pgto: ${humanFormaPagamento(x.forma_pagamento)}</div>
+        <div class="muted">Pgto: ${humanFormaPagamento(x.forma_pagamento)} • Carteira: ${x.carteira || '-'}</div>
         <div class="valor">${valor}</div>
       `;
       const btnEdit = li.querySelector('.edit');
@@ -1044,6 +1091,8 @@ h3.textContent = 'Lançamentos — ' + label;
 
   // ========= RELATÓRIOS / KPIs / GRÁFICOS EXISTENTES =========
   function updateKpis() {
+    let pctDespesas = '—';
+
     // Transações do mês selecionado
     let txMonth = (S.tx || []).filter(x => x.data && inSelectedMonth(x));
     if (!txMonth.length) {
@@ -2929,7 +2978,7 @@ document.addEventListener("DOMContentLoaded", function(){
             <div><strong>${r.descricao || '(sem descrição)'}</strong></div>
             <div style="font-size:12px;opacity:.8">${r.categoria || '-'} • ${r.periodicidade || '-'} • Próx: ${iso(r.proxima_data)} • Valor: ${fmtBRL(r.valor)}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;">
+          <div class="rec-actions">
             ${tagAtivo}
             <button class="btn btn-light" data-action="rec-apply">Aplicar agora</button>
             <button class="btn btn-light" data-action="rec-toggle">${r.ativo ? 'Pausar' : 'Retomar'}</button>
@@ -3164,75 +3213,93 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   function fmtPct(n){ return isFinite(n) ? Math.round(n) + '%' : '0%'; }
 
-  async function renderMetasAcompanhamento(){
-    try {
-      // garante que metas foram carregadas ao menos uma vez
-      if (typeof fetchMetas === 'function') {
-        const hasAny = S && S.metas && (Number(S.metas.total)||0) > 0 || (S.metas && S.metas.porCat && Object.keys(S.metas.porCat).length > 0);
-        if (!hasAny) { try { await fetchMetas(); } catch(_) {} }
+async function renderMetasAcompanhamento(){
+  try {
+    if (typeof fetchMetas === 'function') {
+      const hasAny = S && S.metas && (Number(S.metas.total)||0) > 0 || (S.metas && S.metas.porCat && Object.keys(S.metas.porCat).length > 0);
+      if (!hasAny) { try { await fetchMetas(); } catch(_) {} }
+    }
+
+    const metaTotal = Number((S && S.metas && S.metas.total) || 0);
+    const ym = (S && S.month) ? String(S.month) : new Date().toISOString().slice(0,7);
+    const gastoMes = (S && S.tx ? S.tx : [])
+      .filter(x => x && x.tipo === 'Despesa' && String(x.data||'').startsWith(ym))
+      .reduce((acc, x) => acc + (Number(x.valor)||0), 0);
+
+    var elMetaTotal = document.getElementById('mMetaTotal');
+    var elGastoMes  = document.getElementById('mGastoMes');
+    var elStatus    = document.getElementById('mStatusChip');
+    var elBar       = document.getElementById('mProgBar');
+
+    if (typeof fmtMoney !== 'function') {
+      window.fmtMoney = function(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+    }
+
+    if (elMetaTotal) elMetaTotal.textContent = fmtMoney(metaTotal);
+    if (elGastoMes)  elGastoMes.textContent  = fmtMoney(gastoMes);
+
+    var pctTotal = 0;
+    var statusTotal = 'Sem meta definida';
+    var statusClass = 'chip';
+
+    if (metaTotal > 0) {
+      pctTotal = Math.min((gastoMes / metaTotal) * 100, 100);
+      statusTotal = gastoMes <= metaTotal ? 'Dentro da meta' : 'Estouro';
+      statusClass = 'chip ' + (gastoMes <= metaTotal ? '' : 'warn');
+    }
+
+    if (elBar) elBar.style.width = pctTotal + '%';
+
+    if (elStatus) {
+      elStatus.textContent = statusTotal;
+      elStatus.className = statusClass;
+    }
+
+    var ul = document.getElementById('mListaMetasCat');
+    if (!ul) return;
+    ul.innerHTML = '';
+
+    var metas = (S && S.metas && S.metas.porCat) ? S.metas.porCat : {};
+    var entries = Object.entries(metas);
+
+    if (!entries.length) {
+      var li = document.createElement('li');
+      li.className = 'item';
+      li.innerHTML = '<div class="muted">Nenhuma meta por categoria definida.</div>';
+      ul.append(li);
+      return;
+    }
+
+    entries.forEach(function(pair){
+      var cat = pair[0];
+      var meta = pair[1];
+      var metaNum = Number(meta || 0);
+      var gasto   = gastoDaCategoriaNoMes(cat);
+
+      var pct = 0;
+      var statusText = 'Sem meta definida';
+      var barColor = 'var(--border)';
+
+      if (metaNum > 0) {
+        pct = Math.min((gasto / metaNum) * 100, 100);
+        statusText = gasto <= metaNum ? 'Dentro da meta' : 'Estouro';
+        barColor = gasto <= metaNum ? 'var(--brand)' : 'var(--warn)';
       }
 
-      const metaTotal = Number((S && S.metas && S.metas.total) || 0);
-      const ym = (S && S.month) ? String(S.month) : new Date().toISOString().slice(0,7);
-      const gastoMes = (S && S.tx ? S.tx : [])
-        .filter(x => x && x.tipo === 'Despesa' && String(x.data||'').startsWith(ym))
-        .reduce((acc, x) => acc + (Number(x.valor)||0), 0);
-
-      const pctTotal = metaTotal > 0 ? Math.min((gastoMes/metaTotal)*100, 100) : 0;
-
-      var elMetaTotal = document.getElementById('mMetaTotal');
-      var elGastoMes  = document.getElementById('mGastoMes');
-      var elStatus    = document.getElementById('mStatusChip');
-      var elBar       = document.getElementById('mProgBar');
-
-      if (typeof fmtMoney !== 'function') {
-        window.fmtMoney = function(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
-      }
-
-      if (elMetaTotal) elMetaTotal.textContent = fmtMoney(metaTotal);
-      if (elGastoMes)  elGastoMes.textContent  = fmtMoney(gastoMes);
-      if (elBar)       elBar.style.width       = pctTotal + '%';
-      if (elStatus) {
-        elStatus.textContent = metaTotal ? (gastoMes <= metaTotal ? 'Dentro da meta' : 'Estourou') : '—';
-        elStatus.className   = 'chip ' + (gastoMes <= metaTotal ? '' : 'warn');
-      }
-
-      var ul = document.getElementById('mListaMetasCat');
-      if (!ul) return;
-      ul.innerHTML = '';
-
-      var metas = (S && S.metas && S.metas.porCat) ? S.metas.porCat : {};
-      var entries = Object.entries(metas);
-      if (!entries.length) {
-        var li = document.createElement('li');
-        li.className = 'item';
-        li.innerHTML = '<div class="muted">Nenhuma meta por categoria definida.</div>';
-        ul.append(li);
-        return;
-      }
-
-      entries.forEach(function(pair){
-        var cat = pair[0];
-        var meta = pair[1];
-        var metaNum = Number(meta||0);
-        var gasto   = gastoDaCategoriaNoMes(cat);
-        var pct     = metaNum > 0 ? Math.min((gasto/metaNum)*100, 100) : 0;
-        var ok      = (gasto <= metaNum);
-
-        var li = document.createElement('li');
-        li.className = 'item';
-        li.innerHTML = ''
-          + '<div class="chip">'+cat+'</div>'
-          + '<div class="subinfo">Meta: <strong>'+fmtMoney(metaNum)+'</strong></div>'
-          + '<div class="valor">Gasto: '+fmtMoney(gasto)+'</div>'
-          + '<div class="progress" style="height:8px;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-top:6px">'
-          +   '<div style="width:'+pct+'%;height:100%;background:'+(ok ? 'var(--brand)' : 'var(--warn)')+'"></div>'
-          + '</div>'
-          + '<div class="muted" style="margin-top:6px">Uso: <strong>'+fmtPct(pct)+'</strong> • Status: <strong>'+(ok ? 'OK' : 'Estouro')+'</strong></div>';
-        ul.append(li);
-      });
-    } catch(e){ console.error(e); }
-  }
+      var li = document.createElement('li');
+      li.className = 'item';
+      li.innerHTML = ''
+        + '<div class="chip">'+cat+'</div>'
+        + '<div class="subinfo">Meta: <strong>'+fmtMoney(metaNum)+'</strong></div>'
+        + '<div class="valor">Gasto: '+fmtMoney(gasto)+'</div>'
+        + '<div class="progress" style="height:8px;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-top:6px">'
+        +   '<div style="width:'+pct+'%;height:100%;background:'+barColor+'"></div>'
+        + '</div>'
+        + '<div class="muted" style="margin-top:6px">Uso: <strong>'+(metaNum > 0 ? Math.round(pct)+'%' : '—')+'</strong> • Status: <strong>'+statusText+'</strong></div>';
+      ul.append(li);
+    });
+  } catch(e){ console.error(e); }
+}
 
   function setupMetasModal(){
     var openBtn = document.getElementById('btnGoMetas');
@@ -3381,3 +3448,125 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   } catch(_){}
 })();
+
+// Sugestões de descrição
+
+function fillDescricaoSugestoes(){
+  const dl = document.getElementById("descSugestoes");
+  if(!dl) return;
+  const freq = {};
+  (S.tx||[]).forEach(x=>{
+    if(!x.descricao) return;
+    freq[x.descricao] = (freq[x.descricao]||0)+1;
+  });
+  const uniques = Object.keys(freq).sort((a,b)=>freq[b]-freq[a]).slice(0,50);
+  dl.innerHTML = "";
+  uniques.forEach(desc=>{
+    const opt=document.createElement("option");
+    opt.value=desc;
+    dl.appendChild(opt);
+  });
+}
+
+// =======================
+// PATCHES CRÍTICOS APLICADOS
+// =======================
+
+// --- Normalização unificada ---
+function normalizeFormaPagamento(fp) {
+  if (!fp) return "outros";
+  fp = fp.toString().trim().toLowerCase();
+  const map = {
+    "crédito": "credito",
+    "crédito parcelado": "credito",
+    "cartão": "cartao",
+    "cartao": "cartao",
+    "débito": "debito",
+    "debito": "debito",
+    "pix": "pix",
+    "dinheiro": "dinheiro",
+    "boleto": "outros",
+    "transferência": "outros",
+    "transferencia": "outros"
+  };
+  fp = map[fp] || fp;
+  if (fp === "credito" || fp === "debito") return "cartao";
+  if (["pix","dinheiro","cartao","outros"].includes(fp)) return fp;
+  return "outros";
+}
+
+// --- addOrUpdate protegido contra sobrescrita ---
+let __savingAddOrUpdate = false;
+async function addOrUpdate(keepOpen=false) {
+  if (__savingAddOrUpdate) return;
+  __savingAddOrUpdate = true;
+  try {
+    const selPag = qs('#mPagamento');
+    const valor = parseMoneyMasked(qs("#mValorBig")?.value);
+    const t = {
+      id: S.editingId || gid(),
+      tipo: modalTipo,
+      categoria: qs("#mCategoria")?.value || "",
+      data: isIsoDate(qs("#mData")?.value) ? qs("#mData").value : nowYMD(),
+      descricao: (qs("#mDesc")?.value || "").trim(),
+      valor: isFinite(valor) ? valor : 0,
+      obs: (qs("#mObs")?.value || "").trim()
+    };
+    if (!t.categoria) return alert("Selecione categoria");
+    if (!t.descricao) return alert("Descrição obrigatória");
+    if (!(t.valor > 0)) return alert("Informe o valor");
+
+    if (modalTipo === "Transferência") {
+      if (selPag) selPag.disabled = true;
+      t.carteira = null;
+      t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
+      t.carteira_destino = (qs("#mDestino")?.value || "Marido");
+      t.forma_pagamento = null;
+    } else {
+      if (selPag) selPag.disabled = false;
+      t.carteira = (qs("#mCarteira")?.value || "Casa");
+      t.carteira_origem = null;
+      t.carteira_destino = null;
+      t.forma_pagamento = normalizeFormaPagamento(qs("#mPagamento")?.value);
+    }
+    const chkRepetir = qs("#mRepetir");
+    if (!chkRepetir?.checked) {
+      await saveTx(t);
+      await loadAll();
+      if (!keepOpen) toggleModal(false);
+      return;
+    }
+  } finally {
+    __savingAddOrUpdate = false;
+  }
+}
+window.addOrUpdate = addOrUpdate;
+
+// --- Heatmap único ---
+function renderHeatmap(){
+  const wrap = document.getElementById('heatmap');
+  if (!wrap) return;
+  const ym = S.month;
+  const days = monthDays(ym);
+  const gastosPorDia = Array.from({length: days}, ()=>0);
+  (S.tx || []).forEach(x=>{
+    if (!x.data || x.tipo!=="Despesa") return;
+    if (!String(x.data).startsWith(ym)) return;
+    const d = Number(String(x.data).slice(8,10));
+    gastosPorDia[d-1] += Number(x.valor)||0;
+  });
+  const max = Math.max(...gastosPorDia, 0);
+  wrap.innerHTML = '';
+  for (let d=1; d<=days; d++){
+    const v = gastosPorDia[d-1];
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.textContent = d;
+    if (v>0){
+      const intensity = max ? v/max : 0;
+      cell.style.background = `hsl(0,85%,${90 - 50*intensity}%)`;
+      cell.title = `${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoney(v)}`;
+    }
+    wrap.appendChild(cell);
+  }
+}

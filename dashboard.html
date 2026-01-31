@@ -18,6 +18,17 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css">
+  
+<style>
+.parcel-badge {
+  background: #6b5cff;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  margin-left: 6px;
+}
+</style>
 </head>
 <body>
   <div class="nav">
@@ -489,6 +500,7 @@
         <div class="field span-2">
           <label for="mDesc">Descrição</label>
           <input type="text" id="mDesc" placeholder="Ex.: Supermercado, salário, TED...">
+<datalist id="descSugestoes"></datalist>
         </div>
 
         <div class="field span-2">
@@ -558,6 +570,17 @@
             <div class="field">
               <label><input type="checkbox" id="mAjusteFimMes" checked> Ajustar p/ último dia do mês</label>
               <div class="helper">Para meses com menos dias (31 → 30/28)</div>
+
+<div class="field">
+  <label><input type="checkbox" id="mParcelado"> É parcelado</label>
+</div>
+
+<div class="field" id="fieldParcelas" style="display:none">
+  <label for="mTotalParcelas">Total de parcelas</label>
+  <input type="number" id="mTotalParcelas" min="2" placeholder="Ex: 6">
+  <div class="helper">Ex.: 6x, 10x, 12x</div>
+</div>
+
             </div>
           </div>
         </div>
@@ -652,6 +675,12 @@ document.addEventListener('change', function(e){
     const box = document.getElementById('recurrenceFields');
     if (box) box.style.display = e.target.checked ? '' : 'none';
   }
+
+  if(e.target && e.target.id === 'mParcelado'){
+    const f = document.getElementById('fieldParcelas');
+    if (f) f.style.display = e.target.checked ? '' : 'none';
+  }
+
 });
 </script>
 
