@@ -298,6 +298,7 @@
     </section>
     
     <!-- Carteiras -->
+    <!-- Carteiras -->
     <section id="carteiras">
       <!-- Card: Gastos por carteira (mês/ciclo) --><div class="grid-carteiras">
           <!-- Saldos por carteira (full width) -->
@@ -346,6 +347,8 @@
           <ul id="p2List" class="lanc-mini"></ul>
         </div>
       </div></section>
+
+
 
     <!-- Config -->
     <section id="config">
@@ -506,6 +509,18 @@
         </div>
       </div>
 
+      
+<div class="field span-2" style="margin-top:8px">
+  <label><input type="checkbox" id="mParcelado"> É parcelado</label>
+</div>
+
+<div class="field span-2" id="fieldParcelas" style="display:none">
+  <label for="mTotalParcelas">Total de parcelas</label>
+  <input type="number" id="mTotalParcelas" min="2" placeholder="Ex: 6">
+  <div class="helper">Ex.: 6x, 10x, 12x</div>
+</div>
+
+
       <!-- Recorrência -->
       <div class="field span-2" style="margin-top:8px"><label class="switch"><input type="checkbox" id="mRepetir">Tornar recorrente</label>
 
@@ -568,17 +583,7 @@
               <label><input type="checkbox" id="mAjusteFimMes" checked> Ajustar p/ último dia do mês</label>
               <div class="helper">Para meses com menos dias (31 → 30/28)</div>
 
-<div class="field">
-  <label><input type="checkbox" id="mParcelado"> É parcelado</label>
-</div>
-
-<div class="field" id="fieldParcelas" style="display:none">
-  <label for="mTotalParcelas">Total de parcelas</label>
-  <input type="number" id="mTotalParcelas" min="2" placeholder="Ex: 6">
-  <div class="helper">Ex.: 6x, 10x, 12x</div>
-</div>
-
-            </div>
+</div></div>
           </div>
         </div>
       </div>
