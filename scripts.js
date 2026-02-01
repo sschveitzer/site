@@ -3663,3 +3663,35 @@ document.addEventListener('change', function(e){
     if (f) f.style.display = 'none';
   }
 });
+
+
+
+// === GUARD: Parcelado vs Repetir (não permitir ambos ativos) ===
+function syncParceladoVsRepetirLocks() {
+  const chkParcelado = document.querySelector("#mParcelado");
+  const chkRepetir   = document.querySelector("#mRepetir");
+  if (!chkParcelado || !chkRepetir) return;
+  chkRepetir.disabled   = chkParcelado.checked;
+  chkParcelado.disabled = chkRepetir.checked;
+}
+
+function setupParceladoVsRepetirGuard() {
+  const chkParcelado = document.querySelector("#mParcelado");
+  const chkRepetir   = document.querySelector("#mRepetir");
+  if (!chkParcelado || !chkRepetir) return;
+  chkParcelado.addEventListener("change", syncParceladoVsRepetirLocks);
+  chkRepetir.addEventListener("change", syncParceladoVsRepetirLocks);
+  syncParceladoVsRepetirLocks();
+}
+
+// Hook no toggleModal para aplicar sempre que abrir
+if (typeof toggleModal === "function") {
+  const __origToggleModal = toggleModal;
+  toggleModal = function(show, titleOverride) {
+    __origToggleModal(show, titleOverride);
+    if (show) {
+      setupParceladoVsRepetirGuard();
+      syncParceladoVsRepetirLocks();
+    }
+  }
+}
