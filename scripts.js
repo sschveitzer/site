@@ -3645,3 +3645,21 @@ function renderHeatmap(){
     wrap.appendChild(cell);
   }
 }
+
+// === Parcelado vs Recorrência (exclusão mútua) ===
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'mParcelado'){
+    const rep = document.getElementById('mRepetir');
+    if (rep && e.target.checked) rep.checked = false;
+    const box = document.getElementById('recurrenceFields');
+    if (box) box.style.display = 'none';
+    const f = document.getElementById('fieldParcelas');
+    if (f) f.style.display = e.target.checked ? '' : 'none';
+  }
+  if(e.target && e.target.id === 'mRepetir'){
+    const parc = document.getElementById('mParcelado');
+    if (parc && e.target.checked) parc.checked = false;
+    const f = document.getElementById('fieldParcelas');
+    if (f) f.style.display = 'none';
+  }
+});
