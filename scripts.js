@@ -558,7 +558,7 @@ if (descInput && catSelect && !descInput._autoCat) {
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    if (rec.tipo === "Transferência") {
+    if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
