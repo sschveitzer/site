@@ -63,88 +63,65 @@
 
   <div class="container">
     <!-- Dashboard -->
-<section id="dashboard" class="active">
-
-  <!-- KPIs -->
-  <div class="grid cards kpi-grid">
-    <div class="card">
-      <div class="kpi earn">
-        <i class="ph ph-trend-up icon"></i>
-        <div>
-          <div class="muted">Receitas (mês)</div>
-          <div id="kpiReceitas" class="value">R$ 0,00</div>
+    <section id="dashboard" class="active">
+      <div class="grid cards">
+        <div class="card">
+          <div class="kpi earn">
+            <i class="ph ph-trend-up icon"></i>
+            <div>
+              <div class="muted">Receitas (mês)</div>
+              <div id="kpiReceitas" class="value">R$ 0,00</div>
+            </div>
+            <span class="chip" id="kpiReceitasDelta" title="Variação vs mês anterior">—</span>
+          </div>
         </div>
-        <span class="chip" id="kpiReceitasDelta" title="Variação vs mês anterior">—</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="kpi exp">
-        <i class="ph ph-trend-down icon"></i>
-        <div>
-          <div class="muted">Despesas (mês)</div>
-          <div id="kpiDespesas" class="value">R$ 0,00</div>
+        <div class="card">
+          <div class="kpi exp">
+            <i class="ph ph-trend-down icon"></i>
+            <div>
+              <div class="muted">Despesas (mês)</div>
+              <div id="kpiDespesas" class="value">R$ 0,00</div>
+            </div>
+            <span class="chip" id="kpiDespesasPct" title="Despesas / Receitas">—</span>
+          </div>
         </div>
-        <span class="chip" id="kpiDespesasPct" title="Despesas / Receitas">—</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="kpi balance">
-        <i class="ph ph-wallet icon"></i>
-        <div>
-          <div class="muted">Saldo (mês)</div>
-          <div id="kpiSaldo" class="value">R$ 0,00</div>
+        <div class="card">
+          <div class="kpi balance">
+            <i class="ph ph-wallet icon"></i>
+            <div>
+              <div class="muted">Saldo (mês)</div>
+              <div id="kpiSaldo" class="value">R$ 0,00</div>
+            </div>
+            <span class="chip" id="kpiSaldoDelta" title="Variação vs mês anterior">—</span>
+          </div>
         </div>
-        <span class="chip" id="kpiSaldoDelta" title="Variação vs mês anterior">—</span>
       </div>
-    </div>
-  </div>
+<div class="card metas-card" style="margin-top:16px">
+        <div class="head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3><i class="ph ph-target"></i> Meta mensal de gastos</h3>
+          <button class="icon" id="btnGoMetas" title="Definir metas"><i class="ph ph-sliders"></i></button>
+        </div>
+        <div class="meta-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+          <div class="meta-line"><span class="muted">Meta total:</span> <strong id="metaTotalLabel">—</strong></div>
+          <div class="meta-line"><span class="muted">Gasto no mês:</span> <strong id="metaGastoMes">—</strong></div>
+          <div class="meta-line"><span class="muted">Status:</span> <span id="metaStatusChip" class="chip">—</span></div>
+        </div>
+        <div class="progress" style="width:100%;height:10px;border-radius:999px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--border)">
+          <div id="metaProgBar" class="bar" style="height:100%;width:0%;transition:width .3s ease"></div>
+        </div>
+        <div class="meta-obs muted" id="metaObs" style="margin-top:6px">Defina uma meta para acompanhar o progresso.</div>
+      </div>
 
-  <!-- Metas -->
-  <div class="card metas-card">
-    <div class="head">
-      <h3><i class="ph ph-target"></i> Meta mensal de gastos</h3>
-      <button class="icon" id="btnGoMetas" title="Definir metas">
-        <i class="ph ph-sliders"></i>
-      </button>
-    </div>
+      <div class="grid two" style="margin-top:16px">
+        <div class="card"><h3>Saldo acumulado (12 meses)</h3><canvas id="chartSaldo"></canvas></div>
+        <div class="card"><h3>Despesas por categoria</h3><canvas id="chartPie"></canvas></div>
+      </div>
 
-    <div class="meta-summary">
-      <div><span class="muted">Meta total:</span> <strong id="metaTotalLabel">—</strong></div>
-      <div><span class="muted">Gasto no mês:</span> <strong id="metaGastoMes">—</strong></div>
-      <div><span class="muted">Status:</span> <span id="metaStatusChip" class="chip">—</span></div>
-    </div>
-
-    <div class="progress">
-      <div id="metaProgBar" class="bar"></div>
-    </div>
-
-    <div class="meta-obs muted" id="metaObs">
-      Defina uma meta para acompanhar o progresso.
-    </div>
-  </div>
-
-  <!-- Gráficos -->
-  <div class="grid two charts-grid">
-    <div class="card">
-      <h3>Saldo acumulado (12 meses)</h3>
-      <canvas id="chartSaldo"></canvas>
-    </div>
-
-    <div class="card">
-      <h3>Despesas por categoria</h3>
-      <canvas id="chartPie"></canvas>
-    </div>
-  </div>
-
-  <!-- Últimos lançamentos -->
-  <div class="card">
-    <h3>Últimos lançamentos</h3>
-    <ul id="listaRecentes" class="lanc-grid"></ul>
-  </div>
-
-</section>
+      <div class="card" style="margin-top:16px">
+        <h3>Últimos lançamentos</h3>
+        <ul id="listaRecentes" class="lanc-grid"></ul>
+      </div>
+    </section>
 
     <!-- Lançamentos -->
     <section id="lancamentos">
