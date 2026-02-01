@@ -358,7 +358,7 @@ try { window.savePrefs = savePrefs; } catch(e) {}
       occurrence_date: occDate
     };
     // Carteira/Transferência
-    if (rec.tipo === "Transferência") {
+    if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
@@ -392,11 +392,11 @@ try { window.savePrefs = savePrefs; } catch(e) {}
           .eq("recurrence_id", r.id)
           .eq("occurrence_date", next)
           .maybeSingle();
-        if (exists) {
+        if (!exists) {
 
         if (r.fim_em && next > r.fim_em) break;
+        await materializeOne(r, next);
         }
-        if (!exists) await materializeOne(r, next);
         changed = true;
 
         if (r.periodicidade === "Mensal") {
@@ -558,7 +558,7 @@ if (descInput && catSelect && !descInput._autoCat) {
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    if (rec.tipo === "Transferência") {
+    if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
@@ -611,7 +611,7 @@ const selPag = qs('#mPagamento');
 
     
     // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
-    if (rec.tipo === "Transferência") {
+    if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
@@ -3534,7 +3534,7 @@ async function addOrUpdate(keepOpen=false) {
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
 
-    if (rec.tipo === "Transferência") {
+    if (modalTipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
