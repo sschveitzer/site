@@ -558,7 +558,7 @@ if (descInput && catSelect && !descInput._autoCat) {
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    if (modalTipo === "Transferência") {
+    if (rec.tipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
@@ -930,6 +930,7 @@ h3.textContent = 'Lançamentos — ' + label;
       li.dataset.tipo = x.tipo;
       const v = Number(x.valor)||0;
       const valor = fmt(v);
+	  console.log(x.descricao, x.carteira);
       li.innerHTML = `
         <div class="header-line">
           <div class="chip">${x.tipo||'-'}</div>
