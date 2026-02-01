@@ -359,9 +359,9 @@ try { window.savePrefs = savePrefs; } catch(e) {}
       t.carteira_origem = null;
       t.carteira_destino = null;
     }
-      // Parcelado
-      if (totalParcelas > 1) {
-        const pid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      // ===== SALVAR (parcelado ou normal) =====
+      if (totalParcelas > 1 && modalTipo === "Despesa") {
+        const pid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
         let dataBase = t.data;
         const valorParcela = t.valor / totalParcelas;
         for (let i = 1; i <= totalParcelas; i++) {
@@ -626,18 +626,17 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-const chkRepetir = qs("#mRepetir");
-    if (!chkRepetir?.checked) {
-      // ===== PARCELAMENTO (prompt) =====
-      let totalParcelas = 1;
-      if (modalTipo === "Despesa") {
-        const resp = prompt("Deseja parcelar? Informe número de parcelas (1 = à vista):", "1");
-        totalParcelas = Number(resp) || 1;
-      }
 
-      // Parcelado
-      if (totalParcelas > 1) {
-        const pid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    const chkParcelado = qs("#mParcelado");
+    const totalParcelas = (modalTipo === "Despesa" && chkParcelado && chkParcelado.checked)
+      ? (Number(qs("#mTotalParcelas")?.value) || 1)
+      : 1;
+
+    const chkRepetir = qs("#mRepetir");
+    if (!chkRepetir?.checked) {
+      // ===== SALVAR (parcelado ou normal) =====
+      if (totalParcelas > 1 && modalTipo === "Despesa") {
+        const pid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
         let dataBase = t.data;
         const valorParcela = t.valor / totalParcelas;
         for (let i = 1; i <= totalParcelas; i++) {
@@ -1828,7 +1827,13 @@ function render() {
   });
 
   // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
-const chkRepetir = qs("#mRepetir");
+  
+    const chkParcelado = qs("#mParcelado");
+    const totalParcelas = (modalTipo === "Despesa" && chkParcelado && chkParcelado.checked)
+      ? (Number(qs("#mTotalParcelas")?.value) || 1)
+      : 1;
+
+    const chkRepetir = qs("#mRepetir");
   const recurrenceBox = qs("#recurrenceFields");
   const selPer = qs("#mPeriodicidade");
   const fldDM = qs("#fieldDiaMes");
@@ -3574,11 +3579,17 @@ async function addOrUpdate(keepOpen=false) {
       t.carteira_destino = null;
       t.forma_pagamento = normalizeFormaPagamento(qs("#mPagamento")?.value);
     }
-const chkRepetir = qs("#mRepetir");
+    
+    const chkParcelado = qs("#mParcelado");
+    const totalParcelas = (modalTipo === "Despesa" && chkParcelado && chkParcelado.checked)
+      ? (Number(qs("#mTotalParcelas")?.value) || 1)
+      : 1;
+
+    const chkRepetir = qs("#mRepetir");
     if (!chkRepetir?.checked) {
-      // Parcelado
-      if (totalParcelas > 1) {
-        const pid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      // ===== SALVAR (parcelado ou normal) =====
+      if (totalParcelas > 1 && modalTipo === "Despesa") {
+        const pid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
         let dataBase = t.data;
         const valorParcela = t.valor / totalParcelas;
         for (let i = 1; i <= totalParcelas; i++) {
