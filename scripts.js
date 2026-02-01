@@ -150,6 +150,16 @@ function money(v){
     return toYMD(new Date(yy, mm - 1, day));
   }
   function incWeekly(ymd) { return addDays(ymd, 7); }
+
+function incWeeklyByDow(ymd, dow){
+  const [y,m,d]=ymd.split("-").map(Number);
+  const dt=new Date(y,m-1,d);
+  const cur=dt.getDay();
+  const diff=(dow-cur+7)%7||7;
+  dt.setDate(dt.getDate()+diff);
+  return toYMD(dt);
+}
+
   function incYearly(ymd, diaMes, mes, ajusteFimMes = true) {
     const [y] = ymd.split("-").map(Number);
     const yy = y + 1;
@@ -348,7 +358,7 @@ try { window.savePrefs = savePrefs; } catch(e) {}
       occurrence_date: occDate
     };
     // Carteira/Transferência
-    if (modalTipo === "Transferência") {
+    if (rec.tipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
@@ -377,14 +387,22 @@ try { window.savePrefs = savePrefs; } catch(e) {}
       let changed = false;
 
       while (next <= today) {
+        const { data: exists } = await supabaseClient.from("transactions")
+          .select("id")
+          .eq("recurrence_id", r.id)
+          .eq("occurrence_date", next)
+          .maybeSingle();
+        if (exists) {
+
         if (r.fim_em && next > r.fim_em) break;
-        await materializeOne(r, next);
+        }
+        if (!exists) await materializeOne(r, next);
         changed = true;
 
         if (r.periodicidade === "Mensal") {
           next = incMonthly(next, r.dia_mes || 1, r.ajuste_fim_mes ?? true);
         } else if (r.periodicidade === "Semanal") {
-          next = incWeekly(next);
+          next = incWeeklyByDow(next, r.dia_semana || 1);
         } else if (r.periodicidade === "Anual") {
           next = incYearly(next, r.dia_mes || 1, r.mes || 1, r.ajuste_fim_mes ?? true);
         } else {
@@ -540,7 +558,7 @@ if (descInput && catSelect && !descInput._autoCat) {
     const selPag = qs('#mPagamento');
     const fCarteira = qs("#wrapCarteira");
     const fTransf = qs("#wrapTransf");
-    if (modalTipo === "Transferência") {
+    if (rec.tipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       if (fCarteira) fCarteira.style.display = "none";
       if (fTransf) fTransf.style.display = "";
@@ -593,7 +611,7 @@ const selPag = qs('#mPagamento');
 
     
     // ===== Carteira / Transferência (aplicado SEMPRE, antes de salvar) =====
-    if (modalTipo === "Transferência") {
+    if (rec.tipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
@@ -3516,7 +3534,7 @@ async function addOrUpdate(keepOpen=false) {
     if (!t.descricao) return alert("Descrição obrigatória");
     if (!(t.valor > 0)) return alert("Informe o valor");
 
-    if (modalTipo === "Transferência") {
+    if (rec.tipo === "Transferência") {
       if (selPag) selPag.disabled = true;
       t.carteira = null;
       t.carteira_origem  = (qs("#mOrigem")?.value || "Casa");
