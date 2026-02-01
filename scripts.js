@@ -626,15 +626,15 @@ const selPag = qs('#mPagamento');
     t.forma_pagamento = (modalTipo === 'Transferência') ? null : normalizeFormaPagamento(qs('#mPagamento') ? qs('#mPagamento').value : '');
 
     }
-
-    // ===== PARCELAMENTO (prompt) =====
-    let totalParcelas = 1;
-    if (modalTipo === "Despesa") {
-      const resp = prompt("Deseja parcelar? Informe número de parcelas (1 = à vista):", "1");
-      totalParcelas = Number(resp) || 1;
-    }
 const chkRepetir = qs("#mRepetir");
     if (!chkRepetir?.checked) {
+      // ===== PARCELAMENTO (prompt) =====
+      let totalParcelas = 1;
+      if (modalTipo === "Despesa") {
+        const resp = prompt("Deseja parcelar? Informe número de parcelas (1 = à vista):", "1");
+        totalParcelas = Number(resp) || 1;
+      }
+
       // Parcelado
       if (totalParcelas > 1) {
         const pid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
@@ -1828,13 +1828,6 @@ function render() {
   });
 
   // Recorrência: mostrar/ocultar campos conforme checkbox/periodicidade
-  
-    // ===== PARCELAMENTO (prompt) =====
-    let totalParcelas = 1;
-    if (modalTipo === "Despesa") {
-      const resp = prompt("Deseja parcelar? Informe número de parcelas (1 = à vista):", "1");
-      totalParcelas = Number(resp) || 1;
-    }
 const chkRepetir = qs("#mRepetir");
   const recurrenceBox = qs("#recurrenceFields");
   const selPer = qs("#mPeriodicidade");
@@ -3580,13 +3573,6 @@ async function addOrUpdate(keepOpen=false) {
       t.carteira_origem = null;
       t.carteira_destino = null;
       t.forma_pagamento = normalizeFormaPagamento(qs("#mPagamento")?.value);
-    }
-    
-    // ===== PARCELAMENTO (prompt) =====
-    let totalParcelas = 1;
-    if (modalTipo === "Despesa") {
-      const resp = prompt("Deseja parcelar? Informe número de parcelas (1 = à vista):", "1");
-      totalParcelas = Number(resp) || 1;
     }
 const chkRepetir = qs("#mRepetir");
     if (!chkRepetir?.checked) {
