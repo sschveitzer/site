@@ -930,7 +930,6 @@ h3.textContent = 'Lançamentos — ' + label;
       li.dataset.tipo = x.tipo;
       const v = Number(x.valor)||0;
       const valor = fmt(v);
-	  console.log(x.descricao, x.carteira);
       li.innerHTML = `
         <div class="header-line">
           <div class="chip">${x.tipo||'-'}</div>
