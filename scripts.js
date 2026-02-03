@@ -3728,3 +3728,62 @@ if (typeof toggleModal === "function") {
     };
   }
 })();
+
+
+// === ASSISTENTE FINANCEIRO ===
+
+function totalPorCategoriaMes(categoria, mes) {
+  return S.tx.filter(t =>
+    t.tipo === "Despesa" &&
+    t.categoria.toLowerCase() === categoria.toLowerCase() &&
+    t.data.startsWith(mes)
+  ).reduce((s, t) => s + t.valor, 0);
+}
+
+function totalDespesasMes(mes) {
+  return S.tx.filter(t => t.tipo === "Despesa" && t.data.startsWith(mes))
+    .reduce((s, t) => s + t.valor, 0);
+}
+
+function totalReceitasMes(mes) {
+  return S.tx.filter(t => t.tipo === "Receita" && t.data.startsWith(mes))
+    .reduce((s, t) => s + t.valor, 0);
+}
+
+function saldoMes(mes) {
+  return totalReceitasMes(mes) - totalDespesasMes(mes);
+}
+
+function responderPergunta(texto) {
+  if (!texto) return "Faça uma pergunta 🙂";
+  const q = texto.toLowerCase();
+  const mes = S.month;
+
+  if (q.includes("saldo")) return `Seu saldo neste mês é ${fmtMoney(saldoMes(mes))}.`;
+  if (q.includes("despesa")) return `Você gastou ${fmtMoney(totalDespesasMes(mes))} em despesas neste mês.`;
+  if (q.includes("receita")) return `Você recebeu ${fmtMoney(totalReceitasMes(mes))} neste mês.`;
+
+  for (const c of S.cats) {
+    if (q.includes(c.nome.toLowerCase())) {
+      return `Você gastou ${fmtMoney(totalPorCategoriaMes(c.nome, mes))} em ${c.nome} neste mês.`;
+    }
+  }
+
+  return "Não entendi 🤔 Tente: 'quanto gastei em mercado esse mês'.";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("assistBtn");
+  const input = document.getElementById("assistInput");
+  const resp = document.getElementById("assistResposta");
+
+  if (!btn || !input || !resp) return;
+
+  btn.addEventListener("click", () => {
+    resp.textContent = responderPergunta(input.value);
+  });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") btn.click();
+  });
+});
