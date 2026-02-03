@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   Gestão Financeira - S.Schveitzer
+  </title>
+  <!-- Ícone -->
+  <link rel="icon" type="image/png" href="img/logo.png">
+  <!-- Ícone para Safari/iOS favoritos e tela inicial -->
+  <link rel="apple-touch-icon" href="img/logo.png">
+  <!-- Preconnect para melhorar o carregamento do SDK -->
+  <link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
+  <link href="https://cdn.jsdelivr.net" rel="dns-prefetch"/>
+  <!-- Viewport e tema -->
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <meta content="light dark" name="color-scheme"/>
+  <!-- CSP básica (ajuste domínios se necessário) -->
+  <meta content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co; font-src 'self' data:; " http-equiv="Content-Security-Policy"/>
+  <!-- Estilos globais existentes -->
+  <link href="login.css" rel="stylesheet">
+   <!-- SDK Supabase -->
+   <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js">
+   </script>
+  </link>
+ </head>
+ <body class="auth-page">
+  <noscript>
+   <div class="card auth-card" style="margin:24px auto;max-width:360px">
+    Ative o JavaScript para usar o FinanceAPP.
+   </div>
+  </noscript>
+  <main aria-labelledby="auth-title" class="card auth-card" role="main">
+   <img alt="FinanceAPP" class="logo" height="64" src="img/logo.png" width="64"/>
+   <h1 class="auth-title" id="auth-title">
+    Entrar
+   </h1>
+   <form autocomplete="on" class="auth-form" id="login-form" novalidate="">
+    <div class="field">
+     <label for="email">
+      Email
+     </label>
+     <input aria-required="true" autocomplete="username" id="email" inputmode="email" placeholder="voce@exemplo.com" required="" spellcheck="false" type="email"/>
+    </div>
+    <div class="field">
+     <label for="password">
+      Senha
+     </label>
+     <div class="input-group">
+      <input aria-required="true" autocomplete="current-password" id="password" placeholder="Sua senha" required="" type="password"/>
+      <button aria-label="Mostrar senha" aria-pressed="false" class="icon ghost" id="togglePass" title="Mostrar/ocultar senha" type="button">
+       👁️
+      </button>
+     </div>
+    </div>
+    <button class="btn" data-default-text="Entrar" id="loginBtn" type="submit">
+     Entrar
+    </button>
+    <p aria-live="polite" class="status" id="statusMsg">
+    </p>
+    <!-- Opcional: link de recuperação
+      <p class="helper"><a href="recuperar.html">Esqueci minha senha</a></p>
+      -->
+   </form>
+  </main>
+  <script defer="" src="app.js">
+  </script>
+ </body>
+</html>
