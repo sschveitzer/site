@@ -3858,44 +3858,113 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+// ================================
+// ASSISTENTE FINANCEIRO - EXPANDIDO
+// ================================
 
-// === Conexão do chat modal com o assistente ===
-document.addEventListener("DOMContentLoaded", () => {
-  const fab = document.getElementById("assistFab");
-  const modal = document.getElementById("assistModal");
-  const close = document.getElementById("assistClose");
+function responderPergunta(texto) {
+  if (!texto) return "Faça uma pergunta 🙂";
+  const q = texto.toLowerCase();
+  const mes = getMesFromTexto(q);
 
-  const btn = document.getElementById("assistBtn");
-  const input = document.getElementById("assistInput");
-  const chat = document.getElementById("assistChat");
+  const hoje = new Date();
+  const ontem = new Date(Date.now() - 86400000);
+  const inicioSemana = new Date(hoje);
+  inicioSemana.setDate(hoje.getDate() - hoje.getDay());
 
-  if (fab && modal && close) {
-    fab.addEventListener("click", () => modal.style.display = "flex");
-    close.addEventListener("click", () => modal.style.display = "none");
+  function totalPeriodo(fn){
+    return S.tx.filter(fn).reduce((a,b)=>a+Number(b.valor||0),0);
   }
 
-  if (!btn || !input || !chat) return;
-
-  function addMsg(txt, tipo){
-    const div = document.createElement("div");
-    div.style.marginBottom = "6px";
-    div.innerHTML = tipo==="user" 
-      ? `<strong>Você:</strong> ${txt}`
-      : `<strong>Assistente:</strong> ${txt}`;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+  // ===== RESUMOS =====
+  if (q.includes("resumo da semana")) {
+    return `Você gastou ${fmtMoneyLocal(
+      totalPeriodo(t=>t.tipo==="Despesa" && new Date(t.data)>=inicioSemana)
+    )} nesta semana.`;
   }
 
-  btn.addEventListener("click", () => {
-    const texto = input.value;
-    if (!texto) return;
-    addMsg(texto, "user");
-    const resposta = responderPergunta(texto);
-    addMsg(resposta, "bot");
-    input.value = "";
-  });
+  if (q.includes("resumo do ano")) {
+    const ano = mes.slice(0,4);
+    return `Você gastou ${fmtMoneyLocal(
+      totalPeriodo(t=>t.tipo==="Despesa" && t.data.startsWith(ano))
+    )} neste ano.`;
+  }
 
-  input.addEventListener("keydown", e => {
-    if (e.key === "Enter") btn.click();
-  });
-});
+  if (q.includes("resumo")) return resumoMes(mes);
+
+  // ===== HOJE / ONTEM =====
+  if (q.includes("hoje")) {
+    const d = hoje.toISOString().slice(0,10);
+    return `Hoje você gastou ${fmtMoneyLocal(
+      totalPeriodo(t=>t.tipo==="Despesa" && t.data===d)
+    )}.`;
+  }
+
+  if (q.includes("ontem")) {
+    const d = ontem.toISOString().slice(0,10);
+    return `Ontem você gastou ${fmtMoneyLocal(
+      totalPeriodo(t=>t.tipo==="Despesa" && t.data===d)
+    )}.`;
+  }
+
+  // ===== FORMAS DE PAGAMENTO =====
+  if (q.includes("pix")) {
+    return `Você gastou ${fmtMoneyLocal(
+      totalPeriodo(t=>t.pagamento==="Pix")
+    )} usando Pix.`;
+  }
+
+  if (q.includes("cartão") || q.includes("credito") || q.includes("crédito")) {
+    return `Você gastou ${fmtMoneyLocal(
+      totalPeriodo(t=>t.pagamento && t.pagamento.toLowerCase().includes("cart"))
+    )} no cartão.`;
+  }
+
+  // ===== TOP N =====
+  if (q.includes("top")) {
+    const n = parseInt(q.match(/\d+/)) || 3;
+    const map = {};
+    S.tx.filter(t=>t.tipo==="Despesa" && t.data.startsWith(mes)).forEach(t=>{
+      map[t.categoria]=(map[t.categoria]||0)+t.valor;
+    });
+    return Object.entries(map)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,n)
+      .map((a,i)=>`${i+1}. ${a[0]} (${fmtMoneyLocal(a[1])})`)
+      .join("<br>");
+  }
+
+  // ===== COMPARAÇÃO ENTRE CATEGORIAS =====
+  if (q.includes("compare")) {
+    const cats = S.cats.filter(c=>q.includes(c.nome.toLowerCase()));
+    if (cats.length===2){
+      const v1 = totalPorCategoriaMes(cats[0].nome, mes);
+      const v2 = totalPorCategoriaMes(cats[1].nome, mes);
+      return `${cats[0].nome}: ${fmtMoneyLocal(v1)}<br>${cats[1].nome}: ${fmtMoneyLocal(v2)}`;
+    }
+  }
+
+  // ===== TENDÊNCIA =====
+  if (q.includes("estou gastando") || q.includes("aumentou")) {
+    const [y,m] = mes.split("-").map(Number);
+    const mesPassado = new Date(y,m-2,1).toISOString().slice(0,7);
+    const atual = totalDespesasMes(mes);
+    const anterior = totalDespesasMes(mesPassado);
+    if (atual > anterior) return "Sim, você está gastando mais que mês passado.";
+    if (atual < anterior) return "Você está gastando menos que mês passado.";
+    return "Seu gasto está igual ao mês passado.";
+  }
+
+  // ===== CATEGORIA DIRETA =====
+  for (const c of S.cats) {
+    if (q.includes(c.nome.toLowerCase())) {
+      return `Você gastou ${fmtMoneyLocal(totalPorCategoriaMes(c.nome, mes))} em ${c.nome}.`;
+    }
+  }
+
+  if (q.includes("saldo")) return `Seu saldo é ${fmtMoneyLocal(saldoMes(mes))}.`;
+  if (q.includes("despesa")) return `Você gastou ${fmtMoneyLocal(totalDespesasMes(mes))} em despesas.`;
+  if (q.includes("receita")) return `Você recebeu ${fmtMoneyLocal(totalReceitasMes(mes))}.`;
+
+  return "Não entendi 😅 Tente: 'resumo do mês', 'top 5 categorias', 'quanto gastei hoje'.";
+}
