@@ -3858,97 +3858,19 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// ================================
-// ASSISTENTE FINANCEIRO - VERSÃO 5 (LIMPO)
-// ================================
+// === Assistente flutuante modal ===
+document.addEventListener("DOMContentLoaded", () => {
+  const fab = document.getElementById("assistFab");
+  const modal = document.getElementById("assistModal");
+  const close = document.getElementById("assistClose");
 
-if (typeof ultimaCategoriaPerguntada === "undefined") {
-  var ultimaCategoriaPerguntada = null;
-}
+  if (!fab || !modal || !close) return;
 
-function resumoMes(mes){
-  const tx = S.tx.filter(t=>t.data && t.data.startsWith(mes));
-  const rec = tx.filter(t=>t.tipo==="Receita").reduce((a,b)=>a+Number(b.valor||0),0);
-  const des = tx.filter(t=>t.tipo==="Despesa").reduce((a,b)=>a+Number(b.valor||0),0);
-  const saldo = rec - des;
-
-  const map = {};
-  tx.filter(t=>t.tipo==="Despesa").forEach(t=>{
-    map[t.categoria]=(map[t.categoria]||0)+t.valor;
+  fab.addEventListener("click", () => {
+    modal.style.display = "flex";
   });
-  const top = Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
 
-  return `Resumo do mês:
-Receitas: ${fmtMoneyLocal(rec)}
-Despesas: ${fmtMoneyLocal(des)}
-Saldo: ${fmtMoneyLocal(saldo)}
-Maior gasto: ${top ? top[0]+' ('+fmtMoneyLocal(top[1])+')' : '—'}`;
-}
-
-function responderPergunta(texto) {
-  if (!texto) return "Faça uma pergunta 🙂";
-  const q = texto.toLowerCase();
-  const mes = getMesFromTexto(q);
-
-  const [y,m] = mes.split("-").map(Number);
-  const mesPassado = new Date(y, m-2, 1).toISOString().slice(0,7);
-
-  if (q.includes("resumo")) return resumoMes(mes);
-
-  if (q.includes("limpar")) {
-    const chat = document.getElementById("assistChat");
-    if (chat) chat.innerHTML = "";
-    return "Conversa limpa ✅";
-  }
-
-  for (const c of S.cats) {
-    if (q.includes(c.nome.toLowerCase())) {
-      ultimaCategoriaPerguntada = c.nome;
-    }
-  }
-
-  if (q.includes("onde mais") || q.includes("mais gastei")) {
-    const map = {};
-    S.tx.filter(t=>t.tipo==="Despesa" && t.data.startsWith(mes)).forEach(t=>{
-      map[t.categoria]=(map[t.categoria]||0)+t.valor;
-    });
-    const top = Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
-    if (!top) return "Você ainda não tem gastos neste período.";
-    ultimaCategoriaPerguntada = top[0];
-    return `Você mais gastou em ${top[0]} (${fmtMoneyLocal(top[1])}).`;
-  }
-
-  if ((q.includes("mês passado") || q.includes("mes passado")) && ultimaCategoriaPerguntada) {
-    const atual = totalPorCategoriaMes(ultimaCategoriaPerguntada, mes);
-    const anterior = totalPorCategoriaMes(ultimaCategoriaPerguntada, mesPassado);
-    return `Em ${ultimaCategoriaPerguntada}, mês passado foi ${fmtMoneyLocal(anterior)} e este mês está ${fmtMoneyLocal(atual)}.`;
-  }
-
-  if (q.includes("previsao") || q.includes("previsão")) {
-    const cat = ultimaCategoriaPerguntada;
-    if (cat) return `No ritmo atual, você vai gastar ${fmtMoneyLocal(preverCategoria(cat,mes))} em ${cat}.`;
-    return "Diga a categoria para prever (ex: previsão mercado).";
-  }
-
-  if (q.includes("mais que mês passado") || q.includes("comparar")) {
-    const atual = totalDespesasMes(mes);
-    const anterior = totalDespesasMes(mesPassado);
-    const diff = atual - anterior;
-    if (diff > 0) return `Você gastou ${fmtMoneyLocal(diff)} a mais que no mês passado.`;
-    if (diff < 0) return `Você economizou ${fmtMoneyLocal(Math.abs(diff))} em relação ao mês passado.`;
-    return "Você gastou exatamente o mesmo valor que no mês passado.";
-  }
-
-  for (const c of S.cats) {
-    if (q.includes(c.nome.toLowerCase())) {
-      ultimaCategoriaPerguntada = c.nome;
-      return `Você gastou ${fmtMoneyLocal(totalPorCategoriaMes(c.nome, mes))} em ${c.nome}.`;
-    }
-  }
-
-  if (q.includes("saldo")) return `Seu saldo é ${fmtMoneyLocal(saldoMes(mes))}.`;
-  if (q.includes("despesa")) return `Você gastou ${fmtMoneyLocal(totalDespesasMes(mes))} em despesas.`;
-  if (q.includes("receita")) return `Você recebeu ${fmtMoneyLocal(totalReceitasMes(mes))}.`;
-
-  return "Exemplos: 'resumo do mês', 'onde mais gastei', 'limpar chat', 'previsão mercado'.";
-}
+  close.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+});
