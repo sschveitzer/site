@@ -3728,16 +3728,15 @@ if (typeof toggleModal === "function") {
     };
   }
 })();
-
-
-// === ASSISTENTE FINANCEIRO ===
-
+// ================================
+// ASSISTENTE FINANCEIRO - VERSÃO 2
+// ================================
 
 function fmtMoneyLocal(v){
   const n = Number(v);
   return isFinite(n)
     ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : "R$ 0,00";
+    : "R$ 0,00";
 }
 
 function totalPorCategoriaMes(categoria, mes) {
@@ -3762,24 +3761,86 @@ function saldoMes(mes) {
   return totalReceitasMes(mes) - totalDespesasMes(mes);
 }
 
-function responderPergunta(texto) {
-  if (!texto) return "Faça uma pergunta 🙂";
-  const q = texto.toLowerCase();
-  const mes = S.month;
+function getMesFromTexto(q){
+  const meses = {
+    janeiro: "01", fevereiro: "02", marco: "03", março:"03", abril:"04",
+    maio:"05", junho:"06", julho:"07", agosto:"08", setembro:"09",
+    outubro:"10", novembro:"11", dezembro:"12"
+  };
 
-  if (q.includes("saldo")) return `Seu saldo neste mês é ${fmtMoneyLocal(saldoMes(mes))}.`;
-  if (q.includes("despesa")) return `Você gastou ${fmtMoneyLocal(totalDespesasMes(mes))} em despesas neste mês.`;
-  if (q.includes("receita")) return `Você recebeu ${fmtMoneyLocal(totalReceitasMes(mes))} neste mês.`;
-
-  for (const c of S.cats) {
-    if (q.includes(c.nome.toLowerCase())) {
-      return `Você gastou ${fmtMoneyLocal(totalPorCategoriaMes(c.nome, mes))} em ${c.nome} neste mês.`;
+  for (const m in meses){
+    if(q.includes(m)){
+      return S.month.slice(0,4)+"-"+meses[m];
     }
   }
 
-  return "Não entendi 🤔 Tente: 'quanto gastei em mercado esse mês'.";
+  if(q.includes("mes passado") || q.includes("mês passado")){
+    const [y,m]=S.month.split("-").map(Number);
+    const d=new Date(y,m-2,1);
+    return d.toISOString().slice(0,7);
+  }
+
+  return S.month;
 }
 
+function topCategorias(mes){
+  const map={};
+  S.tx.filter(t=>t.tipo==="Despesa" && t.data.startsWith(mes)).forEach(t=>{
+    map[t.categoria]=(map[t.categoria]||0)+t.valor;
+  });
+
+  return Object.entries(map)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,3)
+    .map(a=>`${a[0]} (${fmtMoneyLocal(a[1])})`)
+    .join(", ");
+}
+
+function preverCategoria(cat,mes){
+  const hoje=new Date();
+  const diasPassados=hoje.getDate();
+  const totalDias=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
+  const total=totalPorCategoriaMes(cat,mes);
+  return (total/diasPassados)*totalDias;
+}
+
+function responderPergunta(texto) {
+  if (!texto) return "Faça uma pergunta 🙂";
+  const q = texto.toLowerCase();
+  const mes = getMesFromTexto(q);
+
+  if (q.includes("top")) {
+    return "Top categorias: " + topCategorias(mes);
+  }
+
+  if (q.includes("previsao") || q.includes("previsão")) {
+    for (const c of S.cats) {
+      if (q.includes(c.nome.toLowerCase())) {
+        return `No ritmo atual, você vai gastar ${fmtMoneyLocal(preverCategoria(c.nome,mes))} em ${c.nome}.`;
+      }
+    }
+    return "Diga a categoria para prever (ex: previsão mercado).";
+  }
+
+  if (q.includes("saldo"))
+    return `Seu saldo é ${fmtMoneyLocal(saldoMes(mes))}.`;
+
+  if (q.includes("despesa"))
+    return `Você gastou ${fmtMoneyLocal(totalDespesasMes(mes))} em despesas.`;
+
+  if (q.includes("receita"))
+    return `Você recebeu ${fmtMoneyLocal(totalReceitasMes(mes))}.`;
+
+  for (const c of S.cats) {
+    if (q.includes(c.nome.toLowerCase())) {
+      return `Você gastou ${fmtMoneyLocal(totalPorCategoriaMes(c.nome, mes))} em ${c.nome}.`;
+    }
+  }
+
+  return "Exemplos: 'top categorias', 'previsão mercado', 'quanto gastei em mercado mês passado'.";
+}
+
+// Botão do assistente
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("assistBtn");
   const input = document.getElementById("assistInput");
