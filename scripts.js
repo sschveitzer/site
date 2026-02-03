@@ -321,6 +321,8 @@ try { window.savePrefs = savePrefs; } catch(e) {}
   async function updateTxCategory(oldName, newName) {
     if (!oldName || !newName || oldName === newName) return;
     await supabaseClient.from("transactions").update({ categoria: newName }).eq("categoria", oldName);
+    // 🔧 Atualiza também metas vinculadas à categoria
+    await supabaseClient.from("metas").update({ categoria: newName }).eq("categoria", oldName);
   }
 
   // ========= RECORRÊNCIAS =========
