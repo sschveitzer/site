@@ -3702,29 +3702,3 @@ if (typeof toggleModal === "function") {
     }
   }
 }
-
-
-// === PATCH: salvar metas por categoria corretamente ===
-(function(){
-  if (window.__patchSaveMetasCat) return;
-  window.__patchSaveMetasCat = true;
-
-  function collectMetasPorCategoria(){
-    const obj = {};
-    document.querySelectorAll('[data-meta-categoria]').forEach(inp=>{
-      const cat = inp.getAttribute('data-meta-categoria');
-      const v = Number(inp.value);
-      if (cat && isFinite(v) && v > 0) obj[cat] = v;
-    });
-    return obj;
-  }
-
-  if (typeof window.saveMetas === 'function'){
-    const oldSave = window.saveMetas;
-    window.saveMetas = async function(payload){
-      payload = payload || {};
-      payload.porCat = collectMetasPorCategoria();
-      return oldSave(payload);
-    };
-  }
-})();
