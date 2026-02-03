@@ -3858,19 +3858,44 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// === Assistente flutuante modal ===
+
+// === Conexão do chat modal com o assistente ===
 document.addEventListener("DOMContentLoaded", () => {
   const fab = document.getElementById("assistFab");
   const modal = document.getElementById("assistModal");
   const close = document.getElementById("assistClose");
 
-  if (!fab || !modal || !close) return;
+  const btn = document.getElementById("assistBtn");
+  const input = document.getElementById("assistInput");
+  const chat = document.getElementById("assistChat");
 
-  fab.addEventListener("click", () => {
-    modal.style.display = "flex";
+  if (fab && modal && close) {
+    fab.addEventListener("click", () => modal.style.display = "flex");
+    close.addEventListener("click", () => modal.style.display = "none");
+  }
+
+  if (!btn || !input || !chat) return;
+
+  function addMsg(txt, tipo){
+    const div = document.createElement("div");
+    div.style.marginBottom = "6px";
+    div.innerHTML = tipo==="user" 
+      ? `<strong>Você:</strong> ${txt}`
+      : `<strong>Assistente:</strong> ${txt}`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  btn.addEventListener("click", () => {
+    const texto = input.value;
+    if (!texto) return;
+    addMsg(texto, "user");
+    const resposta = responderPergunta(texto);
+    addMsg(resposta, "bot");
+    input.value = "";
   });
 
-  close.addEventListener("click", () => {
-    modal.style.display = "none";
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") btn.click();
   });
 });
