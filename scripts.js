@@ -102,7 +102,7 @@ try {
   function isIsoDate(s) {
     return /^\d{4}-\d{2}-\d{2}$/.test(s);
   }
-  function fmtMoney(v) {
+  function fmtMoneyLocal(v) {
     const n = Number(v);
     return isFinite(n)
       ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -768,7 +768,7 @@ try { window.addOrUpdate = addOrUpdate; } catch(e){}
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
-        <div class="${S.hide ? "blurred" : ""} valor" style="font-weight:700">${fmtMoney(v)}</div>${actions}
+        <div class="${S.hide ? "blurred" : ""} valor" style="font-weight:700">${fmtMoneyLocal(v)}</div>${actions}
       </div>`;
     if (!readOnly) {
       const btnEdit = li.querySelector(".edit");
@@ -1011,7 +1011,7 @@ h3.textContent = 'Lançamentos — ' + label;
     rebuildCatSelect(x.categoria);
     const mData = qs("#mData"); if (mData) mData.value = isIsoDate(x.data) ? x.data : nowYMD();
     const mDesc = qs("#mDesc"); if (mDesc) mDesc.value = x.descricao || "";
-    const mVal  = qs("#mValorBig"); if (mVal) mVal.value = fmtMoney(Number(x.valor) || 0);
+    const mVal  = qs("#mValorBig"); if (mVal) mVal.value = fmtMoneyLocal(Number(x.valor) || 0);
     const mObs  = qs("#mObs"); if (mObs) mObs.value = x.obs || "";
     const ttl   = qs("#modalTitle"); if (ttl) ttl.textContent = "Editar lançamento";
     const fCarteira = qs("#wrapCarteira"); const fTransf = qs("#wrapTransf");
@@ -1177,9 +1177,9 @@ h3.textContent = 'Lançamentos — ' + label;
     const kpiSaldo = qs("#kpiSaldo");
 
     // Atualiza números
-    if (kpiReceitas) kpiReceitas.textContent = fmtMoney(receitas);
-    if (kpiDespesas) kpiDespesas.textContent = fmtMoney(despesas);
-    if (kpiSaldo) kpiSaldo.textContent = fmtMoney(saldo);
+    if (kpiReceitas) kpiReceitas.textContent = fmtMoneyLocal(receitas);
+    if (kpiDespesas) kpiDespesas.textContent = fmtMoneyLocal(despesas);
+    if (kpiSaldo) kpiSaldo.textContent = fmtMoneyLocal(saldo);
     const casaAgg = sumInOutByWallet("Casa");
     const saidasCasa = (casaAgg && typeof casaAgg.saidas === "number") ? casaAgg.saidas : 0;
 
@@ -1364,7 +1364,7 @@ h3.textContent = 'Lançamentos — ' + label;
       tbody.innerHTML = '';
       rows.forEach(([cat, total])=>{
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${cat||'-'}</td><td>${fmtMoney(total)}</td>`;
+        tr.innerHTML = `<td>${cat||'-'}</td><td>${fmtMoneyLocal(total)}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -1392,7 +1392,7 @@ h3.textContent = 'Lançamentos — ' + label;
       tbody.innerHTML = '';
       medias.forEach(([cat, avg])=>{
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${cat}</td><td>${fmtMoney(avg)}</td>`;
+        tr.innerHTML = `<td>${cat}</td><td>${fmtMoneyLocal(avg)}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -1419,7 +1419,7 @@ h3.textContent = 'Lançamentos — ' + label;
     }
     const el = document.getElementById('kpiForecastFinal');
     if (el){
-      el.textContent = fmtMoney(proj);
+      el.textContent = fmtMoneyLocal(proj);
       el.style.color = proj >= 0 ? "var(--ok)" : "var(--warn)";
     }
   }
@@ -1492,7 +1492,7 @@ h3.textContent = 'Lançamentos — ' + label;
         const bg = `hsl(0, 85%, ${90 - 50*intensity}%)`; // tons de vermelho
         cell.style.background = bg;
         cell.setAttribute('data-val', String(v));
-        cell.title = `Despesas em ${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoney(v)}`;
+        cell.title = `Despesas em ${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoneyLocal(v)}`;
       }
       wrap.appendChild(cell);
     }
@@ -1582,8 +1582,8 @@ h3.textContent = 'Lançamentos — ' + label;
       li.dataset.tipo = x && x.tipo ? x.tipo : ''; 
       const sinal = x.tipo==="Despesa" ? "-" : "+";
       li.innerHTML = '<div class="left"><strong>'+ (x.descricao || x.descr || '-') +'</strong><div class="sub">'+ (x.data||"") +' • '+ (x.categoria||"-") +'</div></div>' +
-                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
-                     '<div class="right">'+ (sinal) +' '+ fmtMoney(money(x.valor)) +'</div>';
+                     '<div class="right">'+ (sinal) +' '+ fmtMoneyLocal(money(x.valor)) +'</div>';
+                     '<div class="right">'+ (sinal) +' '+ fmtMoneyLocal(money(x.valor)) +'</div>';
       ul.appendChild(li);
     });
   }
@@ -1629,7 +1629,7 @@ function renderCarteiras(){
         const card = document.createElement('div');
         card.className = 'wallet-card';
         card.innerHTML = '<div class="w-head"><i class="ph ph-wallet"></i> <strong>'+w+'</strong></div>' +
-                         '<div class="w-balance">'+ fmtMoney(saldos[w]||0) +'</div>';
+                         '<div class="w-balance">'+ fmtMoneyLocal(saldos[w]||0) +'</div>';
         el.appendChild(card);
       
   // --- Card de ajustes do split (Dinheiro/Pix) — render seguro dentro da seção #carteiras ---
@@ -1671,10 +1671,10 @@ var deltas = (typeof computeSplitDeltas==='function') ? computeSplitDeltas(txSel
     // Somas P1/P2 e listas
     const p1 = sumInOutByWallet("Marido");
     const p2 = sumInOutByWallet("Esposa");
-    const p1In = document.getElementById('p1In'); if (p1In) p1In.textContent = fmtMoney(p1.entradas);
-    const p1Out= document.getElementById('p1Out'); if (p1Out) p1Out.textContent = fmtMoney(p1.saidas);
-    const p2In = document.getElementById('p2In'); if (p2In) p2In.textContent = fmtMoney(p2.entradas);
-    const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoney(p2.saidas);
+    const p1In = document.getElementById('p1In'); if (p1In) p1In.textContent = fmtMoneyLocal(p1.entradas);
+    const p1Out= document.getElementById('p1Out'); if (p1Out) p1Out.textContent = fmtMoneyLocal(p1.saidas);
+    const p2In = document.getElementById('p2In'); if (p2In) p2In.textContent = fmtMoneyLocal(p2.entradas);
+    const p2Out= document.getElementById('p2Out'); if (p2Out) p2Out.textContent = fmtMoneyLocal(p2.saidas);
     renderMiniList('p1List', p1.items);
     renderMiniList('p2List', p2.items);
 
@@ -3292,8 +3292,8 @@ async function renderMetasAcompanhamento(){
       window.fmtMoney = function(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
     }
 
-    if (elMetaTotal) elMetaTotal.textContent = fmtMoney(metaTotal);
-    if (elGastoMes)  elGastoMes.textContent  = fmtMoney(gastoMes);
+    if (elMetaTotal) elMetaTotal.textContent = fmtMoneyLocal(metaTotal);
+    if (elGastoMes)  elGastoMes.textContent  = fmtMoneyLocal(gastoMes);
 
     var pctTotal = 0;
     var statusTotal = 'Sem meta definida';
@@ -3347,8 +3347,8 @@ async function renderMetasAcompanhamento(){
       li.className = 'item';
       li.innerHTML = ''
         + '<div class="chip">'+cat+'</div>'
-        + '<div class="subinfo">Meta: <strong>'+fmtMoney(metaNum)+'</strong></div>'
-        + '<div class="valor">Gasto: '+fmtMoney(gasto)+'</div>'
+        + '<div class="subinfo">Meta: <strong>'+fmtMoneyLocal(metaNum)+'</strong></div>'
+        + '<div class="valor">Gasto: '+fmtMoneyLocal(gasto)+'</div>'
         + '<div class="progress" style="height:8px;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-top:6px">'
         +   '<div style="width:'+pct+'%;height:100%;background:'+barColor+'"></div>'
         + '</div>'
@@ -3647,7 +3647,7 @@ function renderHeatmap(){
     if (v>0){
       const intensity = max ? v/max : 0;
       cell.style.background = `hsl(0,85%,${90 - 50*intensity}%)`;
-      cell.title = `${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoney(v)}`;
+      cell.title = `${String(d).padStart(2,'0')}/${ym.slice(5,7)}: ${fmtMoneyLocal(v)}`;
     }
     wrap.appendChild(cell);
   }
@@ -3732,6 +3732,14 @@ if (typeof toggleModal === "function") {
 
 // === ASSISTENTE FINANCEIRO ===
 
+
+function fmtMoneyLocal(v){
+  const n = Number(v);
+  return isFinite(n)
+    ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : "R$ 0,00";
+}
+
 function totalPorCategoriaMes(categoria, mes) {
   return S.tx.filter(t =>
     t.tipo === "Despesa" &&
@@ -3759,13 +3767,13 @@ function responderPergunta(texto) {
   const q = texto.toLowerCase();
   const mes = S.month;
 
-  if (q.includes("saldo")) return `Seu saldo neste mês é ${fmtMoney(saldoMes(mes))}.`;
-  if (q.includes("despesa")) return `Você gastou ${fmtMoney(totalDespesasMes(mes))} em despesas neste mês.`;
-  if (q.includes("receita")) return `Você recebeu ${fmtMoney(totalReceitasMes(mes))} neste mês.`;
+  if (q.includes("saldo")) return `Seu saldo neste mês é ${fmtMoneyLocal(saldoMes(mes))}.`;
+  if (q.includes("despesa")) return `Você gastou ${fmtMoneyLocal(totalDespesasMes(mes))} em despesas neste mês.`;
+  if (q.includes("receita")) return `Você recebeu ${fmtMoneyLocal(totalReceitasMes(mes))} neste mês.`;
 
   for (const c of S.cats) {
     if (q.includes(c.nome.toLowerCase())) {
-      return `Você gastou ${fmtMoney(totalPorCategoriaMes(c.nome, mes))} em ${c.nome} neste mês.`;
+      return `Você gastou ${fmtMoneyLocal(totalPorCategoriaMes(c.nome, mes))} em ${c.nome} neste mês.`;
     }
   }
 
