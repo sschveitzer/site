@@ -3968,3 +3968,51 @@ function responderPergunta(texto) {
 
   return "Não entendi 😅 Tente: 'resumo do mês', 'top 5 categorias', 'quanto gastei hoje'.";
 }
+
+
+// ================================
+// MODAL DO ASSISTENTE (ABRIR/FECHAR + CHAT)
+// ================================
+document.addEventListener("DOMContentLoaded", () => {
+  const fab = document.getElementById("assistFab");
+  const modal = document.getElementById("assistModal");
+  const close = document.getElementById("assistClose");
+
+  const btn = document.getElementById("assistBtn");
+  const input = document.getElementById("assistInput");
+  const chat = document.getElementById("assistChat");
+
+  if (fab && modal && close) {
+    fab.addEventListener("click", () => {
+      modal.style.display = "flex";
+    });
+    close.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+  }
+
+  if (!btn || !input || !chat) return;
+
+  function addMsg(txt, tipo){
+    const div = document.createElement("div");
+    div.style.marginBottom = "6px";
+    div.innerHTML = tipo==="user"
+      ? `<strong>Você:</strong> ${txt}`
+      : `<strong>Assistente:</strong> ${txt}`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  btn.addEventListener("click", () => {
+    const texto = input.value;
+    if (!texto) return;
+    addMsg(texto, "user");
+    const resposta = responderPergunta(texto);
+    addMsg(resposta, "bot");
+    input.value = "";
+  });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") btn.click();
+  });
+});
