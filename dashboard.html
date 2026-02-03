@@ -121,17 +121,7 @@
         <h3>Últimos lançamentos</h3>
         <ul id="listaRecentes" class="lanc-grid"></ul>
       </div>
-    
-<div class="card" style="margin-top:16px">
-  <h3><i class="ph ph-chat-circle-dots"></i> Assistente financeiro</h3>
-  <div style="display:flex; gap:8px; margin-top:8px">
-    <input id="assistInput" type="text" placeholder="Ex: quanto gastei em mercado esse mês" style="flex:1">
-    <button class="btn" id="assistBtn">Perguntar</button>
-  </div>
-  <div id="assistChat" style="margin-top:8px; max-height:180px; overflow:auto; font-size:13px"></div>
-</div>
-
-</section>
+    </section>
 
     <!-- Lançamentos -->
     <section id="lancamentos">
@@ -734,6 +724,27 @@ document.addEventListener('change', function(e){
 
     <h3 style="margin-top:8px">Metas por categoria</h3>
     <ul id="mListaMetasCat" class="cats-grid"></ul>
+  </div>
+</div>
+
+
+<!-- Botão flutuante do assistente -->
+<button id="assistFab" class="assist-fab">💬</button>
+
+<!-- Modal do Assistente -->
+<div id="assistModal" class="assist-modal">
+  <div class="assist-box">
+    <div class="assist-header">
+      <span>Assistente financeiro</span>
+      <button id="assistClose">✕</button>
+    </div>
+
+    <div id="assistChat" class="assist-chat"></div>
+
+    <div class="assist-input">
+      <input id="assistInput" type="text" placeholder="Digite sua pergunta..." />
+      <button id="assistBtn">Enviar</button>
+    </div>
   </div>
 </div>
 
