@@ -1,3 +1,24 @@
+
+// === Função faltante para evitar erro ===
+function resumoMes(mes){
+  const tx = S.tx.filter(t=>t.data && t.data.startsWith(mes));
+  const rec = tx.filter(t=>t.tipo==="Receita").reduce((a,b)=>a+Number(b.valor||0),0);
+  const des = tx.filter(t=>t.tipo==="Despesa").reduce((a,b)=>a+Number(b.valor||0),0);
+  const saldo = rec - des;
+
+  const map = {};
+  tx.filter(t=>t.tipo==="Despesa").forEach(t=>{
+    map[t.categoria]=(map[t.categoria]||0)+t.valor;
+  });
+  const top = Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
+
+  return `Resumo do mês:
+Receitas: ${fmtMoneyLocal(rec)}
+Despesas: ${fmtMoneyLocal(des)}
+Saldo: ${fmtMoneyLocal(saldo)}
+Maior gasto: ${top ? top[0]+' ('+fmtMoneyLocal(top[1])+')' : '—'}`;
+}
+
 // Normaliza forma_pagamento para os valores aceitos pelo banco
 function normalizeFormaPagamento(v){
   v = String(v || '').trim().toLowerCase();
