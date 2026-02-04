@@ -2602,11 +2602,9 @@ body.dark .card:hover {
   inset: 0;
   background: rgba(0,0,0,.5);
   display: none;
-  justify-content: flex-start; /* esquerda */
-  align-items: flex-end;       /* embaixo */
+  justify-content: center;
+  align-items: flex-end;
   z-index: 1000;
-  padding-left: 12px;
-  padding-bottom: 12px;
 }
 
 .assist-box {
@@ -2652,4 +2650,49 @@ body.dark .card:hover {
   background: var(--brand);
   color: #fff;
   cursor: pointer;
+}
+
+
+/* === Chat visual melhorado === */
+.assist-header {
+  padding: 12px;
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--chip);
+}
+
+.assist-chat {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-soft);
+}
+
+.assist-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  line-height: 1.3;
+  word-wrap: break-word;
+}
+
+.assist-msg.user {
+  align-self: flex-end;
+  background: var(--brand);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.assist-msg.bot {
+  align-self: flex-start;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
 }

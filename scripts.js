@@ -3995,10 +3995,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function addMsg(txt, tipo){
     const div = document.createElement("div");
-    div.style.marginBottom = "6px";
-    div.innerHTML = tipo==="user"
-      ? `<strong>Você:</strong> ${txt}`
-      : `<strong>Assistente:</strong> ${txt}`;
+    div.className = "assist-msg " + (tipo === "user" ? "user" : "bot");
+    div.innerHTML = txt;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
   }
