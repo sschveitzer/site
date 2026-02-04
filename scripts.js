@@ -4019,71 +4019,54 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ================================
-// ASSISTENTE FINANCEIRO - INTELIGENTE
+// ASSISTENTE FINANCEIRO - V8 FINAL (CONSOLIDADO)
 // ================================
+(function(){
+  const __oldResponder = window.responderPergunta;
 
-function mediaUltimosMeses(cat, n=3){
-  const meses = [...new Set(S.tx.map(t=>t.data.slice(0,7)))].sort().slice(-n);
-  let total = 0;
-  meses.forEach(m=>{
-    total += totalPorCategoriaMes(cat,m);
-  });
-  return total / meses.length;
-}
+  window.responderPergunta = function(texto){
+    if (!texto) return "Faça uma pergunta 🙂";
+    const q = texto.toLowerCase();
+    const mes = getMesFromTexto(q);
 
-function categoriaPior(mes){
-  const [y,m] = mes.split("-").map(Number);
-  const mesPassado = new Date(y,m-2,1).toISOString().slice(0,7);
-  let pior = null;
-  let diffMax = 0;
+    // MODO COACH
+    if (q.includes("coach") || q.includes("me ajude") || q.includes("me oriente") || q.includes("economizar")) {
+      let dicas = [];
+      const saldo = saldoMes(mes);
 
-  S.cats.forEach(c=>{
-    const atual = totalPorCategoriaMes(c.nome, mes);
-    const ant = totalPorCategoriaMes(c.nome, mesPassado);
-    const diff = atual - ant;
-    if (diff > diffMax){
-      diffMax = diff;
-      pior = {nome:c.nome, diff};
-    }
-  });
-
-  return pior;
-}
-
-function responderPergunta(texto) {
-  if (!texto) return "Faça uma pergunta 🙂";
-  const q = texto.toLowerCase();
-  const mes = getMesFromTexto(q);
-
-  // desperdício
-  if (q.includes("desperdi") || q.includes("onde to gastando demais") || q.includes("onde estou gastando demais")) {
-    let alerta = null;
-    S.cats.forEach(c=>{
-      const atual = totalPorCategoriaMes(c.nome, mes);
-      const media = mediaUltimosMeses(c.nome,3);
-      if (atual > media * 1.25){
-        alerta = `Você gastou muito em ${c.nome}: ${fmtMoneyLocal(atual)}, acima da média (${fmtMoneyLocal(media)}).`;
+      if (saldo < 0){
+        dicas.push("⚠️ Você está gastando mais do que ganha. Corte despesas variáveis.");
       }
-    });
-    return alerta || "Não identifiquei desperdícios claros este mês.";
-  }
 
-  // economia
-  if (q.includes("econom") || q.includes("como posso economizar")) {
-    const pior = categoriaPior(mes);
-    if (!pior) return "Seus gastos estão equilibrados.";
-    return `Sugestão: reduza ${pior.nome}. Só este mês aumentou ${fmtMoneyLocal(pior.diff)}.`;
-  }
+      S.cats.forEach(c=>{
+        const atual = totalPorCategoriaMes(c.nome, mes);
+        const media = mediaUltimosMeses(c.nome,3);
+        if (media && atual > media * 1.2){
+          dicas.push(`Reduza ${c.nome}: está ${fmtMoneyLocal(atual-media)} acima da média.`);
+        }
+      });
 
-  // diagnóstico
-  if (q.includes("diagnost") || q.includes("situação financeira")) {
-    const saldo = saldoMes(mes);
-    if (saldo < 0) return "⚠️ Você está gastando mais do que ganha.";
-    return "Sua situação está equilibrada neste mês.";
-  }
+      if (!dicas.length) dicas.push("🎉 Seus gastos estão equilibrados. Continue assim!");
+      return dicas.join("<br>");
+    }
 
-  return responderPerguntaAntiga(texto);
-}
+    // META
+    if (q.includes("meta")) {
+      const saldo = saldoMes(mes);
+      if (saldo < 0) return "Sugestão: meta principal é gastar menos que sua renda.";
+      return "Meta sugerida: poupar pelo menos 10% da sua renda.";
+    }
 
-// fallback para função anterior
-const responderPerguntaAntiga = window.responderPergunta;
+    // MOTIVAÇÃO
+    if (q.includes("motiv") || q.includes("mensagem")) {
+      return "💪 Cada passo conta. Controle financeiro é hábito, não sacrifício.";
+    }
+
+    // fallback seguro
+    if (typeof __oldResponder === "function") {
+      return __oldResponder(texto);
+    }
+
+    return "Não consegui responder agora 😅";
+  };
+})();
