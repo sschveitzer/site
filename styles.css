@@ -2603,6 +2603,7 @@ body.dark .card:hover {
   background: rgba(0,0,0,.5);
   display: none;
   justify-content: flex-start; /* esquerda */
+  align-items: flex-end;       /* embaixo */
   z-index: 1000;
   padding-left: 12px;
   padding-bottom: 12px;
